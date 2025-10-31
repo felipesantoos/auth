@@ -1,8 +1,7 @@
 """
 Dependency Injection Container
 Factory functions for service and repository dependencies
-Supports multiple repository implementations based on environment
-Following @03a-multiple-repositories.md patterns
+Following hexagonal architecture patterns
 """
 import logging
 from infra.database.database import get_db_session
@@ -75,7 +74,6 @@ async def get_auth_service(
     """
     Factory for IAuthService interface.
     
-    Uses environment-based repository selection (see get_app_user_repository).
     Returns AuthService instance (implements only IAuthService).
     """
     repository = await get_app_user_repository(session)
@@ -94,7 +92,6 @@ async def get_password_reset_service(
     """
     Factory for IPasswordResetService interface.
     
-    Uses environment-based repository selection (see get_app_user_repository).
     Returns PasswordResetService instance (implements only IPasswordResetService).
     """
     repository = await get_app_user_repository(session)
@@ -115,7 +112,6 @@ async def get_oauth_service(
     """
     Factory for IOAuthService interface.
     
-    Uses environment-based repository selection (see get_app_user_repository).
     Returns OAuthService instance (implements only IOAuthService).
     """
     repository = await get_app_user_repository(session)
