@@ -62,25 +62,10 @@ async def get_app_user_repository(
     session: AsyncSession = Depends(get_db_session)
 ) -> AppUserRepositoryInterface:
     """
-    Factory for AppUser repository with environment-based selection.
+    Factory for AppUser repository.
     
-    Following @03a-multiple-repositories.md pattern:
-    - test: Use in-memory repository (fast, isolated, no database needed)
-    - production/development: Use PostgreSQL repository
-    
-    Returns:
-        AppUserRepositoryInterface implementation based on environment
+    Uses PostgreSQL repository for all environments.
     """
-    environment = settings.environment.lower()
-    
-    # Always use in-memory for tests
-    if environment == "test":
-        from tests.repositories.in_memory_app_user_repository import InMemoryAppUserRepository
-        logger.info("Using InMemoryAppUserRepository for testing")
-        return InMemoryAppUserRepository()
-    
-    # For production/development: use PostgreSQL
-    logger.debug("Using AppUserRepository (PostgreSQL)")
     return AppUserRepository(session)
 
 
