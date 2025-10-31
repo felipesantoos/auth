@@ -27,7 +27,10 @@ from app.api.dtos.response.auth_response import (
     MessageResponse,
 )
 from app.api.mappers.auth_mapper import AuthMapper
-from app.api.dicontainer.dicontainer import get_auth_service
+from app.api.dicontainer.dicontainer import (
+    get_auth_service,
+    get_password_reset_service,
+)
 from app.api.middlewares.auth_middleware import (
     get_current_user,
     get_current_admin_user,
@@ -449,7 +452,7 @@ async def delete_user(
 async def forgot_password(
     request: Request,
     forgot_request: ForgotPasswordRequest,
-    auth_service: IPasswordResetService = Depends(get_auth_service),
+    auth_service: IPasswordResetService = Depends(get_password_reset_service),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -493,7 +496,7 @@ async def forgot_password(
 async def reset_password(
     request: Request,
     reset_request: ResetPasswordRequest,
-    auth_service: IPasswordResetService = Depends(get_auth_service),
+    auth_service: IPasswordResetService = Depends(get_password_reset_service),
     session: AsyncSession = Depends(get_db_session),
 ):
     """

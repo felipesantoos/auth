@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse
 from config.oauth_config import oauth
 from config.settings import settings
 from core.interfaces.primary.oauth_service_interface import IOAuthService
-from app.api.dicontainer.dicontainer import get_auth_service
+from app.api.dicontainer.dicontainer import get_oauth_service
 from app.api.middlewares.tenant_middleware import get_client_from_request
 from infra.database.database import get_db_session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -74,7 +74,7 @@ async def oauth_callback(
     request: Request,
     provider: str,
     session: AsyncSession = Depends(get_db_session),
-    auth_service: IOAuthService = Depends(get_auth_service),
+    auth_service: IOAuthService = Depends(get_oauth_service),
 ):
     """
     Handle OAuth provider callback (multi-tenant).

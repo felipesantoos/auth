@@ -15,6 +15,8 @@ from core.interfaces.primary.client_service_interface import ClientServiceInterf
 # Auth
 from infra.database.repositories.app_user_repository import AppUserRepository
 from core.services.auth.auth_service import AuthService
+from core.services.auth.password_reset_service import PasswordResetService
+from core.services.auth.oauth_service import OAuthService
 from core.interfaces.primary.auth_service_interface import IAuthService
 from core.interfaces.primary.password_reset_service_interface import IPasswordResetService
 from core.interfaces.primary.oauth_service_interface import IOAuthService
@@ -61,20 +63,55 @@ async def get_auth_service(
     session: AsyncSession = Depends(get_db_session)
 ) -> IAuthService:
     """
-    Factory for Auth service.
+    Factory for IAuthService interface.
     
-    Creates repository with session and injects into service.
-    Also injects CacheService, SettingsProvider and EmailService for password reset functionality.
+    Returns AuthService instance (implements only IAuthService).
+    """
+    repository = AppUserRepository(session)
+    cache_service = CacheService()
+    settings_provider = SettingsProvider()
+    return AuthService(
+        repository=repository,
+        cache_service=cache_service,
+        settings_provider=settings_provider,
+    )
+
+
+async def get_password_reset_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> IPasswordResetService:
+    """
+    Factory for IPasswordResetService interface.
+    
+    Returns PasswordResetService instance (implements only IPasswordResetService).
     """
     repository = AppUserRepository(session)
     cache_service = CacheService()
     settings_provider = SettingsProvider()
     email_service = EmailService()
-    return AuthService(
-        repository,
+    return PasswordResetService(
+        repository=repository,
         cache_service=cache_service,
         settings_provider=settings_provider,
-        email_service=email_service
+        email_service=email_service,
+    )
+
+
+async def get_oauth_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> IOAuthService:
+    """
+    Factory for IOAuthService interface.
+    
+    Returns OAuthService instance (implements only IOAuthService).
+    """
+    repository = AppUserRepository(session)
+    cache_service = CacheService()
+    settings_provider = SettingsProvider()
+    return OAuthService(
+        repository=repository,
+        cache_service=cache_service,
+        settings_provider=settings_provider,
     )
 
 
@@ -84,5 +121,7 @@ __all__ = [
     "get_client_service",
     "get_app_user_repository",
     "get_auth_service",
+    "get_password_reset_service",
+    "get_oauth_service",
 ]
 
