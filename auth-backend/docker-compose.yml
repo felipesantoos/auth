@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: auth-postgres
+    environment:
+      POSTGRES_DB: auth_system
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: auth-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - auth-network
+
+  # Auth API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-api
+    environment:
+      # Application
+      APP_NAME: "Auth System API"
+      APP_VERSION: "1.0.0"
+      ENVIRONMENT: development
+      DEBUG: "true"
+      
+      # API
+      API_HOST: "0.0.0.0"
+      API_PORT: "8080"
+      
+      # Database
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/auth_system"
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+      
+      # JWT
+      JWT_SECRET_KEY: "your-secret-key-change-in-production"
+      JWT_ALGORITHM: "HS256"
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      JWT_REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      
+      # CORS
+      CORS_ORIGINS: "http://localhost:3000,http://localhost:5173"
+      
+      # Logging
+      LOG_LEVEL: "INFO"
+      
+      # Pagination
+      DEFAULT_PAGE_SIZE: "20"
+      MAX_PAGE_SIZE: "100"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Mount code for development (hot reload)
+      - .:/app
+      # Don't mount these directories
+      - /app/__pycache__
+      - /app/.pytest_cache
+    networks:
+      - auth-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  auth-network:
+    driver: bridge
+
