@@ -94,21 +94,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Register custom exception handlers
+# This registers all domain exception handlers AND the global middleware
 from app.api.middlewares.exception_handler import register_exception_handlers
 register_exception_handlers(app)
-
-
-# Global exception handler (fallback for uncaught exceptions)
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    """Handle all uncaught exceptions"""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "detail": "Internal server error" if not settings.debug else str(exc)
-        },
-    )
 
 
 # Health check endpoint

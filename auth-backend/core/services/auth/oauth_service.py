@@ -12,6 +12,12 @@ from core.interfaces.secondary.cache_service_interface import CacheServiceInterf
 from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
+from core.exceptions import (
+    ValidationException,
+    MissingRequiredFieldException,
+    InvalidCredentialsException,
+    DomainException,
+)
 from .auth_service_base import AuthServiceBase
 
 logger = logging.getLogger(__name__)
@@ -111,17 +117,32 @@ class OAuthService(AuthServiceBase, IOAuthService):
             
         Returns:
             Tuple of (access_token, refresh_token, user)
+            
+        Raises:
+            MissingRequiredFieldException: If client_id is missing
+            InvalidCredentialsException: If user account is deactivated
+            ValidationException: If validation fails
+            DomainException: If technical error occurs
         """
         if not client_id:
-            raise ValueError("Client ID is required for OAuth login (multi-tenant)")
+            raise MissingRequiredFieldException("client_id")
         
         logger.info("OAuth login attempt", extra={"provider": provider, "email": email, "client_id": client_id})
         
-        user = await self._create_or_update_oauth_user(email, name, client_id, provider)
-        
-        if not user.active:
-            raise ValueError("User account is deactivated")
-        
-        access_token, refresh_token = await self._generate_and_store_tokens(user.id, client_id)
-        return access_token, refresh_token, user
+        try:
+            user = await self._create_or_update_oauth_user(email, name, client_id, provider)
+            
+            if not user.active:
+                raise InvalidCredentialsException()
+            
+            access_token, refresh_token = await self._generate_and_store_tokens(user.id, client_id)
+            logger.info("OAuth login successful", extra={"user_id": user.id, "provider": provider, "client_id": client_id})
+            return access_token, refresh_token, user
+            
+        except (MissingRequiredFieldException, InvalidCredentialsException, ValidationException):
+            # Domain exceptions - let them propagate
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during OAuth login: {e}", exc_info=True, extra={"provider": provider, "email": email, "client_id": client_id})
+            raise DomainException("Failed to authenticate via OAuth due to technical error", "OAUTH_AUTHENTICATION_FAILED")
 

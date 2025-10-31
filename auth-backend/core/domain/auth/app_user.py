@@ -6,7 +6,14 @@ Adapted for multi-tenant architecture with client_id
 from dataclasses import dataclass, field
 from typing import Optional
 from datetime import datetime
+import re
 from .user_role import UserRole
+from core.exceptions import (
+    MissingRequiredFieldException,
+    InvalidEmailException,
+    InvalidValueException,
+    ValidationException,
+)
 
 
 @dataclass
@@ -48,28 +55,59 @@ class AppUser:
             new_password_hash: New hashed password
             
         Raises:
-            ValueError: If password hash is empty
+            ValidationException: If password hash is empty
         """
         if not new_password_hash:
-            raise ValueError("Password hash cannot be empty")
+            raise MissingRequiredFieldException("password_hash")
         self._password_hash = new_password_hash
     
     def validate(self) -> None:
-        """Business validation rules"""
-        if not self.username or len(self.username) < 3:
-            raise ValueError("Username must have at least 3 characters")
+        """
+        Validate entity according to business rules.
         
-        if not self.email or "@" not in self.email:
-            raise ValueError("Invalid email address")
+        Raises:
+            ValidationException: If validation fails
+        """
+        # Required fields
+        if not self.username or not self.username.strip():
+            raise MissingRequiredFieldException("username")
         
-        if not self.name or len(self.name) < 2:
-            raise ValueError("Name must have at least 2 characters")
+        if not self.email or not self.email.strip():
+            raise MissingRequiredFieldException("email")
         
+        if not self.name or not self.name.strip():
+            raise MissingRequiredFieldException("name")
+        
+        # Email format
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, self.email):
+            raise InvalidEmailException(self.email)
+        
+        # Username length
+        if len(self.username) < 3:
+            raise InvalidValueException("username", self.username, "must be at least 3 characters")
+        
+        if len(self.username) > 255:
+            raise InvalidValueException("username", self.username, "must not exceed 255 characters")
+        
+        # Name length
+        if len(self.name) < 2:
+            raise InvalidValueException("name", self.name, "must be at least 2 characters")
+        
+        if len(self.name) > 255:
+            raise InvalidValueException("name", self.name, "must not exceed 255 characters")
+        
+        # Email length
+        if len(self.email) > 255:
+            raise InvalidValueException("email", self.email, "must not exceed 255 characters")
+        
+        # Password hash required
         if not self._password_hash:
-            raise ValueError("Password hash is required")
+            raise MissingRequiredFieldException("password_hash")
         
+        # Client ID required (multi-tenant)
         if not self.client_id:
-            raise ValueError("Client ID is required (multi-tenant)")
+            raise MissingRequiredFieldException("client_id")
     
     def activate(self) -> None:
         """Business operation to activate user"""

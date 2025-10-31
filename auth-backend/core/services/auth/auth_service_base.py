@@ -10,6 +10,7 @@ import bcrypt
 import jwt
 from core.interfaces.secondary.cache_service_interface import CacheServiceInterface
 from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.exceptions import InvalidPasswordException
 
 logger = logging.getLogger(__name__)
 
@@ -60,19 +61,19 @@ class AuthServiceBase:
         - At least one digit
         
         Raises:
-            ValueError: If password doesn't meet requirements
+            InvalidPasswordException: If password doesn't meet requirements
         """
         if len(password) < 8:
-            raise ValueError("Password must be at least 8 characters")
+            raise InvalidPasswordException("Password must be at least 8 characters")
         
         if not re.search(r'[A-Z]', password):
-            raise ValueError("Password must contain at least one uppercase letter")
+            raise InvalidPasswordException("Password must contain at least one uppercase letter")
         
         if not re.search(r'[a-z]', password):
-            raise ValueError("Password must contain at least one lowercase letter")
+            raise InvalidPasswordException("Password must contain at least one lowercase letter")
         
         if not re.search(r'[0-9]', password):
-            raise ValueError("Password must contain at least one number")
+            raise InvalidPasswordException("Password must contain at least one number")
     
     def _generate_token(self, user_id: str, token_type: str, client_id: Optional[str] = None) -> str:
         """

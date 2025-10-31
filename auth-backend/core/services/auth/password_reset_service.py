@@ -12,6 +12,13 @@ from core.interfaces.secondary.cache_service_interface import CacheServiceInterf
 from core.interfaces.secondary.email_service_interface import EmailServiceInterface
 from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
 from core.domain.auth.app_user import AppUser
+from core.exceptions import (
+    InvalidTokenException,
+    UserNotFoundException,
+    ValidationException,
+    EmailServiceException,
+    DomainException,
+)
 from .auth_service_base import AuthServiceBase
 
 logger = logging.getLogger(__name__)
@@ -113,6 +120,9 @@ class PasswordResetService(AuthServiceBase, IPasswordResetService):
             logger.info("Password reset email sent", extra={"user_id": user.id, "client_id": client_id})
         except Exception as e:
             logger.error(f"Failed to send password reset email: {str(e)}", extra={"user_id": user.id}, exc_info=True)
+            # Non-blocking - token is valid even if email fails
+            # Raise domain exception but don't fail the password reset request
+            raise EmailServiceException(f"Failed to send password reset email: {str(e)}")
     
     async def forgot_password(self, email: str, client_id: str) -> bool:
         """
@@ -127,21 +137,37 @@ class PasswordResetService(AuthServiceBase, IPasswordResetService):
             
         Returns:
             True (always, for security)
+            
+        Raises:
+            EmailServiceException: If email sending fails (non-blocking, token still valid)
+            DomainException: If technical error occurs
         """
         logger.info("Password reset request", extra={"email": email, "client_id": client_id})
         
-        user = await self.repository.find_by_email(email, client_id=client_id)
-        
-        # Security: Always return True to prevent user enumeration
-        if not user or not user.active:
-            if not user:
-                logger.warning("Password reset requested for non-existent email", extra={"email": email, "client_id": client_id})
-            else:
-                logger.warning("Password reset requested for inactive user", extra={"user_id": user.id, "client_id": client_id})
+        try:
+            user = await self.repository.find_by_email(email, client_id=client_id)
+            
+            # Security: Always return True to prevent user enumeration
+            if not user or not user.active:
+                if not user:
+                    logger.warning("Password reset requested for non-existent email", extra={"email": email, "client_id": client_id})
+                else:
+                    logger.warning("Password reset requested for inactive user", extra={"user_id": user.id, "client_id": client_id})
+                return True
+            
+            try:
+                await self._process_password_reset_for_user(user, client_id)
+            except EmailServiceException:
+                # Email failed but token is valid - log and continue
+                logger.warning("Password reset token generated but email sending failed", extra={"user_id": user.id, "client_id": client_id})
+                # Still return True - token is valid even if email fails
+            
             return True
-        
-        await self._process_password_reset_for_user(user, client_id)
-        return True
+            
+        except Exception as e:
+            # Log but don't fail - security: always return True
+            logger.error(f"Unexpected error during password reset request: {e}", exc_info=True, extra={"email": email, "client_id": client_id})
+            return True
     
     async def _validate_reset_token(
         self, reset_token: str, client_id: str
@@ -160,29 +186,33 @@ class PasswordResetService(AuthServiceBase, IPasswordResetService):
             Tuple of (user_id, user)
             
         Raises:
-            ValueError: If token is invalid, expired, used, or user is inactive
+            InvalidTokenException: If token is invalid, expired, used, or user is inactive
+            UserNotFoundException: If user not found
         """
         payload = self.verify_token(reset_token)
         if not payload or payload.get("type") != "password_reset":
-            raise ValueError("Invalid or expired reset token")
+            raise InvalidTokenException()
         
         token_client_id = payload.get("client_id")
         if token_client_id != client_id:
-            raise ValueError("Invalid reset token - client mismatch")
+            raise InvalidTokenException()
         
         user_id = payload.get("user_id")
         if not user_id:
-            raise ValueError("Invalid reset token payload")
+            raise InvalidTokenException()
         
         cache_key = f"password_reset:{client_id}:{reset_token}"
         stored_user_id = await self.cache.get(cache_key)
         if not stored_user_id or stored_user_id != user_id:
             logger.warning("Password reset token not found in Redis or already used", extra={"client_id": client_id})
-            raise ValueError("Reset token has been used or expired")
+            raise InvalidTokenException()
         
         user = await self.repository.find_by_id(user_id, client_id=client_id)
-        if not user or not user.active:
-            raise ValueError("User not found or account is deactivated")
+        if not user:
+            raise UserNotFoundException(user_id=user_id)
+        
+        if not user.active:
+            raise InvalidTokenException()
         
         return user_id, user
     
@@ -227,13 +257,24 @@ class PasswordResetService(AuthServiceBase, IPasswordResetService):
             True if successful
             
         Raises:
-            ValueError: If reset token is invalid, expired, or already used
+            InvalidTokenException: If reset token is invalid, expired, or already used
+            UserNotFoundException: If user not found
+            ValidationException: If password doesn't meet requirements
+            DomainException: If technical error occurs
         """
         logger.info("Password reset attempt", extra={"client_id": client_id})
         
-        user_id, user = await self._validate_reset_token(reset_token, client_id)
-        await self._update_password_and_revoke_tokens(user, new_password, reset_token, client_id)
-        
-        logger.info("Password reset successful", extra={"user_id": user_id, "client_id": client_id})
-        return True
+        try:
+            user_id, user = await self._validate_reset_token(reset_token, client_id)
+            await self._update_password_and_revoke_tokens(user, new_password, reset_token, client_id)
+            
+            logger.info("Password reset successful", extra={"user_id": user_id, "client_id": client_id})
+            return True
+            
+        except (InvalidTokenException, UserNotFoundException, ValidationException):
+            # Domain exceptions - let them propagate
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during password reset: {e}", exc_info=True, extra={"client_id": client_id})
+            raise DomainException("Failed to reset password due to technical error", "PASSWORD_RESET_FAILED")
 

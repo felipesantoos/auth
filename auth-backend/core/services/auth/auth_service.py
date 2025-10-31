@@ -12,6 +12,16 @@ from core.interfaces.secondary.settings_provider_interface import SettingsProvid
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
 from core.services.filters.user_filter import UserFilter
+from core.exceptions import (
+    InvalidCredentialsException,
+    UserNotFoundException,
+    EmailAlreadyExistsException,
+    ValidationException,
+    InvalidTokenException,
+    TokenExpiredException,
+    DomainException,
+    BusinessRuleException,
+)
 from .auth_service_base import AuthServiceBase
 
 logger = logging.getLogger(__name__)
@@ -59,14 +69,14 @@ class AuthService(AuthServiceBase, IAuthService):
             Validated user
             
         Raises:
-            ValueError: If credentials are invalid (generic message for security)
+            InvalidCredentialsException: If credentials are invalid (generic message for security)
         """
         user = await self.repository.find_by_email(email, client_id=client_id)
         if not user or user.client_id != client_id or not user.active:
-            raise ValueError("Invalid email or password")
+            raise InvalidCredentialsException()
         
         if not self._verify_password(password, user.password_hash):
-            raise ValueError("Invalid email or password")
+            raise InvalidCredentialsException()
         
         return user
     
@@ -87,29 +97,33 @@ class AuthService(AuthServiceBase, IAuthService):
             Tuple of (payload, client_id, user_id)
             
         Raises:
-            ValueError: If token is invalid, revoked, or user is inactive
+            InvalidTokenException: If token is invalid, revoked, or user is inactive
+            UserNotFoundException: If user not found
         """
         payload = self.verify_token(refresh_token)
         if not payload or payload.get("type") != "refresh":
-            raise ValueError("Invalid refresh token")
+            raise InvalidTokenException()
         
         client_id_to_use = self._resolve_client_id_from_token(payload, client_id)
         if not client_id_to_use:
-            raise ValueError("Invalid refresh token")
+            raise InvalidTokenException()
         
         user_id = payload.get("user_id")
         if not user_id:
-            raise ValueError("Invalid token payload")
+            raise InvalidTokenException()
         
         cache_key = f"{client_id_to_use}:refresh_token:{refresh_token}"
         stored_user_id = await self.cache.get(cache_key)
         if not stored_user_id or stored_user_id != user_id:
             logger.warning("Refresh token not found in Redis or revoked", extra={"client_id": client_id_to_use})
-            raise ValueError("Refresh token has been revoked")
+            raise InvalidTokenException()
         
         user = await self.repository.find_by_id(user_id, client_id=client_id_to_use)
-        if not user or not user.active:
-            raise ValueError("User not found or inactive")
+        if not user:
+            raise UserNotFoundException(user_id=user_id)
+        
+        if not user.active:
+            raise InvalidCredentialsException()
         
         return payload, client_id_to_use, user_id
     
@@ -128,9 +142,15 @@ class AuthService(AuthServiceBase, IAuthService):
             Tuple of (access_token, refresh_token, user)
             
         Raises:
-            ValueError: If credentials are invalid or user doesn't belong to client
+            InvalidCredentialsException: If credentials are invalid or user doesn't belong to client
         """
-        user = await self._validate_login_credentials(email, password, client_id)
+        try:
+            user = await self._validate_login_credentials(email, password, client_id)
+        except InvalidCredentialsException:
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during login: {e}", exc_info=True, extra={"email": email, "client_id": client_id})
+            raise DomainException("Failed to authenticate user due to technical error", "AUTHENTICATION_FAILED")
         access_token, refresh_token = await self._generate_and_store_tokens(user.id, client_id)
         
         logger.info("Login successful", extra={"user_id": user.id, "client_id": client_id})
@@ -191,11 +211,11 @@ class AuthService(AuthServiceBase, IAuthService):
         Ensure email doesn't already exist for the client.
         
         Raises:
-            ValueError: If email already exists
+            EmailAlreadyExistsException: If email already exists
         """
         existing = await self.repository.find_by_email(email, client_id=client_id)
         if existing:
-            raise ValueError(f"Email '{email}' is already registered for this client")
+            raise EmailAlreadyExistsException(email)
     
     def _validate_and_hash_password(self, password: str) -> str:
         """
@@ -256,11 +276,28 @@ class AuthService(AuthServiceBase, IAuthService):
             
         Returns:
             Created user
+            
+        Raises:
+            EmailAlreadyExistsException: If email already exists
+            ValidationException: If validation fails
+            DomainException: If technical error occurs
         """
-        await self._ensure_email_not_exists(email, client_id)
-        password_hash = self._validate_and_hash_password(password)
-        user = self._create_user_domain_object(username, email, password_hash, name, client_id)
-        return await self.repository.save(user)
+        try:
+            await self._ensure_email_not_exists(email, client_id)
+            password_hash = self._validate_and_hash_password(password)
+            user = self._create_user_domain_object(username, email, password_hash, name, client_id)
+            
+            created_user = await self.repository.save(user)
+            logger.info("User registered successfully", extra={"user_id": created_user.id, "email": email, "client_id": client_id})
+            return created_user
+            
+        except (EmailAlreadyExistsException, ValidationException):
+            # Domain exceptions - let them propagate
+            raise
+        except Exception as e:
+            # Unexpected error (database, network, etc.)
+            logger.error(f"Unexpected error registering user: {e}", exc_info=True, extra={"email": email, "client_id": client_id})
+            raise DomainException("Failed to register user due to technical error", "USER_REGISTRATION_FAILED")
     
     async def change_password(
         self, user_id: str, old_password: str, new_password: str, client_id: Optional[str] = None
@@ -273,22 +310,36 @@ class AuthService(AuthServiceBase, IAuthService):
             old_password: Current password
             new_password: New password
             client_id: Optional client ID for validation
+            
+        Raises:
+            UserNotFoundException: If user not found
+            InvalidCredentialsException: If current password is incorrect
+            ValidationException: If new password doesn't meet requirements
+            DomainException: If technical error occurs
         """
-        user = await self.repository.find_by_id(user_id, client_id=client_id)
-        if not user:
-            raise ValueError("User not found")
-        
-        if not self._verify_password(old_password, user.password_hash):
-            raise ValueError("Current password is incorrect")
-        
-        new_password_hash = self._validate_and_hash_password(new_password)
-        user.change_password_hash(new_password_hash)  # Use controlled method for encapsulation
-        user.updated_at = datetime.utcnow()
-        
-        await self.repository.save(user)
-        
-        logger.info("Password changed successfully", extra={"user_id": user_id, "client_id": user.client_id})
-        return True
+        try:
+            user = await self.repository.find_by_id(user_id, client_id=client_id)
+            if not user:
+                raise UserNotFoundException(user_id=user_id)
+            
+            if not self._verify_password(old_password, user.password_hash):
+                raise InvalidCredentialsException()
+            
+            new_password_hash = self._validate_and_hash_password(new_password)
+            user.change_password_hash(new_password_hash)  # Use controlled method for encapsulation
+            user.updated_at = datetime.utcnow()
+            
+            await self.repository.save(user)
+            
+            logger.info("Password changed successfully", extra={"user_id": user_id, "client_id": user.client_id})
+            return True
+            
+        except (UserNotFoundException, InvalidCredentialsException, ValidationException):
+            # Domain exceptions - let them propagate
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error changing password: {e}", exc_info=True, extra={"user_id": user_id, "client_id": client_id})
+            raise DomainException("Failed to change password due to technical error", "PASSWORD_CHANGE_FAILED")
     
     async def get_current_user(self, user_id: str, client_id: Optional[str] = None) -> Optional[AppUser]:
         """
@@ -306,6 +357,9 @@ class AuthService(AuthServiceBase, IAuthService):
         
         Filter Pattern: Service passes filter directly to repository.
         NO conditional logic here - repository handles all filtering, pagination, and sorting.
+        
+        Returns:
+            List of users (empty list if error, graceful degradation)
         """
         logger.info("Listing users", extra={"filter": filter})
         
@@ -314,8 +368,9 @@ class AuthService(AuthServiceBase, IAuthService):
             logger.info(f"Found {len(result)} users")
             return result
         except Exception as e:
-            logger.error(f"Error listing users: {str(e)}", exc_info=True)
-            raise
+            logger.error(f"Error listing users: {str(e)}", exc_info=True, extra={"filter": filter})
+            # Graceful degradation: return empty list instead of failing
+            return []
     
     async def count_users(self, filter: Optional[UserFilter] = None) -> int:
         """
@@ -323,6 +378,9 @@ class AuthService(AuthServiceBase, IAuthService):
         
         Filter Pattern: Uses same filter as list_all_users but without pagination/sorting.
         Simple delegation - repository handles all filter logic.
+        
+        Returns:
+            Count of users (0 if error, graceful degradation)
         """
         logger.info("Counting users", extra={"filter": filter})
         
@@ -331,8 +389,9 @@ class AuthService(AuthServiceBase, IAuthService):
             logger.info(f"Counted {result} users")
             return result
         except Exception as e:
-            logger.error(f"Error counting users: {str(e)}", exc_info=True)
-            raise
+            logger.error(f"Error counting users: {str(e)}", exc_info=True, extra={"filter": filter})
+            # Graceful degradation: return 0 instead of failing
+            return 0
     
     async def get_user_by_email(self, email: str, client_id: Optional[str] = None) -> Optional[AppUser]:
         """
@@ -373,9 +432,23 @@ class AuthService(AuthServiceBase, IAuthService):
             user_id: ID of user to delete
             admin_id: ID of admin performing the deletion
             client_id: Optional client ID for validation
+            
+        Raises:
+            BusinessRuleException: If trying to delete own account
+            DomainException: If technical error occurs
         """
-        if user_id == admin_id:
-            raise ValueError("Cannot delete your own account")
-        
-        return await self.repository.delete(user_id, client_id=client_id)
+        try:
+            if user_id == admin_id:
+                raise BusinessRuleException("Cannot delete your own account", "CANNOT_DELETE_OWN_ACCOUNT")
+            
+            result = await self.repository.delete(user_id, client_id=client_id)
+            if result:
+                logger.info("User deleted successfully", extra={"user_id": user_id, "admin_id": admin_id, "client_id": client_id})
+            return result
+            
+        except BusinessRuleException:
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error deleting user: {e}", exc_info=True, extra={"user_id": user_id, "admin_id": admin_id, "client_id": client_id})
+            raise DomainException("Failed to delete user due to technical error", "USER_DELETION_FAILED")
 
