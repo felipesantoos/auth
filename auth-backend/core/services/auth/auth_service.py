@@ -3,7 +3,7 @@ Authentication Service Implementation
 Implements IAuthService - core authentication operations (login, logout, register, etc.)
 """
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from datetime import datetime
 from core.interfaces.primary.auth_service_interface import IAuthService
 from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
@@ -11,7 +11,7 @@ from core.interfaces.secondary.cache_service_interface import CacheServiceInterf
 from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
-from core.domain.auth.user_filter import UserFilter
+from core.services.filters.user_filter import UserFilter
 from .auth_service_base import AuthServiceBase
 
 logger = logging.getLogger(__name__)
@@ -300,15 +300,39 @@ class AuthService(AuthServiceBase, IAuthService):
         """
         return await self.repository.find_by_id(user_id, client_id=client_id)
     
-    async def list_all_users(self, client_id: Optional[str] = None) -> list[AppUser]:
+    async def list_all_users(self, filter: Optional[UserFilter] = None) -> List[AppUser]:
         """
-        List all users (admin only, filtered by client_id if provided).
+        List all users with optional filter (admin only).
         
-        Args:
-            client_id: Optional client ID to filter users
+        Filter Pattern: Service passes filter directly to repository.
+        NO conditional logic here - repository handles all filtering, pagination, and sorting.
         """
-        filter_obj = UserFilter(client_id=client_id) if client_id else None
-        return await self.repository.find_all(filter=filter_obj)
+        logger.info("Listing users", extra={"filter": filter})
+        
+        try:
+            result = await self.repository.find_all(filter)
+            logger.info(f"Found {len(result)} users")
+            return result
+        except Exception as e:
+            logger.error(f"Error listing users: {str(e)}", exc_info=True)
+            raise
+    
+    async def count_users(self, filter: Optional[UserFilter] = None) -> int:
+        """
+        Counts users with optional filter.
+        
+        Filter Pattern: Uses same filter as list_all_users but without pagination/sorting.
+        Simple delegation - repository handles all filter logic.
+        """
+        logger.info("Counting users", extra={"filter": filter})
+        
+        try:
+            result = await self.repository.count(filter)
+            logger.info(f"Counted {result} users")
+            return result
+        except Exception as e:
+            logger.error(f"Error counting users: {str(e)}", exc_info=True)
+            raise
     
     async def get_user_by_email(self, email: str, client_id: Optional[str] = None) -> Optional[AppUser]:
         """

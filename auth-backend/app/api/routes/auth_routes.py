@@ -5,7 +5,7 @@ Adapted for multi-tenant architecture
 """
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from core.interfaces.primary.auth_service_interface import IAuthService
 from core.interfaces.primary.password_reset_service_interface import IPasswordResetService
 
@@ -27,6 +27,13 @@ from app.api.dtos.response.auth_response import (
     MessageResponse,
 )
 from app.api.mappers.auth_mapper import AuthMapper
+from app.api.dtos.response.paginated_response import PaginatedResponse
+from app.api.utils.pagination import (
+    create_paginated_response,
+    get_default_page_size,
+    validate_page_size,
+)
+from core.services.filters.user_filter import UserFilter
 from app.api.dicontainer.dicontainer import (
     get_auth_service,
     get_password_reset_service,
@@ -265,22 +272,69 @@ async def get_me(
 
 # ========== Admin User Management Endpoints ==========
 
-@router.get("/users", response_model=list[UserResponse])
+@router.get("/users", response_model=PaginatedResponse[UserResponse])
 async def list_users(
     request: Request,
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    page_size: int = Query(None, ge=1, le=100, description="Items per page"),
+    search: Optional[str] = Query(None, description="Search in username, email, name"),
+    role: Optional[str] = Query(None, description="Filter by role"),
+    active: Optional[bool] = Query(None, description="Filter by active status"),
+    email: Optional[str] = Query(None, description="Filter by email"),
+    username: Optional[str] = Query(None, description="Filter by username"),
+    sort_by: Optional[str] = Query(None, description="Field to sort by (e.g., 'full_name', 'created_at')"),
+    sort_order: Optional[str] = Query("asc", regex="^(asc|desc)$", description="Sort order"),
     auth_service: IAuthService = Depends(get_auth_service),
     current_user: AppUser = Depends(get_current_admin_user),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
-    List all users for the current client (admin only, multi-tenant).
+    List all users for the current client with pagination and filtering (admin only, multi-tenant).
     
     Returns users only from the same client as the authenticated admin.
+    Supports pagination, search, filtering, and sorting.
     Requires admin authentication.
     """
     # Multi-tenant: Only list users from current user's client
-    users = await auth_service.list_all_users(client_id=current_user.client_id)
-    return [AuthMapper.to_user_response(user) for user in users]
+    validated_page_size = validate_page_size(page_size) if page_size else get_default_page_size()
+    
+    # Build filter
+    user_filter = UserFilter(
+        client_id=current_user.client_id,  # Multi-tenant isolation
+        page=page,
+        page_size=validated_page_size,
+        search=search,
+        email=email,
+        username=username,
+        active=active,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+    
+    # Convert role string to enum if provided
+    if role:
+        try:
+            user_filter.role = UserRole(role)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {role}",
+            )
+    
+    # Get paginated results
+    users = await auth_service.list_all_users(filter=user_filter)
+    total_items = await auth_service.count_users(filter=user_filter)
+    
+    # Convert to response DTOs
+    user_responses = [AuthMapper.to_user_response(user) for user in users]
+    
+    # Create paginated response
+    return create_paginated_response(
+        items=user_responses,
+        page=page,
+        page_size=validated_page_size,
+        total_items=total_items,
+    )
 
 
 @router.get("/users/by-email", response_model=UserResponse)

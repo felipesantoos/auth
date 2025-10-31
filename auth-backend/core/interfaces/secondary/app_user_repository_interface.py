@@ -6,7 +6,7 @@ Adapted for multi-tenant architecture
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_filter import UserFilter
+from core.services.filters.user_filter import UserFilter
 
 
 class AppUserRepositoryInterface(ABC):
@@ -72,6 +72,25 @@ class AppUserRepositoryInterface(ABC):
         Args:
             user_id: User ID
             client_id: Optional client ID for multi-tenant isolation
+        """
+        pass
+    
+    @abstractmethod
+    async def count(self, filter: Optional[UserFilter] = None) -> int:
+        """
+        Counts users with optional filtering.
+        
+        Filter Pattern: Uses same filter as find_all() but WITHOUT pagination/sorting.
+        Essential for calculating total_pages in paginated responses.
+        
+        Args:
+            filter: Optional filter object (applies search and specific filters only):
+                - search: General search term (BaseFilter)
+                - client_id, role, active, email, username: User-specific filters
+                - Note: pagination and sorting are ignored in count
+        
+        Returns:
+            Total number of users matching the filter criteria (unpaginated count)
         """
         pass
 

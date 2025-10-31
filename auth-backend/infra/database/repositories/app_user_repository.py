@@ -5,13 +5,13 @@ Adapted for multi-tenant architecture with client_id filtering
 """
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy import select, delete as sql_delete, and_
+from sqlalchemy import select, delete as sql_delete, and_, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.interfaces.secondary.app_user_repository_interface import (
     AppUserRepositoryInterface,
 )
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_filter import UserFilter
+from core.services.filters.user_filter import UserFilter
 from infra.database.models.app_user import DBAppUser
 from infra.database.mappers.app_user_mapper import AppUserMapper
 
@@ -36,15 +36,28 @@ class AppUserRepository(AppUserRepositoryInterface):
         self.session = session
     
     async def find_all(self, filter: Optional[UserFilter] = None) -> List[AppUser]:
-        """Lists all users with optional filtering (respects client_id)"""
+        """
+        Lists all users with optional filtering, pagination, and sorting.
+        
+        Filter Pattern: Applies all filters, pagination, and sorting at SQL level.
+        """
         query = select(DBAppUser)
         conditions = []
         
-        # Multi-tenant: Always filter by client_id if provided
-        if filter and filter.client_id:
-            conditions.append(DBAppUser.client_id == filter.client_id)
-        
         if filter:
+            # Multi-tenant: Always filter by client_id if provided
+            if filter.client_id:
+                conditions.append(DBAppUser.client_id == filter.client_id)
+            
+            # Apply search filter (from BaseFilter)
+            if filter.search:
+                search_conditions = [
+                    DBAppUser.username.ilike(f"%{filter.search}%"),
+                    DBAppUser.email.ilike(f"%{filter.search}%"),
+                    DBAppUser.full_name.ilike(f"%{filter.search}%"),
+                ]
+                conditions.append(or_(*search_conditions))
+            
             # Apply specific filters
             if filter.email:
                 conditions.append(DBAppUser.email.ilike(f"%{filter.email}%"))
@@ -54,12 +67,31 @@ class AppUserRepository(AppUserRepositoryInterface):
                 conditions.append(DBAppUser.role == filter.role.value)
             if filter.active is not None:
                 conditions.append(DBAppUser.is_active == filter.active)
-        
-        if conditions:
-            query = query.where(and_(*conditions))
-        
-        # Default ordering
-        query = query.order_by(DBAppUser.full_name)
+            
+            # Add all conditions
+            if conditions:
+                query = query.where(and_(*conditions))
+            
+            # Apply sorting (from BaseFilter)
+            if filter.sort_by:
+                column = getattr(DBAppUser, filter.sort_by, None)
+                if column is not None:
+                    if filter.sort_order == "desc":
+                        query = query.order_by(column.desc())
+                    else:
+                        query = query.order_by(column.asc())
+            else:
+                # Default ordering
+                query = query.order_by(DBAppUser.full_name)
+            
+            # Apply pagination (from BaseFilter)
+            if filter.limit is not None or filter.page_size is not None:
+                query = query.limit(filter.get_limit())
+            if filter.offset is not None or filter.page is not None:
+                query = query.offset(filter.get_offset())
+        else:
+            # No filter - apply default ordering
+            query = query.order_by(DBAppUser.full_name)
         
         result = await self.session.execute(query)
         db_users = result.scalars().all()
@@ -157,4 +189,46 @@ class AppUserRepository(AppUserRepositoryInterface):
         result = await self.session.execute(query)
         await self.session.flush()
         return result.rowcount > 0
+    
+    async def count(self, filter: Optional[UserFilter] = None) -> int:
+        """
+        Counts users with optional filtering.
+        
+        Filter Pattern: Uses same filter conditions as find_all() but WITHOUT pagination/sorting.
+        Essential for calculating total_pages in paginated responses.
+        """
+        query = select(func.count(DBAppUser.id))
+        
+        if filter:
+            conditions = []
+            
+            # Multi-tenant: Always filter by client_id if provided
+            if filter.client_id:
+                conditions.append(DBAppUser.client_id == filter.client_id)
+            
+            # Apply search filter (from BaseFilter)
+            if filter.search:
+                search_conditions = [
+                    DBAppUser.username.ilike(f"%{filter.search}%"),
+                    DBAppUser.email.ilike(f"%{filter.search}%"),
+                    DBAppUser.full_name.ilike(f"%{filter.search}%"),
+                ]
+                conditions.append(or_(*search_conditions))
+            
+            # Apply specific filters (same as find_all)
+            if filter.email:
+                conditions.append(DBAppUser.email.ilike(f"%{filter.email}%"))
+            if filter.username:
+                conditions.append(DBAppUser.username.ilike(f"%{filter.username}%"))
+            if filter.role:
+                conditions.append(DBAppUser.role == filter.role.value)
+            if filter.active is not None:
+                conditions.append(DBAppUser.is_active == filter.active)
+            
+            # Add all conditions (NO pagination or sorting)
+            if conditions:
+                query = query.where(and_(*conditions))
+        
+        result = await self.session.execute(query)
+        return result.scalar() or 0
 

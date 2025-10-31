@@ -4,8 +4,9 @@ Defines core authentication operations (login, logout, register, etc.)
 Following Interface Segregation Principle
 """
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from core.domain.auth.app_user import AppUser
+from core.services.filters.user_filter import UserFilter
 
 
 class IAuthService(ABC):
@@ -136,15 +137,42 @@ class IAuthService(ABC):
     # ========== Admin Operations ==========
     
     @abstractmethod
-    async def list_all_users(self, client_id: Optional[str] = None) -> list[AppUser]:
+    async def list_all_users(self, filter: Optional[UserFilter] = None) -> List[AppUser]:
         """
-        List all users (admin only, filtered by client_id if provided).
+        List all users with optional filter (admin only).
+        
+        Filter Pattern: Service accepts filter and passes directly to repository.
+        No conditional logic here - repository handles all filtering, pagination, and sorting.
         
         Args:
-            client_id: Optional client ID to filter users
+            filter: Optional filter object containing:
+                - search: General search term (BaseFilter) - searches in username, email, name
+                - page/page_size or offset/limit: Pagination (BaseFilter)
+                - sort_by/sort_order: Sorting (BaseFilter)
+                - client_id: Filter by client (tenant) - required for multi-tenant isolation
+                - role, active, email, username: User-specific filters
         
         Returns:
-            List of users
+            List of users matching the filter criteria (paginated and sorted)
+        """
+        pass
+    
+    @abstractmethod
+    async def count_users(self, filter: Optional[UserFilter] = None) -> int:
+        """
+        Counts users with optional filter.
+        
+        Filter Pattern: Uses same filter as list_all_users but without pagination/sorting.
+        Essential for pagination metadata (total_pages, has_next, etc.).
+        
+        Args:
+            filter: Optional filter object (same filters as list_all_users):
+                - search: General search term (BaseFilter)
+                - client_id, role, active, email, username: User-specific filters
+                - Note: pagination and sorting are ignored in count
+        
+        Returns:
+            Total number of users matching the filter criteria (unpaginated count)
         """
         pass
     
