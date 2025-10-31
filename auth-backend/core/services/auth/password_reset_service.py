@@ -95,6 +95,25 @@ class PasswordResetService(AuthServiceBase, IPasswordResetService):
         ttl_seconds = 60 * 60  # 1 hour
         await self.cache.set(cache_key, user_id, ttl=ttl_seconds)
     
+    async def _process_password_reset_for_user(self, user: AppUser, client_id: str) -> None:
+        """
+        Generate reset token and send email for valid user.
+        
+        Non-blocking email sending - token is valid even if email fails.
+        
+        Args:
+            user: Valid active user
+            client_id: Client (tenant) ID
+        """
+        reset_token = self._generate_reset_token(user.id, user.email, client_id)
+        await self._store_reset_token(reset_token, user.id, client_id)
+        
+        try:
+            await self.email_service.send_password_reset_email(user.email, reset_token, client_id)
+            logger.info("Password reset email sent", extra={"user_id": user.id, "client_id": client_id})
+        except Exception as e:
+            logger.error(f"Failed to send password reset email: {str(e)}", extra={"user_id": user.id}, exc_info=True)
+    
     async def forgot_password(self, email: str, client_id: str) -> bool:
         """
         Request password reset (generate reset token) (multi-tenant).
@@ -121,16 +140,7 @@ class PasswordResetService(AuthServiceBase, IPasswordResetService):
                 logger.warning("Password reset requested for inactive user", extra={"user_id": user.id, "client_id": client_id})
             return True
         
-        reset_token = self._generate_reset_token(user.id, user.email, client_id)
-        await self._store_reset_token(reset_token, user.id, client_id)
-        
-        # Send email (non-blocking - token is valid even if email fails)
-        try:
-            await self.email_service.send_password_reset_email(email, reset_token, client_id)
-            logger.info("Password reset email sent", extra={"user_id": user.id, "client_id": client_id})
-        except Exception as e:
-            logger.error(f"Failed to send password reset email: {str(e)}", extra={"user_id": user.id}, exc_info=True)
-        
+        await self._process_password_reset_for_user(user, client_id)
         return True
     
     async def _validate_reset_token(
@@ -164,7 +174,6 @@ class PasswordResetService(AuthServiceBase, IPasswordResetService):
         if not user_id:
             raise ValueError("Invalid reset token payload")
         
-        # Check if token exists in Redis (validates single-use - delete after successful reset)
         cache_key = f"password_reset:{client_id}:{reset_token}"
         stored_user_id = await self.cache.get(cache_key)
         if not stored_user_id or stored_user_id != user_id:

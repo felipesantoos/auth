@@ -101,14 +101,12 @@ class AuthService(AuthServiceBase, IAuthService):
         if not user_id:
             raise ValueError("Invalid token payload")
         
-        # Check if token exists in Redis (not revoked) - validates token hasn't been logged out
         cache_key = f"{client_id_to_use}:refresh_token:{refresh_token}"
         stored_user_id = await self.cache.get(cache_key)
         if not stored_user_id or stored_user_id != user_id:
             logger.warning("Refresh token not found in Redis or revoked", extra={"client_id": client_id_to_use})
             raise ValueError("Refresh token has been revoked")
         
-        # Verify user still exists and is active (user might have been deactivated)
         user = await self.repository.find_by_id(user_id, client_id=client_id_to_use)
         if not user or not user.active:
             raise ValueError("User not found or inactive")
@@ -154,7 +152,6 @@ class AuthService(AuthServiceBase, IAuthService):
         if not client_id_to_use:
             return False
         
-        # Revoke token by deleting from Redis (enables immediate logout)
         cache_key = f"{client_id_to_use}:refresh_token:{refresh_token}"
         await self.cache.delete(cache_key)
         
@@ -179,17 +176,70 @@ class AuthService(AuthServiceBase, IAuthService):
         """
         payload, client_id_to_use, user_id = await self._validate_refresh_token(refresh_token, client_id)
         
-        # Generate new tokens (token rotation for security)
         new_access_token, new_refresh_token = await self._generate_and_store_tokens(
             user_id, client_id_to_use
         )
         
-        # Revoke old refresh token (token rotation - one token valid at a time)
         cache_key = f"{client_id_to_use}:refresh_token:{refresh_token}"
         await self.cache.delete(cache_key)
         
         logger.info("Token refresh successful", extra={"user_id": user_id, "client_id": client_id_to_use})
         return new_access_token, new_refresh_token
+    
+    async def _ensure_email_not_exists(self, email: str, client_id: str) -> None:
+        """
+        Ensure email doesn't already exist for the client.
+        
+        Raises:
+            ValueError: If email already exists
+        """
+        existing = await self.repository.find_by_email(email, client_id=client_id)
+        if existing:
+            raise ValueError(f"Email '{email}' is already registered for this client")
+    
+    def _validate_and_hash_password(self, password: str) -> str:
+        """
+        Validate password strength and hash it.
+        
+        Raises:
+            ValueError: If password doesn't meet strength requirements
+            
+        Returns:
+            Hashed password
+        """
+        self._validate_password_strength(password)
+        return self._hash_password(password)
+    
+    def _create_user_domain_object(
+        self, username: str, email: str, password_hash: str, name: str, client_id: str
+    ) -> AppUser:
+        """
+        Create and validate user domain object.
+        
+        Args:
+            username: Username
+            email: User email
+            password_hash: Hashed password
+            name: User full name
+            client_id: Client (tenant) ID
+            
+        Returns:
+            Created and validated user domain object
+        """
+        user = AppUser(
+            id=None,
+            username=username,
+            email=email,
+            password_hash=password_hash,
+            name=name,
+            role=UserRole.USER,
+            client_id=client_id,
+            active=True,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        user.validate()
+        return user
     
     async def register(
         self, username: str, email: str, password: str, name: str, client_id: str
@@ -207,35 +257,9 @@ class AuthService(AuthServiceBase, IAuthService):
         Returns:
             Created user
         """
-        # Check if email already exists within client (multi-tenant)
-        existing = await self.repository.find_by_email(email, client_id=client_id)
-        if existing:
-            raise ValueError(f"Email '{email}' is already registered for this client")
-        
-        # Validate password strength
-        self._validate_password_strength(password)
-        
-        # Hash password
-        password_hash = self._hash_password(password)
-        
-        # Create user (default role is USER)
-        user = AppUser(
-            id=None,
-            username=username,
-            email=email,
-            password_hash=password_hash,
-            name=name,
-            role=UserRole.USER,
-            client_id=client_id,  # Multi-tenant
-            active=True,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-        )
-        
-        # Validate
-        user.validate()
-        
-        # Save
+        await self._ensure_email_not_exists(email, client_id)
+        password_hash = self._validate_and_hash_password(password)
+        user = self._create_user_domain_object(username, email, password_hash, name, client_id)
         return await self.repository.save(user)
     
     async def change_password(
@@ -250,20 +274,14 @@ class AuthService(AuthServiceBase, IAuthService):
             new_password: New password
             client_id: Optional client ID for validation
         """
-        # Get user with client_id filtering (multi-tenant)
         user = await self.repository.find_by_id(user_id, client_id=client_id)
         if not user:
             raise ValueError("User not found")
         
-        # Verify old password
         if not self._verify_password(old_password, user.password_hash):
             raise ValueError("Current password is incorrect")
         
-        # Validate new password strength
-        self._validate_password_strength(new_password)
-        
-        # Hash and update
-        user.password_hash = self._hash_password(new_password)
+        user.password_hash = self._validate_and_hash_password(new_password)
         user.updated_at = datetime.utcnow()
         
         await self.repository.save(user)

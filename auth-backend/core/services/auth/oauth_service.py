@@ -81,7 +81,6 @@ class OAuthService(AuthServiceBase, IOAuthService):
             user = await self.repository.save(user)
             logger.info("New user created via OAuth", extra={"user_id": user.id, "provider": provider, "client_id": client_id})
         else:
-            # Update name if changed on OAuth provider
             if user.name != name:
                 user.name = name
                 user.updated_at = datetime.utcnow()

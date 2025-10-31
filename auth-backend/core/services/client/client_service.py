@@ -75,7 +75,6 @@ class ClientService(ClientServiceInterface):
     async def update_client(self, client: Client) -> Client:
         """Update client"""
         client.validate()
-        # Update timestamp to track when client was last modified
         client.updated_at = datetime.utcnow()
         return await self.repository.save(client)
     
