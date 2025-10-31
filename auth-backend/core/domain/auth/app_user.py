@@ -3,7 +3,7 @@ App User Domain Model
 Represents a system user with authentication and authorization
 Adapted for multi-tenant architecture with client_id
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 from datetime import datetime
 from .user_role import UserRole
@@ -15,20 +15,44 @@ class AppUser:
     Domain model for application user.
     
     This is pure business logic with no framework dependencies.
-    Following Single Responsibility Principle.
+    Following Single Responsibility Principle and Encapsulation.
     
     Multi-tenant: Each user belongs to a client (tenant).
+    
+    Encapsulation: password_hash is protected and accessed via property and controlled methods.
     """
     id: Optional[str]
     username: str
     email: str
-    password_hash: str
     name: str
     role: UserRole
     client_id: Optional[str]  # Multi-tenant: client (tenant) ID
     active: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    _password_hash: str = field(repr=False, init=True)
+    
+    @property
+    def password_hash(self) -> str:
+        """Read-only access to password hash (encapsulation)"""
+        return self._password_hash
+    
+    def change_password_hash(self, new_password_hash: str) -> None:
+        """
+        Change password hash (controlled modification).
+        
+        This method enforces that password hash changes go through proper validation.
+        Services should hash passwords before calling this method.
+        
+        Args:
+            new_password_hash: New hashed password
+            
+        Raises:
+            ValueError: If password hash is empty
+        """
+        if not new_password_hash:
+            raise ValueError("Password hash cannot be empty")
+        self._password_hash = new_password_hash
     
     def validate(self) -> None:
         """Business validation rules"""
@@ -41,7 +65,7 @@ class AppUser:
         if not self.name or len(self.name) < 2:
             raise ValueError("Name must have at least 2 characters")
         
-        if not self.password_hash:
+        if not self._password_hash:
             raise ValueError("Password hash is required")
         
         if not self.client_id:

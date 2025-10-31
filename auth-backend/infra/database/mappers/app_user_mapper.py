@@ -14,13 +14,13 @@ class AppUserMapper:
             id=db_user.id,
             username=db_user.username,
             email=db_user.email,
-            password_hash=db_user.hashed_password,
             name=db_user.full_name,
             role=UserRole(db_user.role),
             client_id=db_user.client_id,  # Multi-tenant
             active=db_user.is_active,
             created_at=db_user.created_at,
             updated_at=db_user.updated_at,
+            _password_hash=db_user.hashed_password,  # Use protected field for encapsulation
         )
     
     @staticmethod
@@ -32,7 +32,7 @@ class AppUserMapper:
         db_user.id = user.id
         db_user.username = user.username
         db_user.email = user.email
-        db_user.hashed_password = user.password_hash
+        db_user.hashed_password = user.password_hash  # Access via property (encapsulation)
         db_user.full_name = user.name
         db_user.role = user.role.value
         db_user.is_active = user.active

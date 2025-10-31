@@ -3,7 +3,7 @@ Client Domain Model
 Represents a tenant/client in the multi-tenant system
 """
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 from datetime import datetime
 
@@ -15,14 +15,21 @@ class Client:
     
     Each client represents a separate tenant with isolated users.
     This is pure business logic with no framework dependencies.
+    
+    Encapsulation: api_key is protected and accessed via property.
     """
     id: Optional[str]
     name: str
     subdomain: str
-    api_key: Optional[str] = None
     active: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    _api_key: Optional[str] = field(default=None, repr=False)
+    
+    @property
+    def api_key(self) -> Optional[str]:
+        """Read-only access to API key (encapsulation)"""
+        return self._api_key
     
     def validate(self) -> None:
         """Business validation rules"""
@@ -45,7 +52,15 @@ class Client:
         self.active = False
     
     def generate_api_key(self) -> str:
-        """Generate a new API key for the client"""
-        self.api_key = secrets.token_urlsafe(32)
-        return self.api_key
+        """
+        Generate a new API key for the client.
+        
+        This method encapsulates the API key generation logic and ensures
+        the key is always generated using secure methods.
+        
+        Returns:
+            The newly generated API key
+        """
+        self._api_key = secrets.token_urlsafe(32)
+        return self._api_key
 

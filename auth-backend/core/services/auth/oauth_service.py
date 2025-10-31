@@ -71,11 +71,11 @@ class OAuthService(AuthServiceBase, IOAuthService):
                 id=None,
                 username=username,
                 email=email,
-                password_hash=password_hash,
                 name=name,
                 role=UserRole.USER,
                 client_id=client_id,
-                active=True
+                active=True,
+                _password_hash=password_hash,  # Use protected field for encapsulation
             )
             user.validate()
             user = await self.repository.save(user)

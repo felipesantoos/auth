@@ -47,10 +47,10 @@ class ClientService(ClientServiceInterface):
             id=None,
             name=name,
             subdomain=subdomain.lower(),
-            api_key=None,
             active=True,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
+            _api_key=None,  # Use protected field for encapsulation
         )
         
         client.validate()

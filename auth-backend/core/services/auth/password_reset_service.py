@@ -202,7 +202,8 @@ class PasswordResetService(AuthServiceBase, IPasswordResetService):
             client_id: Client (tenant) ID
         """
         self._validate_password_strength(new_password)
-        user.password_hash = self._hash_password(new_password)
+        new_password_hash = self._hash_password(new_password)
+        user.change_password_hash(new_password_hash)  # Use controlled method for encapsulation
         user.updated_at = datetime.utcnow()
         await self.repository.save(user)
         

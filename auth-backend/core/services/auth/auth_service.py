@@ -230,13 +230,13 @@ class AuthService(AuthServiceBase, IAuthService):
             id=None,
             username=username,
             email=email,
-            password_hash=password_hash,
             name=name,
             role=UserRole.USER,
             client_id=client_id,
             active=True,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
+            _password_hash=password_hash,  # Use protected field for encapsulation
         )
         user.validate()
         return user
@@ -281,7 +281,8 @@ class AuthService(AuthServiceBase, IAuthService):
         if not self._verify_password(old_password, user.password_hash):
             raise ValueError("Current password is incorrect")
         
-        user.password_hash = self._validate_and_hash_password(new_password)
+        new_password_hash = self._validate_and_hash_password(new_password)
+        user.change_password_hash(new_password_hash)  # Use controlled method for encapsulation
         user.updated_at = datetime.utcnow()
         
         await self.repository.save(user)

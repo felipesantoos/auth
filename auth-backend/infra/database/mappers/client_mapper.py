@@ -16,10 +16,10 @@ class ClientMapper:
             id=db_client.id,
             name=db_client.name,
             subdomain=db_client.subdomain,
-            api_key=db_client.api_key,
             active=db_client.active,
             created_at=db_client.created_at,
             updated_at=db_client.updated_at,
+            _api_key=db_client.api_key,  # Use protected field for encapsulation
         )
     
     @staticmethod
@@ -31,7 +31,7 @@ class ClientMapper:
         db_client.id = client.id
         db_client.name = client.name
         db_client.subdomain = client.subdomain
-        db_client.api_key = client.api_key
+        db_client.api_key = client.api_key  # Access via property (encapsulation)
         db_client.active = client.active
         db_client.created_at = client.created_at
         db_client.updated_at = client.updated_at
