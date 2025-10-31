@@ -1,19 +1,25 @@
 """
 Dependency Injection Container
 Factory functions for service and repository dependencies
+Supports multiple repository implementations based on environment
+Following @03a-multiple-repositories.md patterns
 """
 import logging
 from infra.database.database import get_db_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
+from config.settings import settings
 
 # Client
 from infra.database.repositories.client_repository import ClientRepository
 from core.services.client.client_service import ClientService
 from core.interfaces.primary.client_service_interface import ClientServiceInterface
 
-# Auth
+# Auth Repositories
 from infra.database.repositories.app_user_repository import AppUserRepository
+from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
+
+# Auth Services
 from core.services.auth.auth_service import AuthService
 from core.services.auth.password_reset_service import PasswordResetService
 from core.services.auth.oauth_service import OAuthService
@@ -52,10 +58,29 @@ async def get_client_service(
     return ClientService(repository)
 
 
-def get_app_user_repository(
+async def get_app_user_repository(
     session: AsyncSession = Depends(get_db_session)
-) -> AppUserRepository:
-    """Factory for AppUser repository"""
+) -> AppUserRepositoryInterface:
+    """
+    Factory for AppUser repository with environment-based selection.
+    
+    Following @03a-multiple-repositories.md pattern:
+    - test: Use in-memory repository (fast, isolated, no database needed)
+    - production/development: Use PostgreSQL repository
+    
+    Returns:
+        AppUserRepositoryInterface implementation based on environment
+    """
+    environment = settings.environment.lower()
+    
+    # Always use in-memory for tests
+    if environment == "test":
+        from tests.repositories.in_memory_app_user_repository import InMemoryAppUserRepository
+        logger.info("Using InMemoryAppUserRepository for testing")
+        return InMemoryAppUserRepository()
+    
+    # For production/development: use PostgreSQL
+    logger.debug("Using AppUserRepository (PostgreSQL)")
     return AppUserRepository(session)
 
 
@@ -65,9 +90,10 @@ async def get_auth_service(
     """
     Factory for IAuthService interface.
     
+    Uses environment-based repository selection (see get_app_user_repository).
     Returns AuthService instance (implements only IAuthService).
     """
-    repository = AppUserRepository(session)
+    repository = await get_app_user_repository(session)
     cache_service = CacheService()
     settings_provider = SettingsProvider()
     return AuthService(
@@ -83,9 +109,10 @@ async def get_password_reset_service(
     """
     Factory for IPasswordResetService interface.
     
+    Uses environment-based repository selection (see get_app_user_repository).
     Returns PasswordResetService instance (implements only IPasswordResetService).
     """
-    repository = AppUserRepository(session)
+    repository = await get_app_user_repository(session)
     cache_service = CacheService()
     settings_provider = SettingsProvider()
     email_service = EmailService()
@@ -103,9 +130,10 @@ async def get_oauth_service(
     """
     Factory for IOAuthService interface.
     
+    Uses environment-based repository selection (see get_app_user_repository).
     Returns OAuthService instance (implements only IOAuthService).
     """
-    repository = AppUserRepository(session)
+    repository = await get_app_user_repository(session)
     cache_service = CacheService()
     settings_provider = SettingsProvider()
     return OAuthService(
