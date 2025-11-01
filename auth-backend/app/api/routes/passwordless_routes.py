@@ -22,7 +22,7 @@ from core.exceptions import InvalidTokenException, TokenExpiredException, UserNo
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/auth/passwordless", tags=["Passwordless Auth"])
+router = APIRouter(prefix="/api/auth/passwordless", tags=["Passwordless Auth"])
 
 
 @router.post("/send", response_model=SendMagicLinkResponse)

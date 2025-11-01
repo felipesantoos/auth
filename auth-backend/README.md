@@ -493,3 +493,22 @@ def downgrade() -> None:
     pass
 ```
 
+---
+
+## 📚 API Documentation
+
+Complete API reference and guides:
+
+- **[API Endpoints Reference](docs/API_ENDPOINTS.md)** - Full documentation of all authentication endpoints
+- Swagger/OpenAPI: Available at `/docs` when running in development mode
+
+### Quick Links
+
+- [Authentication Endpoints](docs/API_ENDPOINTS.md#authentication)
+- [OAuth2 Integration](docs/API_ENDPOINTS.md#oauth2-social-login)
+- [MFA Setup](docs/API_ENDPOINTS.md#multi-factor-authentication-mfa)
+- [Session Management](docs/API_ENDPOINTS.md#session-management)
+- [Admin User Management](docs/API_ENDPOINTS.md#authentication)
+
+---
+

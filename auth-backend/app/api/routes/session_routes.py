@@ -20,7 +20,7 @@ from core.services.auth.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/auth/sessions", tags=["Sessions"])
+router = APIRouter(prefix="/api/auth/sessions", tags=["Sessions"])
 
 
 @router.get("", response_model=ActiveSessionsResponse)

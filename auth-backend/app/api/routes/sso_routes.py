@@ -24,12 +24,12 @@ from core.exceptions import BusinessRuleException, InvalidCredentialsException
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["SSO"])
+router = APIRouter(prefix="/api/auth/sso", tags=["SSO"])
 
 
 # ========== SAML Routes ==========
 
-@router.get("/auth/saml/login")
+@router.get("/saml/login")
 async def saml_login(
     saml_service: Annotated[SAMLService, Depends(get_saml_service)],
     client_id: str = Query(..., description="Client ID"),
@@ -59,7 +59,7 @@ async def saml_login(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to initiate SAML login")
 
 
-@router.post("/auth/saml/acs")
+@router.post("/saml/acs")
 async def saml_acs(
     saml_service: Annotated[SAMLService, Depends(get_saml_service)],
     auth_service: Annotated[IAuthService, Depends(get_auth_service)],
@@ -125,7 +125,7 @@ async def saml_acs(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to process SAML response")
 
 
-@router.get("/auth/saml/metadata", response_class=HTMLResponse)
+@router.get("/saml/metadata", response_class=HTMLResponse)
 async def saml_metadata(
     saml_service: Annotated[SAMLService, Depends(get_saml_service)]
 ):
@@ -146,7 +146,7 @@ async def saml_metadata(
 
 # ========== OIDC Routes ==========
 
-@router.get("/auth/oidc/login")
+@router.get("/oidc/login")
 async def oidc_login(
     oidc_service: Annotated[OIDCService, Depends(get_oidc_service)],
     client_id: str = Query(..., description="Client ID")
@@ -166,7 +166,7 @@ async def oidc_login(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to initiate OIDC login")
 
 
-@router.get("/auth/oidc/callback")
+@router.get("/oidc/callback")
 async def oidc_callback(
     oidc_service: Annotated[OIDCService, Depends(get_oidc_service)],
     auth_service: Annotated[IAuthService, Depends(get_auth_service)],
@@ -229,7 +229,7 @@ async def oidc_callback(
 
 # ========== LDAP Routes ==========
 
-@router.post("/auth/ldap/login")
+@router.post("/ldap/login")
 async def ldap_login(
     ldap_service: Annotated[LDAPService, Depends(get_ldap_service)],
     auth_service: Annotated[IAuthService, Depends(get_auth_service)],

@@ -23,7 +23,7 @@ from core.exceptions import InvalidTokenException, TokenExpiredException, UserNo
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/auth/email", tags=["Email Verification"])
+router = APIRouter(prefix="/api/auth/email", tags=["Email Verification"])
 
 
 @router.post("/verify", response_model=VerifyEmailResponse)
