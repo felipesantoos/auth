@@ -5,6 +5,7 @@
 import { AuthServiceInterface } from './authServiceInterface';
 import { AuthRepository } from '../../repositories/auth_repository';
 import { User, LoginDTO, RegisterDTO, ForgotPasswordDTO, ResetPasswordDTO, MessageResponse } from '../../domain/auth';
+import { MFARequiredResponse } from '../../domain/mfa';
 
 export class AuthService implements AuthServiceInterface {
   private repository: AuthRepository;
@@ -13,8 +14,17 @@ export class AuthService implements AuthServiceInterface {
     this.repository = repository;
   }
 
-  async login(credentials: LoginDTO): Promise<User> {
-    const tokenResponse = await this.repository.login(credentials);
+  async login(credentials: LoginDTO): Promise<User | MFARequiredResponse> {
+    const response = await this.repository.login(credentials);
+
+    // Check if MFA is required
+    if ('mfa_required' in response && response.mfa_required) {
+      // Return MFA required response - frontend will show MFA input
+      return response as MFARequiredResponse;
+    }
+
+    // Normal token response
+    const tokenResponse = response as any;
 
     // Store tokens
     localStorage.setItem('access_token', tokenResponse.access_token);
