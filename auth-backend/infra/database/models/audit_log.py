@@ -35,7 +35,7 @@ class DBAuditLog(Base):
     user_agent = Column(Text, nullable=True)
     
     # Additional data
-    metadata = Column(JSONB, nullable=True)  # Event-specific data
+    event_metadata = Column(JSONB, nullable=True)  # Event-specific data
     
     # Status
     status = Column(String(20), nullable=False, default='success')  # 'success', 'failure', 'warning'

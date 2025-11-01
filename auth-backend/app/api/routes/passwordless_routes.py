@@ -2,7 +2,7 @@
 Passwordless Authentication Routes
 Endpoints for magic link authentication
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from typing import Annotated
 import logging
 
@@ -15,6 +15,7 @@ from app.api.dtos.response.passwordless_response import (
     VerifyMagicLinkResponse
 )
 from app.api.dicontainer.dicontainer import get_passwordless_service, get_auth_service
+from app.api.middlewares.rate_limit_middleware import limiter
 from core.services.auth.passwordless_service import PasswordlessService
 from core.interfaces.primary.auth_service_interface import IAuthService
 from core.exceptions import InvalidTokenException, TokenExpiredException, UserNotFoundException, BusinessRuleException
@@ -25,8 +26,10 @@ router = APIRouter(prefix="/auth/passwordless", tags=["Passwordless Auth"])
 
 
 @router.post("/send", response_model=SendMagicLinkResponse)
+@limiter.limit("3/hour")  # Limit to 3 magic links per hour per IP
 async def send_magic_link(
-    request: SendMagicLinkRequest,
+    magic_link_request: SendMagicLinkRequest,
+    request: Request,
     passwordless_service: Annotated[PasswordlessService, Depends(get_passwordless_service)]
 ):
     """
@@ -35,13 +38,12 @@ async def send_magic_link(
     User will receive an email with a login link.
     Link expires in 15 minutes.
     
-    Rate limited to prevent abuse.
+    Rate limited to 3 requests per hour to prevent abuse.
     """
     try:
-        # TODO: Add rate limiting decorator
         await passwordless_service.send_magic_link(
-            email=request.email,
-            client_id=request.client_id
+            email=magic_link_request.email,
+            client_id=magic_link_request.client_id
         )
         
         return SendMagicLinkResponse(

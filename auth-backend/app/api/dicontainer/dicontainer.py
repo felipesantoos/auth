@@ -252,9 +252,11 @@ async def get_oidc_service(
 ) -> OIDCService:
     """Factory for OIDCService"""
     user_repository = await get_app_user_repository(session)
+    cache_service = CacheService()
     settings_provider = SettingsProvider()
     return OIDCService(
         user_repository=user_repository,
+        cache_service=cache_service,
         settings_provider=settings_provider,
     )
 

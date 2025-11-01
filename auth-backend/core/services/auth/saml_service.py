@@ -131,14 +131,17 @@ class SAMLService:
             
             if not user:
                 # Auto-provision user from SAML attributes
-                from core.services.auth.auth_service import AuthService
+                # Note: SAML users don't use local passwords - they authenticate via IdP
+                # We create a random password hash to satisfy the domain model
                 import secrets
+                import bcrypt
                 
-                # Create user with random password (won't be used for SAML login)
                 random_password = secrets.token_urlsafe(32)
+                password_hash = bcrypt.hashpw(
+                    random_password.encode('utf-8'),
+                    bcrypt.gensalt(rounds=12)
+                ).decode('utf-8')
                 
-                # TODO: Inject auth service properly
-                # For now, create user directly
                 user = AppUser(
                     id=None,
                     username=username,
@@ -150,7 +153,7 @@ class SAMLService:
                     email_verified=True,  # Auto-verified for SAML users
                     created_at=datetime.utcnow(),
                     updated_at=datetime.utcnow(),
-                    _password_hash="saml_user_no_password"
+                    _password_hash=password_hash
                 )
                 
                 user.validate()

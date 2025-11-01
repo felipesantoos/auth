@@ -31,9 +31,9 @@ router = APIRouter(tags=["SSO"])
 
 @router.get("/auth/saml/login")
 async def saml_login(
+    saml_service: Annotated[SAMLService, Depends(get_saml_service)],
     client_id: str = Query(..., description="Client ID"),
-    return_url: Optional[str] = Query(None, description="Return URL"),
-    saml_service: Annotated[SAMLService, Depends(get_saml_service)]
+    return_url: Optional[str] = Query(None, description="Return URL")
 ):
     """
     Initiate SAML login (redirect to IdP).
@@ -61,12 +61,12 @@ async def saml_login(
 
 @router.post("/auth/saml/acs")
 async def saml_acs(
-    request: Request,
-    SAMLResponse: str = Form(...),
-    RelayState: Optional[str] = Form(None),
     saml_service: Annotated[SAMLService, Depends(get_saml_service)],
     auth_service: Annotated[IAuthService, Depends(get_auth_service)],
-    audit_service: Annotated[AuditService, Depends(get_audit_service)]
+    audit_service: Annotated[AuditService, Depends(get_audit_service)],
+    request: Request = None,
+    SAMLResponse: str = Form(...),
+    RelayState: Optional[str] = Form(None)
 ):
     """
     SAML Assertion Consumer Service (ACS).
@@ -115,7 +115,7 @@ async def saml_acs(
         )
         
         # Redirect to frontend with tokens
-        frontend_url = RelayState or f"{auth_service.settings.frontend_url}/login/success"
+        frontend_url = return_url or f"{auth_service.settings.frontend_url}/login/success"
         return RedirectResponse(url=f"{frontend_url}?access_token={access_token}&refresh_token={refresh_token}")
         
     except BusinessRuleException as e:
@@ -148,8 +148,8 @@ async def saml_metadata(
 
 @router.get("/auth/oidc/login")
 async def oidc_login(
-    client_id: str = Query(..., description="Client ID"),
-    oidc_service: Annotated[OIDCService, Depends(get_oidc_service)]
+    oidc_service: Annotated[OIDCService, Depends(get_oidc_service)],
+    client_id: str = Query(..., description="Client ID")
 ):
     """
     Initiate OIDC login (redirect to provider).
@@ -157,7 +157,7 @@ async def oidc_login(
     Compatible with Google, Microsoft, Okta, Auth0, etc.
     """
     try:
-        authorization_url = oidc_service.get_authorization_url(client_id=client_id)
+        authorization_url = await oidc_service.get_authorization_url(client_id=client_id)
         return RedirectResponse(url=authorization_url)
     except BusinessRuleException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
@@ -168,11 +168,11 @@ async def oidc_login(
 
 @router.get("/auth/oidc/callback")
 async def oidc_callback(
-    code: str = Query(..., description="Authorization code"),
-    state: str = Query(..., description="State parameter"),
     oidc_service: Annotated[OIDCService, Depends(get_oidc_service)],
     auth_service: Annotated[IAuthService, Depends(get_auth_service)],
-    audit_service: Annotated[AuditService, Depends(get_audit_service)]
+    audit_service: Annotated[AuditService, Depends(get_audit_service)],
+    code: str = Query(..., description="Authorization code"),
+    state: str = Query(..., description="State parameter")
 ):
     """
     OIDC callback (exchange code for tokens).
@@ -180,11 +180,22 @@ async def oidc_callback(
     Called by identity provider after user authenticates.
     """
     try:
+        # Extract client_id from state
+        import json
+        import base64
+        client_id = "default"
+        
+        try:
+            state_data = json.loads(base64.b64decode(state).decode())
+            client_id = state_data.get("client_id", "default")
+        except Exception as e:
+            logger.warning(f"Failed to decode OIDC state: {e}")
+        
         # Handle OIDC callback
         user = await oidc_service.handle_callback(
             code=code,
             state=state,
-            client_id="default"  # TODO: Extract from state
+            client_id=client_id
         )
         
         # Generate tokens
@@ -220,12 +231,12 @@ async def oidc_callback(
 
 @router.post("/auth/ldap/login")
 async def ldap_login(
-    username: str = Form(...),
-    password: str = Form(...),
-    client_id: str = Form(...),
     ldap_service: Annotated[LDAPService, Depends(get_ldap_service)],
     auth_service: Annotated[IAuthService, Depends(get_auth_service)],
     audit_service: Annotated[AuditService, Depends(get_audit_service)],
+    username: str = Form(...),
+    password: str = Form(...),
+    client_id: str = Form(...),
     request: Request = None
 ):
     """

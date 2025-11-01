@@ -1,8 +1,8 @@
-"""add_advanced_auth_features
+"""add advanced auth features
 
-Revision ID: 20250131_0001
-Revises: 20250101_0002
-Create Date: 2025-01-31 00:01:00.000000
+Revision ID: 625f6b9fbb95
+Revises: 964f20d5f591
+Create Date: 2025-11-01 01:16:15.272428+00:00
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '20250131_0001'
-down_revision: Union[str, None] = '20250101_0002'
+revision: str = '625f6b9fbb95'
+down_revision: Union[str, None] = '964f20d5f591'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -84,7 +84,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_user_session_revoked_at'), 'user_session', ['revoked_at'], unique=False)
     op.create_index(op.f('ix_user_session_expires_at'), 'user_session', ['expires_at'], unique=False)
     
-    # 7. Create audit_log table
+    # 7. Create audit_log table (with event_metadata instead of metadata)
     op.create_table(
         'audit_log',
         sa.Column('id', sa.String(), nullable=False),
@@ -95,7 +95,7 @@ def upgrade() -> None:
         sa.Column('resource_id', sa.String(length=100), nullable=True),
         sa.Column('ip_address', sa.String(length=45), nullable=True),
         sa.Column('user_agent', sa.Text(), nullable=True),
-        sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('event_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column('status', sa.String(length=20), nullable=False, server_default='success'),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('now()')),
         sa.ForeignKeyConstraint(['user_id'], ['app_user.id'], ondelete='SET NULL'),
@@ -213,4 +213,3 @@ def downgrade() -> None:
     op.drop_column('app_user', 'email_verification_sent_at')
     op.drop_column('app_user', 'email_verification_token')
     op.drop_column('app_user', 'email_verified')
-

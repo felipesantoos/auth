@@ -1,8 +1,8 @@
-"""create_client_table
+"""create client table
 
-Revision ID: 20250101_0001
+Revision ID: ba7b72823874
 Revises: 
-Create Date: 2025-01-01 00:01:00.000000
+Create Date: 2025-11-01 01:15:38.865689+00:00
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '20250101_0001'
+revision: str = 'ba7b72823874'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

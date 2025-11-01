@@ -10,6 +10,7 @@ import secrets
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
 from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
+from core.interfaces.secondary.cache_service_interface import CacheServiceInterface
 from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
 from core.exceptions import (
     BusinessRuleException,
@@ -40,16 +41,18 @@ class OIDCService:
     def __init__(
         self,
         user_repository: AppUserRepositoryInterface,
+        cache_service: CacheServiceInterface,
         settings_provider: SettingsProviderInterface,
     ):
         self.user_repository = user_repository
+        self.cache_service = cache_service
         self.settings = settings_provider.get_settings()
     
     def is_enabled(self) -> bool:
         """Check if OIDC is enabled"""
         return self.settings.oidc_enabled
     
-    def get_authorization_url(
+    async def get_authorization_url(
         self,
         client_id: str,
         state: Optional[str] = None
@@ -86,9 +89,21 @@ class OIDCService:
             # )
             # return authorization_url
             
-            # Simplified implementation
+            # Generate secure state for CSRF protection
             if not state:
                 state = secrets.token_urlsafe(32)
+            
+            # Store state in Redis for validation (10 min TTL)
+            import json
+            import base64
+            state_data = {"client_id": client_id}
+            encoded_state = base64.b64encode(json.dumps(state_data).encode()).decode()
+            
+            await self.cache_service.store_state(
+                key=f"oidc:state:{encoded_state}",
+                state=state_data,
+                ttl=600  # 10 minutes
+            )
             
             issuer = self.settings.oidc_issuer or "https://accounts.google.com"
             redirect_uri = self.settings.oidc_redirect_uri or f"{self.settings.api_base_url}/auth/oidc/callback"
@@ -99,7 +114,7 @@ class OIDCService:
                 f"&redirect_uri={redirect_uri}"
                 f"&response_type=code"
                 f"&scope=openid profile email"
-                f"&state={state}"
+                f"&state={encoded_state}"
             )
             
             logger.info(f"OIDC login initiated for client {client_id}")
@@ -136,7 +151,19 @@ class OIDCService:
             )
         
         try:
-            # TODO: Validate state (CSRF protection)
+            # Validate state (CSRF protection)
+            state_key = f"oidc:state:{state}"
+            stored_state = await self.cache_service.get(state_key)
+            
+            if not stored_state:
+                logger.warning(f"OIDC state not found or expired: {state}")
+                raise BusinessRuleException(
+                    "Invalid or expired OIDC state (possible CSRF attack)",
+                    "OIDC_INVALID_STATE"
+                )
+            
+            # Delete state to prevent replay attacks (single-use)
+            await self.cache_service.delete(state_key)
             
             # In production, use authlib:
             # from authlib.integrations.httpx_client import AsyncOAuth2Client

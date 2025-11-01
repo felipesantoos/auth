@@ -19,9 +19,14 @@ sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..'
 from infra.database.database import Base
 
 # Import all models here to ensure they're registered with Base.metadata
+# This is CRITICAL for alembic autogenerate to detect schema changes
 from infra.database.models.client import DBClient  # noqa: F401
 from infra.database.models.app_user import DBAppUser  # noqa: F401
-# More models will be imported as they're created
+from infra.database.models.api_key import DBApiKey  # noqa: F401
+from infra.database.models.audit_log import DBAuditLog  # noqa: F401
+from infra.database.models.backup_code import DBBackupCode  # noqa: F401
+from infra.database.models.user_session import DBUserSession  # noqa: F401
+from infra.database.models.webauthn_credential import DBWebAuthnCredential  # noqa: F401
 
 # Alembic Config object
 config = context.config

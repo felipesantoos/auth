@@ -18,10 +18,11 @@ from app.api.dtos.response.mfa_response import (
     RegenerateBackupCodesResponse
 )
 from app.api.middlewares.auth_middleware import get_current_user
-from app.api.dicontainer.dicontainer import get_mfa_service
+from app.api.dicontainer.dicontainer import get_mfa_service, get_auth_service
 from core.domain.auth.app_user import AppUser
 from core.services.auth.mfa_service import MFAService
-from core.exceptions import BusinessRuleException, ValidationException
+from core.interfaces.primary.auth_service_interface import IAuthService
+from core.exceptions import BusinessRuleException, InvalidCredentialsException, ValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -94,25 +95,43 @@ async def enable_mfa(
 async def disable_mfa(
     request: DisableMFARequest,
     current_user: Annotated[AppUser, Depends(get_current_user)],
-    mfa_service: Annotated[MFAService, Depends(get_mfa_service)]
+    mfa_service: Annotated[MFAService, Depends(get_mfa_service)],
+    auth_service: Annotated[IAuthService, Depends(get_auth_service)]
 ):
     """
     Disable MFA.
     
-    Requires password confirmation.
+    Requires password confirmation for security.
     """
     try:
-        # TODO: Verify password before disabling
-        # For now, allow disable without password check
+        # Verify password before disabling MFA (security measure)
+        try:
+            await auth_service.login(
+                username=current_user.username,
+                password=request.password,
+                client_id=current_user.client_id
+            )
+        except InvalidCredentialsException:
+            logger.warning(f"Invalid password attempt when disabling MFA for user {current_user.id}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid password. Please provide your current password to disable MFA."
+            )
+        
+        # Password verified, proceed to disable MFA
         await mfa_service.disable_mfa(
             user_id=current_user.id,
             client_id=current_user.client_id
         )
         
+        logger.info(f"MFA disabled for user {current_user.id}")
+        
         return EnableMFAResponse(
             success=True,
             message="MFA disabled successfully"
         )
+    except HTTPException:
+        raise
     except BusinessRuleException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
     except Exception as e:
