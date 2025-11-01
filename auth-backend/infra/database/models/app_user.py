@@ -4,7 +4,7 @@ SQLAlchemy model for PostgreSQL persistence
 Adapted for multi-tenant architecture with client_id
 """
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Index
 from sqlalchemy.orm import relationship
 from infra.database.database import Base
 import uuid
@@ -73,4 +73,16 @@ class DBAppUser(Base):
     
     # Relationships
     client = relationship("DBClient", backref="users")
+    
+    # Composite Indexes for query optimization
+    __table_args__ = (
+        # Multi-tenant queries: client_id + is_active
+        Index('idx_user_client_active', 'client_id', 'is_active'),
+        # Email lookup with status: email + is_active
+        Index('idx_user_email_active', 'email', 'is_active'),
+        # User search within client: client_id + username
+        Index('idx_user_client_username', 'client_id', 'username'),
+        # Recent active users: client_id + created_at
+        Index('idx_user_client_created', 'client_id', 'created_at'),
+    )
 

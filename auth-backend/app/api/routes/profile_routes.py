@@ -3,13 +3,14 @@ User Profile Routes
 Self-service profile management endpoints
 """
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from typing import Annotated
+from typing import Annotated, List
 import logging
 
 from app.api.middlewares.auth_middleware import get_current_user
-from app.api.dicontainer.dicontainer import get_user_profile_service
+from app.api.dicontainer.dicontainer import get_user_profile_service, get_app_user_repository
 from core.domain.auth.app_user import AppUser
 from core.services.auth.user_profile_service import UserProfileService
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -305,5 +306,77 @@ async def get_kyc_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get KYC status"
+        )
+
+
+# Batch Operations
+class BatchUsersRequest(BaseModel):
+    """Batch users request"""
+    user_ids: List[str]
+
+
+class BatchUserResponse(BaseModel):
+    """Batch user response item"""
+    id: str
+    username: str
+    email: str
+    name: str
+    role: str
+    is_active: bool
+
+
+@router.post("/batch", response_model=List[BatchUserResponse])
+async def get_users_batch(
+    request: BatchUsersRequest,
+    current_user: Annotated[AppUser, Depends(get_current_user)],
+    user_repository: Annotated[IAppUserRepository, Depends(get_app_user_repository)]
+):
+    """
+    Get multiple users in one request (batch operation).
+    
+    Optimized endpoint that fetches multiple users with a single database query
+    instead of making N separate requests. Useful for populating UI elements
+    that display multiple users at once.
+    
+    - **user_ids**: List of user IDs to fetch (max 100)
+    - Returns only users that exist and belong to the same client
+    """
+    try:
+        # Limit batch size to prevent abuse
+        if len(request.user_ids) > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum 100 users per batch request"
+            )
+        
+        if not request.user_ids:
+            return []
+        
+        # Fetch users in batch (single query)
+        users = await user_repository.find_by_ids(
+            user_ids=request.user_ids,
+            client_id=current_user.client_id  # Multi-tenant isolation
+        )
+        
+        # Map to response
+        return [
+            BatchUserResponse(
+                id=user.id,
+                username=user.username,
+                email=user.email,
+                name=user.name,
+                role=user.role.value,
+                is_active=user.is_active
+            )
+            for user in users
+        ]
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in batch user fetch: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch users"
         )
 

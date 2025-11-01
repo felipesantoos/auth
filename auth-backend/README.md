@@ -59,6 +59,175 @@ Multi-tenant Authentication and Authorization System built with FastAPI.
 - ✅ **Avatar Upload** - Integrated user avatar management
 - ✅ **Security** - Access control, virus scanning, audit logging
 
+### Advanced Topics & Production Features
+- ✅ **Background Tasks (Celery)** - Async task processing with worker and beat scheduler
+- ✅ **WebSockets** - Real-time communication with connection manager and room support
+- ✅ **Advanced Caching** - MD5-hashed keys, custom key builders, cache invalidation, warming
+- ✅ **API Versioning** - Header-based versioning with middleware support
+- ✅ **Database Optimization** - Composite indexes, eager loading (selectinload), efficient pagination
+- ✅ **Monitoring & Observability** - Prometheus metrics, health checks (/ready, /live)
+- ✅ **Performance** - GZip compression, request batching, connection pooling
+- ✅ **Maintenance Tasks** - Automated cleanup of expired sessions, tokens, audit logs
+
+## Monitoring & Observability
+
+### Health Check Endpoints
+
+- **`GET /health`** - Basic health check
+- **`GET /health/ready`** - Readiness probe (checks database + Redis)
+- **`GET /health/live`** - Liveness probe (process alive)
+- **`GET /metrics`** - Prometheus metrics endpoint
+
+**Test health checks:**
+```bash
+./scripts/monitor.sh
+```
+
+### Prometheus Metrics
+
+The system exposes metrics for monitoring:
+
+- `http_requests_total` - Total HTTP requests by method, endpoint, status
+- `http_request_duration_seconds` - Request duration histogram
+- `http_request_size_bytes` - Request size histogram
+- `http_response_size_bytes` - Response size histogram
+
+**Access metrics:**
+```bash
+curl http://localhost:8080/metrics
+```
+
+### WebSocket Real-Time Communication
+
+Connect to WebSocket endpoint:
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws?token=YOUR_JWT_TOKEN');
+
+// Send ping
+ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+
+// Join room
+ws.send(JSON.stringify({ type: 'join_room', room_id: 'room123' }));
+
+// Send room message
+ws.send(JSON.stringify({
+  type: 'room_message',
+  room_id: 'room123',
+  content: 'Hello everyone!'
+}));
+```
+
+**Get WebSocket stats:**
+```bash
+curl http://localhost:8080/ws/stats \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### API Versioning
+
+Use header-based versioning:
+
+```bash
+# Version 1.0 (default)
+curl http://localhost:8080/api/auth/profile/me \
+  -H "Authorization: Bearer TOKEN"
+
+# Version 2.0
+curl http://localhost:8080/api/auth/profile/me \
+  -H "Authorization: Bearer TOKEN" \
+  -H "X-API-Version: 2.0"
+```
+
+Supported versions: `1.0`, `2.0`
+
+### Celery Background Tasks
+
+**Start Celery worker:**
+```bash
+celery -A infra.celery.celery_app worker --loglevel=info --concurrency=4
+```
+
+**Start Celery Beat scheduler (for periodic tasks):**
+```bash
+celery -A infra.celery.celery_app beat --loglevel=info
+```
+
+**Monitor with Flower:**
+```bash
+celery -A infra.celery.celery_app flower
+# Access at http://localhost:5555
+```
+
+**Scheduled Tasks:**
+- `cleanup-expired-sessions` - Daily at 3:00 AM
+- `cleanup-expired-tokens` - Daily at 2:00 AM
+- `cleanup-old-audit-logs` - Weekly on Sunday at 4:00 AM
+- `warm-popular-cache` - Every 6 hours
+
+### Advanced Caching
+
+**Cache decorator with MD5 hashing:**
+```python
+from infra.redis.cache_service import cached
+
+@cached(key_prefix="users", ttl=300)
+async def get_user(user_id: str):
+    return await repository.find_by_id(user_id)
+
+# With custom key builder
+@cached(
+    key_prefix="search",
+    ttl=600,
+    key_builder=lambda query, page: f"search:{query}:{page}"
+)
+async def search_users(query: str, page: int = 1):
+    return await repository.search(query, page)
+```
+
+**Cache invalidation:**
+```python
+from core.services.cache.cache_invalidation_service import CacheInvalidationService
+
+cache_invalidation = CacheInvalidationService()
+
+# Invalidate user cache
+await cache_invalidation.invalidate_user_cache(user_id)
+
+# Invalidate by pattern
+await cache_invalidation.invalidate_pattern("user:*")
+```
+
+### Performance Optimizations
+
+**Batch requests:**
+```bash
+# Get multiple users in one request
+curl -X POST http://localhost:8080/api/auth/profile/batch \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_ids": ["user1", "user2", "user3"]
+  }'
+```
+
+**Optimized pagination:**
+```python
+from app.api.utils.pagination import paginate_query_with_response
+
+# Efficient pagination with separate count query
+response = await paginate_query_with_response(
+    session,
+    query=select(DBUser).where(DBUser.is_active == True),
+    page=2,
+    page_size=50
+)
+```
+
+**Database indexes:** Composite indexes for common query patterns:
+- `idx_user_client_active` (client_id, is_active)
+- `idx_user_email_active` (email, is_active)
+- `idx_session_user_active` (user_id, revoked_at, expires_at)
+
 ## File Upload & Storage
 
 ### Quick Start

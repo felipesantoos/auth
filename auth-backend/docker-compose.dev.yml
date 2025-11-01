@@ -23,3 +23,33 @@ services:
     ports:
       - "6379:6379"  # Expose for local access (RedisInsight, etc.)
 
+  # Celery Worker (Background Jobs) - Development
+  celery-worker:
+    build:
+      target: development
+    command: celery -A infra.celery.celery_app worker --loglevel=debug --concurrency=2
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+      - /app/venv
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=debug
+      - ENVIRONMENT=development
+
+  # Celery Beat (Periodic Task Scheduler) - Development
+  celery-beat:
+    build:
+      target: development
+    command: celery -A infra.celery.celery_app beat --loglevel=debug
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+      - /app/venv
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=debug
+      - ENVIRONMENT=development
+

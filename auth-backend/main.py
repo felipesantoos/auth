@@ -100,6 +100,18 @@ app.add_middleware(
 from app.api.middlewares.logging_middleware import LoggingMiddleware
 app.add_middleware(LoggingMiddleware)
 
+# Configure Metrics Collection (Prometheus)
+from app.api.middlewares.metrics_middleware import MetricsMiddleware
+app.add_middleware(MetricsMiddleware)
+
+# Configure Response Compression
+from fastapi.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # Compress responses > 1KB
+
+# Configure API Versioning (Header-based)
+from app.api.middlewares.api_versioning import APIVersionMiddleware
+app.add_middleware(APIVersionMiddleware)
+
 # HTTPS Redirect (Production only)
 from app.api.middlewares.https_redirect_middleware import HTTPSRedirectMiddleware
 
@@ -124,16 +136,25 @@ from app.api.middlewares.exception_handler import register_exception_handlers
 register_exception_handlers(app)
 
 
-# Health check endpoint
-@app.get("/health", tags=["Health"])
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "app": settings.app_name,
-        "version": settings.app_version,
-        "environment": settings.environment,
-    }
+# Note: Health check endpoints moved to app/api/routes/health_routes.py
+# Basic /health, /health/ready, and /health/live endpoints are available
+
+
+# Metrics endpoint for Prometheus
+from app.api.middlewares.metrics_middleware import get_metrics
+
+@app.get("/metrics", tags=["Monitoring"])
+async def metrics():
+    """
+    Prometheus metrics endpoint.
+    
+    Exposes application metrics in Prometheus format:
+    - http_requests_total: Total HTTP requests by method, endpoint, status
+    - http_request_duration_seconds: Request duration histogram
+    - http_request_size_bytes: Request size histogram
+    - http_response_size_bytes: Response size histogram
+    """
+    return get_metrics()
 
 
 # Root endpoint
@@ -148,6 +169,8 @@ async def root():
 
 
 # Import and register routes
+from app.api.routes import health_routes
+from app.api.routes import websocket_routes
 from app.api.routes import client_routes
 from app.api.routes import auth_routes
 from app.api.routes import oauth_routes
@@ -170,6 +193,12 @@ from app.api.routes import chunked_upload_routes
 
 # Register routers
 logger.info("Registering API routes...")
+
+# Health Checks & Monitoring
+app.include_router(health_routes.router)
+
+# WebSocket Real-Time Communication
+app.include_router(websocket_routes.router)
 
 # Client Management (admin only)
 app.include_router(client_routes.router)

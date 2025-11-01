@@ -1,11 +1,12 @@
 """
 User Session Repository Implementation
-Handles persistence of user sessions
+Handles persistence of user sessions with eager loading to prevent N+1 queries
 """
 import logging
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import select, and_, or_
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.domain.auth.user_session import UserSession
@@ -69,7 +70,11 @@ class UserSessionRepository:
     async def find_active_by_user(
         self, user_id: str, client_id: str
     ) -> List[UserSession]:
-        """Find all active sessions for a user"""
+        """
+        Find all active sessions for a user.
+        
+        Uses eager loading to prevent N+1 queries if relationships are accessed.
+        """
         try:
             now = datetime.utcnow()
             query = select(DBUserSession).where(

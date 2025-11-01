@@ -54,6 +54,55 @@ services:
     # Don't expose ports - only internal access
     ports: []
 
+  # Celery Worker (Background Jobs) - Production
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    command: celery -A infra.celery.celery_app worker --loglevel=warning --concurrency=8
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=warning
+    deploy:
+      replicas: 2  # Multiple workers for high availability
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  # Celery Beat (Periodic Task Scheduler) - Production
+  # CRITICAL: Only 1 instance to avoid duplicate scheduled tasks
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    command: celery -A infra.celery.celery_app beat --loglevel=warning
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=warning
+    deploy:
+      replicas: 1  # MUST be exactly 1 - never scale this
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
 volumes:
   postgres_prod_data:
   redis_prod_data:

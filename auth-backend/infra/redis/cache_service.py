@@ -194,29 +194,75 @@ class CacheService(ICacheService):
             return False
 
 
-def cached(key_prefix: str, ttl: int = 3600):
+def cached(
+    key_prefix: str = "cache",
+    ttl: int = 3600,
+    key_builder: Optional[Callable] = None
+):
     """
-    Decorator for caching async function results
+    Advanced decorator for caching async function results.
+    
+    Features:
+    - Automatic key generation with MD5 hashing for complex arguments
+    - Custom key builder support for fine-grained control
+    - Configurable TTL per decorator usage
+    
+    Args:
+        key_prefix: Prefix for cache key (default: "cache")
+        ttl: Time to live in seconds (default: 3600 = 1 hour)
+        key_builder: Optional custom function to build cache key from args/kwargs
     
     Usage:
-        @cached("bonds", ttl=3600)
-        async def get_all_bonds():
-            return await repository.find_all()
+        Basic usage:
+            @cached(key_prefix="users", ttl=300)
+            async def get_user(user_id: str):
+                return await repository.find_by_id(user_id)
+        
+        With custom key builder:
+            @cached(
+                key_prefix="search",
+                ttl=600,
+                key_builder=lambda *args, **kwargs: f"search:{kwargs.get('query')}:{kwargs.get('page')}"
+            )
+            async def search_users(query: str, page: int = 1):
+                return await repository.search(query, page)
     """
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # Build cache key
-            cache_key = f"{key_prefix}:{func.__name__}"
+            if key_builder:
+                # Use custom key builder
+                cache_key = key_builder(*args, **kwargs)
+            else:
+                # Default key builder with MD5 hash
+                import hashlib
+                
+                # Build key parts from function name and arguments
+                key_parts = [func.__name__]
+                
+                # Add positional arguments (skip 'self' for methods)
+                start_idx = 1 if args and hasattr(args[0], func.__name__) else 0
+                key_parts.extend([str(arg) for arg in args[start_idx:]])
+                
+                # Add keyword arguments (sorted for consistency)
+                key_parts.extend([f"{k}={v}" for k, v in sorted(kwargs.items())])
+                
+                # Create key string and hash it
+                key_str = ":".join(key_parts)
+                key_hash = hashlib.md5(key_str.encode()).hexdigest()
+                cache_key = f"{key_prefix}:{key_hash}"
             
             # Try to get from cache
             cache = CacheService()
             cached_value = await cache.get(cache_key)
             
             if cached_value is not None:
+                logger.debug(f"Cache HIT for {func.__name__}", extra={"cache_key": cache_key})
                 return cached_value
             
             # Not in cache, execute function
+            logger.debug(f"Cache MISS for {func.__name__}", extra={"cache_key": cache_key})
             result = await func(*args, **kwargs)
             
             # Store in cache

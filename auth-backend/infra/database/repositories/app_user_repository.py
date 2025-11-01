@@ -152,6 +152,42 @@ class AppUserRepository(IAppUserRepository):
             logger.error(f"Error finding user {user_id}: {e}", exc_info=True)
             raise DomainException("Failed to find user", "REPOSITORY_ERROR")
     
+    async def find_by_ids(self, user_ids: List[str], client_id: Optional[str] = None) -> List[AppUser]:
+        """
+        Finds multiple users by their IDs (batch operation).
+        
+        Optimized for batch requests - single query instead of N queries.
+        Prevents N+1 query problems when fetching multiple users.
+        
+        Args:
+            user_ids: List of user IDs
+            client_id: Optional client ID for multi-tenant isolation
+            
+        Returns:
+            List of users found (may be less than requested if some don't exist)
+        """
+        try:
+            if not user_ids:
+                return []
+            
+            query = select(DBAppUser).where(DBAppUser.id.in_(user_ids))
+            
+            # Multi-tenant: Filter by client_id if provided
+            if client_id:
+                query = query.where(DBAppUser.client_id == client_id)
+            
+            result = await self.session.execute(query)
+            db_users = result.scalars().all()
+            
+            return [AppUserMapper.to_domain(db_user) for db_user in db_users]
+        
+        except DatabaseError as e:
+            logger.error(f"Database error finding users by IDs: {e}", exc_info=True)
+            raise DomainException("Database operation failed", "DATABASE_ERROR")
+        except Exception as e:
+            logger.error(f"Error finding users by IDs: {e}", exc_info=True)
+            raise DomainException("Failed to find users", "REPOSITORY_ERROR")
+    
     async def find_by_email(self, email: str, client_id: Optional[str] = None) -> Optional[AppUser]:
         """
         Finds by email with optional client_id filtering (multi-tenant).

@@ -3,7 +3,7 @@ User Session Database Model
 SQLAlchemy model for tracking user sessions across devices
 """
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Index
 from sqlalchemy.orm import relationship
 from infra.database.database import Base
 import uuid
@@ -45,4 +45,14 @@ class DBUserSession(Base):
     # Relationships
     user = relationship("DBAppUser", backref="sessions")
     client = relationship("DBClient")
+    
+    # Composite Indexes for query optimization
+    __table_args__ = (
+        # Active sessions by user: user_id + revoked_at + expires_at
+        Index('idx_session_user_active', 'user_id', 'revoked_at', 'expires_at'),
+        # Client sessions: client_id + user_id
+        Index('idx_session_client_user', 'client_id', 'user_id'),
+        # Recent activity: user_id + last_activity
+        Index('idx_session_user_activity', 'user_id', 'last_activity'),
+    )
 

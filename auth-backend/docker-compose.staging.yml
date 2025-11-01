@@ -34,6 +34,47 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD_STAGING}
     ports: []  # Don't expose externally
 
+  # Celery Worker (Background Jobs) - Staging
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    command: celery -A infra.celery.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      - ENVIRONMENT=staging
+      - LOG_LEVEL=info
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # Celery Beat (Periodic Task Scheduler) - Staging
+  # IMPORTANT: Only 1 instance to avoid duplicate scheduled tasks
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    command: celery -A infra.celery.celery_app beat --loglevel=info
+    environment:
+      - ENVIRONMENT=staging
+      - LOG_LEVEL=info
+    deploy:
+      replicas: 1  # Must be exactly 1
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
 volumes:
   postgres_staging_data:
 

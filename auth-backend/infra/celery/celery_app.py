@@ -1,9 +1,10 @@
 """
 Celery Application Configuration
-Background task processing for async operations
+Background task processing for async operations with scheduled periodic tasks
 """
 import logging
 from celery import Celery
+from celery.schedules import crontab
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,8 @@ celery_app = Celery(
     backend=settings.celery_result_backend,
     include=[
         'infra.celery.tasks.email_tasks',
+        'infra.celery.tasks.cache_tasks',
+        'infra.celery.tasks.maintenance_tasks',
     ]
 )
 
@@ -53,15 +56,29 @@ celery_app.conf.update(
 logger.info(f"Celery app initialized with broker: {settings.celery_broker_url}")
 
 
-# Periodic tasks (optional - for scheduled emails)
-@celery_app.on_after_configure.connect
-def setup_periodic_tasks(sender, **kwargs):
-    """Setup periodic tasks (if needed)."""
-    # Example: Clean up old tracking data every day
-    # sender.add_periodic_task(
-    #     86400.0,  # Every 24 hours
-    #     cleanup_old_tracking_data.s(),
-    #     name='cleanup-tracking-data'
-    # )
-    pass
+# Periodic tasks (Celery Beat schedule)
+celery_app.conf.beat_schedule = {
+    # Cleanup expired sessions - Daily at 3:00 AM
+    'cleanup-expired-sessions': {
+        'task': 'cleanup_expired_sessions',
+        'schedule': crontab(hour=3, minute=0),
+    },
+    # Cleanup expired tokens - Daily at 2:00 AM
+    'cleanup-expired-tokens': {
+        'task': 'cleanup_expired_tokens',
+        'schedule': crontab(hour=2, minute=0),
+    },
+    # Cleanup old audit logs (>90 days) - Weekly on Sunday at 4:00 AM
+    'cleanup-old-audit-logs': {
+        'task': 'cleanup_old_audit_logs',
+        'schedule': crontab(hour=4, minute=0, day_of_week=0),
+    },
+    # Warm popular cache - Every 6 hours
+    'warm-popular-cache': {
+        'task': 'warm_popular_cache',
+        'schedule': crontab(minute=0, hour='*/6'),
+    },
+}
+
+logger.info(f"Celery Beat schedule configured with {len(celery_app.conf.beat_schedule)} periodic tasks")
 

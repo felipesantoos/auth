@@ -51,6 +51,7 @@ class DBAuditLog(Base):
     __table_args__ = (
         Index('idx_audit_user_event', 'user_id', 'event_type'),
         Index('idx_audit_client_event', 'client_id', 'event_type'),
-        Index('idx_audit_created', 'created_at'),
+        Index('idx_audit_user_created', 'user_id', 'created_at'),  # Time-based user queries
+        Index('idx_audit_client_created', 'client_id', 'created_at'),  # Time-based client queries
     )
 
