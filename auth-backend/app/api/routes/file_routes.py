@@ -12,7 +12,7 @@ from app.api.dtos.response import (
     PresignedUrlResponse,
     FileShareResponse
 )
-from app.api.middlewares.authorization import get_current_user
+from app.api.middlewares.auth_middleware import get_current_user
 from app.api.middlewares.upload_rate_limiter import upload_rate_limit
 from app.api.dicontainer.dicontainer import get_file_service
 from core.domain.auth.app_user import AppUser

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class ClientRepository(IClientRepository):
     """
-    PostgreSQL implementation of ClientRepositoryInterface.
+    PostgreSQL implementation of IClientRepository.
     
     This is a secondary adapter - implements the repository interface.
     """

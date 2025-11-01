@@ -4,7 +4,7 @@ API endpoints for multipart/chunked uploads
 """
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from core.services.files.chunked_upload_manager import ChunkedUploadManager
-from app.api.middlewares.authorization import get_current_user
+from app.api.middlewares.auth_middleware import get_current_user
 from app.api.dicontainer.dicontainer import get_chunked_upload_manager
 from core.domain.auth.app_user import AppUser
 from pydantic import BaseModel
@@ -58,9 +58,9 @@ async def init_chunked_upload(
 async def upload_chunk(
     upload_id: str,
     chunk_number: int,
-    chunk: UploadFile = File(...),
     current_user: AppUser = Depends(get_current_user),
-    chunked_manager: ChunkedUploadManager = Depends()
+    chunked_manager: ChunkedUploadManager = Depends(get_chunked_upload_manager),
+    chunk: UploadFile = File(...)
 ):
     """
     Upload a chunk.
@@ -83,7 +83,7 @@ async def upload_chunk(
 async def complete_chunked_upload(
     upload_id: str,
     current_user: AppUser = Depends(get_current_user),
-    chunked_manager: ChunkedUploadManager = Depends()
+    chunked_manager: ChunkedUploadManager = Depends(get_chunked_upload_manager)
 ):
     """
     Complete chunked upload.
@@ -110,7 +110,7 @@ async def complete_chunked_upload(
 async def abort_chunked_upload(
     upload_id: str,
     current_user: AppUser = Depends(get_current_user),
-    chunked_manager: ChunkedUploadManager = Depends()
+    chunked_manager: ChunkedUploadManager = Depends(get_chunked_upload_manager)
 ):
     """
     Abort chunked upload.

@@ -42,7 +42,7 @@ class DBFile(Base):
     
     # Organization
     tags = Column(JSON, default=list)  # List of tags
-    metadata = Column(JSON, default=dict)  # Custom metadata
+    file_metadata = Column(JSON, default=dict)  # Custom metadata
     
     # Timestamps
     uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)

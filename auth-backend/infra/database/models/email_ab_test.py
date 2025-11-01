@@ -47,7 +47,7 @@ class DBEmailABTest(Base):
     winner_selected_at = Column(DateTime, nullable=True)
     
     # Metadata
-    metadata = Column(JSONB, nullable=True)  # Additional test configuration
+    test_metadata = Column(JSONB, nullable=True)  # Additional test configuration
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

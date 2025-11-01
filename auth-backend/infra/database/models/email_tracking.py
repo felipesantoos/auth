@@ -53,7 +53,7 @@ class DBEmailTracking(Base):
     
     # Metadata
     tags = Column(JSONB, nullable=True)  # ['transactional', 'password-reset']
-    metadata = Column(JSONB, nullable=True)  # Additional tracking data
+    email_metadata = Column(JSONB, nullable=True)  # Additional tracking data
     
     # Relationships
     user = relationship("DBAppUser", backref="email_tracking")

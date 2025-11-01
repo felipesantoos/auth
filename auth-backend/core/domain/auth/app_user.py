@@ -37,10 +37,10 @@ class AppUser:
     name: str
     role: UserRole
     client_id: Optional[str]  # Multi-tenant: client (tenant) ID
+    _password_hash: str = field(repr=False, init=True)
     active: bool = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    _password_hash: str = field(repr=False, init=True)
     
     # Email Verification
     email_verified: bool = False

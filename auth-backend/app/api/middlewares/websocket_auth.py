@@ -7,8 +7,8 @@ from typing import Optional
 import logging
 
 from core.domain.auth.app_user import AppUser
-from core.interfaces.secondary.token_service_interface import ITokenService
-from app.api.dicontainer.dicontainer import get_token_service
+from core.interfaces.primary.auth_service_interface import IAuthService
+from app.api.dicontainer.dicontainer import get_auth_service, get_app_user_repository
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +43,8 @@ async def get_current_user_ws(
     
     try:
         # Validate token
-        token_service: ITokenService = await get_token_service()
-        payload = await token_service.decode_access_token(token)
+        auth_service: IAuthService = get_auth_service()
+        payload = auth_service.verify_token(token)
         
         # Extract user data from payload
         user_id = payload.get("sub")
@@ -54,15 +54,14 @@ async def get_current_user_ws(
             raise Exception("Invalid token payload")
         
         # Get user from repository
-        from app.api.dicontainer.dicontainer import get_app_user_repository
-        user_repository = await get_app_user_repository()
+        user_repository = get_app_user_repository()
         
         user = await user_repository.find_by_id(user_id, client_id)
         
         if not user:
             raise Exception("User not found")
         
-        if not user.is_active:
+        if not user.active:
             raise Exception("User is inactive")
         
         logger.debug(f"WebSocket user authenticated: {user_id}")

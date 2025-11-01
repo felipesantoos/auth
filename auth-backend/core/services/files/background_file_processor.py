@@ -80,9 +80,9 @@ class BackgroundFileProcessor:
                 responsive_urls[f"w{width}"] = resp_file.public_url
             
             # Update file metadata with variant URLs
-            file_record.metadata = file_record.metadata or {}
-            file_record.metadata['thumbnails'] = thumb_urls
-            file_record.metadata['responsive'] = responsive_urls
+            file_record.file_metadata = file_record.file_metadata or {}
+            file_record.file_metadata['thumbnails'] = thumb_urls
+            file_record.file_metadata['responsive'] = responsive_urls
             
             logger.info(f"Image processed successfully: {file_id}")
             
@@ -127,8 +127,8 @@ class BackgroundFileProcessor:
             )
             
             # Update file metadata
-            file_record.metadata = file_record.metadata or {}
-            file_record.metadata['thumbnail_url'] = thumb_file.public_url
+            file_record.file_metadata = file_record.file_metadata or {}
+            file_record.file_metadata['thumbnail_url'] = thumb_file.public_url
             
             logger.info(f"Video processed successfully: {file_id}")
             

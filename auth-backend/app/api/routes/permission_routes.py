@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Annotated
 import logging
 
-from app.api.middlewares.auth_middleware import get_current_user, require_role
+from app.api.middlewares.auth_middleware import get_current_user, get_current_admin_user
 from app.api.dicontainer.dicontainer import get_permission_service
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
@@ -47,9 +47,8 @@ class PermissionResponse(BaseModel):
 @router.post("", response_model=PermissionResponse, status_code=status.HTTP_201_CREATED)
 async def grant_permission(
     request: GrantPermissionRequest,
-    current_user: Annotated[AppUser, Depends(get_current_user)],
-    permission_service: Annotated[PermissionService, Depends(get_permission_service)],
-    _: None = Depends(require_role(UserRole.ADMIN))  # Admin only
+    current_user: Annotated[AppUser, Depends(get_current_admin_user)],
+    permission_service: Annotated[PermissionService, Depends(get_permission_service)]
 ):
     """
     Grant permission to user (admin only).

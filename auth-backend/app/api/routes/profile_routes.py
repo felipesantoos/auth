@@ -179,9 +179,9 @@ async def delete_account(
 
 @router.post("/avatar", status_code=status.HTTP_200_OK)
 async def upload_avatar(
-    avatar: UploadFile = File(...),
     current_user: Annotated[AppUser, Depends(get_current_user)],
-    profile_service: Annotated[UserProfileService, Depends(get_user_profile_service)]
+    profile_service: Annotated[UserProfileService, Depends(get_user_profile_service)],
+    avatar: UploadFile = File(...)
 ):
     """
     Upload user avatar.

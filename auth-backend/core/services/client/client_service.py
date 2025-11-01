@@ -28,7 +28,7 @@ class ClientService(IClientService):
     - Open/Closed (extend via new methods)
     """
     
-    def __init__(self, repository: ClientRepositoryInterface):
+    def __init__(self, repository: IClientRepository):
         """
         Constructor injection for testability.
         

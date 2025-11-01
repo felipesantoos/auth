@@ -9,7 +9,7 @@ from sqlalchemy import select, delete as sql_delete, and_, func, or_
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, DatabaseError
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.interfaces.secondary.app_user_repository_interface import (
-    AppUserRepositoryInterface,
+    IAppUserRepository,
 )
 from core.domain.auth.app_user import AppUser
 from core.services.filters.user_filter import UserFilter

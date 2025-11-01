@@ -47,9 +47,9 @@ async def register_begin(
 async def register_complete(
     credential_id: str,
     public_key: str,
-    device_name: str = None,
     current_user: Annotated[AppUser, Depends(get_current_user)],
-    webauthn_service: Annotated[WebAuthnService, Depends(get_webauthn_service)]
+    webauthn_service: Annotated[WebAuthnService, Depends(get_webauthn_service)],
+    device_name: str = None
 ):
     """
     Complete WebAuthn credential registration (store credential).

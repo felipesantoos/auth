@@ -3,7 +3,7 @@
 # ============================================
 # Builder stage - Install dependencies
 # ============================================
-FROM python:3.12-slim as builder
+FROM python:3.12-slim AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ============================================
 # Base stage - Common configuration
 # ============================================
-FROM python:3.12-slim as base
+FROM python:3.12-slim AS base
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
