@@ -8,8 +8,8 @@ from datetime import datetime
 
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
-from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import (
     BusinessRuleException,
     ValidationException,
@@ -32,8 +32,8 @@ class SAMLService:
     
     def __init__(
         self,
-        user_repository: AppUserRepositoryInterface,
-        settings_provider: SettingsProviderInterface,
+        user_repository: IAppUserRepository,
+        settings_provider: ISettingsProvider,
     ):
         self.user_repository = user_repository
         self.settings = settings_provider.get_settings()

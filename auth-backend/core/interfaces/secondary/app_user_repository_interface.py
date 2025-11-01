@@ -9,7 +9,7 @@ from core.domain.auth.app_user import AppUser
 from core.services.filters.user_filter import UserFilter
 
 
-class AppUserRepositoryInterface(ABC):
+class IAppUserRepository(ABC):
     """
     Repository interface for AppUser persistence.
     

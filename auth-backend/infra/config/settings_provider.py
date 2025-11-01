@@ -2,11 +2,11 @@
 Settings Provider Implementation
 Provides access to application settings via interface
 """
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from config.settings import settings
 
 
-class SettingsProvider(SettingsProviderInterface):
+class SettingsProvider(ISettingsProvider):
     """
     Implementation of SettingsProviderInterface.
     

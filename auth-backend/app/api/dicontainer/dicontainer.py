@@ -12,11 +12,11 @@ from config.settings import settings
 # Client
 from infra.database.repositories.client_repository import ClientRepository
 from core.services.client.client_service import ClientService
-from core.interfaces.primary.client_service_interface import ClientServiceInterface
+from core.interfaces.primary.client_service_interface import IClientService
 
 # Auth Repositories
 from infra.database.repositories.app_user_repository import AppUserRepository
-from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
 
 # Auth Services
 from core.services.auth.auth_service import AuthService
@@ -40,6 +40,7 @@ from infra.database.repositories.audit_log_repository import AuditLogRepository
 from infra.database.repositories.backup_code_repository import BackupCodeRepository
 from infra.database.repositories.user_session_repository import UserSessionRepository
 from infra.database.repositories.api_key_repository import ApiKeyRepository
+from infra.database.repositories.permission_repository import PermissionRepository
 
 # New Services
 from core.services.audit.audit_service import AuditService
@@ -53,6 +54,8 @@ from core.services.auth.saml_service import SAMLService
 from core.services.auth.oidc_service import OIDCService
 from core.services.auth.ldap_service import LDAPService
 from core.services.auth.login_notification_service import LoginNotificationService
+from core.services.auth.permission_service import PermissionService
+from core.services.auth.user_profile_service import UserProfileService
 
 # New Repositories (WebAuthn)
 from infra.database.repositories.webauthn_credential_repository import WebAuthnCredentialRepository
@@ -69,7 +72,7 @@ def get_client_repository(
 
 async def get_client_service(
     session: AsyncSession = Depends(get_db_session)
-) -> ClientServiceInterface:
+) -> IClientService:
     """
     Factory for Client service.
     
@@ -81,7 +84,7 @@ async def get_client_service(
 
 async def get_app_user_repository(
     session: AsyncSession = Depends(get_db_session)
-) -> AppUserRepositoryInterface:
+) -> IAppUserRepository:
     """
     Factory for AppUser repository.
     
@@ -284,6 +287,28 @@ def get_login_notification_service() -> LoginNotificationService:
     )
 
 
+async def get_permission_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> PermissionService:
+    """Factory for PermissionService"""
+    repository = PermissionRepository(session)
+    return PermissionService(repository=repository)
+
+
+async def get_user_profile_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> UserProfileService:
+    """Factory for UserProfileService"""
+    user_repository = await get_app_user_repository(session)
+    email_service = EmailService()
+    settings_provider = SettingsProvider()
+    return UserProfileService(
+        user_repository=user_repository,
+        email_service=email_service,
+        settings_provider=settings_provider
+    )
+
+
 # Export all factories
 __all__ = [
     "get_client_repository",
@@ -303,5 +328,7 @@ __all__ = [
     "get_oidc_service",
     "get_ldap_service",
     "get_login_notification_service",
+    "get_permission_service",
+    "get_user_profile_service",
 ]
 

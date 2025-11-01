@@ -7,7 +7,7 @@ from typing import List, Optional
 from core.domain.auth.user_session import UserSession
 
 
-class UserSessionRepositoryInterface(ABC):
+class IUserSessionRepository(ABC):
     """Interface for user session repository operations"""
     
     @abstractmethod

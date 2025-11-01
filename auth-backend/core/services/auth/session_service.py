@@ -11,8 +11,8 @@ import uuid
 
 from core.domain.auth.user_session import UserSession
 from infra.database.repositories.user_session_repository import UserSessionRepository
-from core.interfaces.secondary.cache_service_interface import CacheServiceInterface
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.cache_service_interface import ICacheService
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import (
     BusinessRuleException,
     ValidationException,
@@ -36,8 +36,8 @@ class SessionService:
     def __init__(
         self,
         repository: UserSessionRepository,
-        cache_service: CacheServiceInterface,
-        settings_provider: SettingsProviderInterface,
+        cache_service: ICacheService,
+        settings_provider: ISettingsProvider,
     ):
         self.repository = repository
         self.cache = cache_service

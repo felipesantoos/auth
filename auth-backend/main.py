@@ -151,6 +151,8 @@ from app.api.routes import passwordless_routes
 from app.api.routes import audit_routes
 from app.api.routes import webauthn_routes
 from app.api.routes import sso_routes
+from app.api.routes import permission_routes
+from app.api.routes import profile_routes
 
 # Register routers
 logger.info("Registering API routes...")
@@ -175,6 +177,10 @@ app.include_router(audit_routes.router)
 # Enterprise SSO Features
 app.include_router(webauthn_routes.router)
 app.include_router(sso_routes.router)
+
+# Fine-Grained Access Control & User Profile
+app.include_router(permission_routes.router)
+app.include_router(profile_routes.router)
 
 logger.info("All routes registered successfully")
 

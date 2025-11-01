@@ -8,7 +8,7 @@ from core.domain.auth.audit_log import AuditLog
 from core.domain.auth.audit_event_type import AuditEventType
 
 
-class AuditLogRepositoryInterface(ABC):
+class IAuditLogRepository(ABC):
     """Interface for audit log repository operations"""
     
     @abstractmethod

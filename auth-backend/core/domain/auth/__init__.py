@@ -8,6 +8,7 @@ from .audit_event_type import AuditEventType
 from .api_key import ApiKey
 from .api_key_scope import ApiKeyScope
 from .webauthn_credential import WebAuthnCredential
+from .permission import Permission, PermissionAction  # ResourceType removed! ✨
 
 __all__ = [
     "AppUser",
@@ -19,5 +20,8 @@ __all__ = [
     "ApiKey",
     "ApiKeyScope",
     "WebAuthnCredential",
+    "Permission",
+    "PermissionAction",
+    # ResourceType removed - now using free strings!
 ]
 

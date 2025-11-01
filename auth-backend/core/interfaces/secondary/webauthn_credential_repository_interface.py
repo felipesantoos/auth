@@ -7,7 +7,7 @@ from typing import List, Optional
 from core.domain.auth.webauthn_credential import WebAuthnCredential
 
 
-class WebAuthnCredentialRepositoryInterface(ABC):
+class IWebAuthnCredentialRepository(ABC):
     """Interface for WebAuthn credential repository operations"""
     
     @abstractmethod

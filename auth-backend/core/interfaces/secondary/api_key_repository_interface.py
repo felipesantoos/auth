@@ -7,7 +7,7 @@ from typing import List, Optional
 from core.domain.auth.api_key import ApiKey
 
 
-class ApiKeyRepositoryInterface(ABC):
+class IApiKeyRepository(ABC):
     """Interface for API key repository operations"""
     
     @abstractmethod

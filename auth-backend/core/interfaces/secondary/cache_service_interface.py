@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Any
 
 
-class CacheServiceInterface(ABC):
+class ICacheService(ABC):
     """
     Cache service interface - defines caching contract.
     

@@ -5,7 +5,7 @@ Defines contract for accessing application settings (Dependency Inversion Princi
 from abc import ABC, abstractmethod
 
 
-class SettingsProviderInterface(ABC):
+class ISettingsProvider(ABC):
     """
     Settings provider interface - defines contract for accessing settings.
     

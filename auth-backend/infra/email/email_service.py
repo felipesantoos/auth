@@ -7,13 +7,13 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
-from core.interfaces.secondary.email_service_interface import EmailServiceInterface
+from core.interfaces.secondary.email_service_interface import IEmailService
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
 
-class EmailService(EmailServiceInterface):
+class EmailService(IEmailService):
     """
     SMTP email service implementation.
     

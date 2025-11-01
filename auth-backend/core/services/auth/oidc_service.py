@@ -9,9 +9,9 @@ import secrets
 
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
-from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
-from core.interfaces.secondary.cache_service_interface import CacheServiceInterface
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
+from core.interfaces.secondary.cache_service_interface import ICacheService
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import (
     BusinessRuleException,
     ValidationException,
@@ -40,9 +40,9 @@ class OIDCService:
     
     def __init__(
         self,
-        user_repository: AppUserRepositoryInterface,
-        cache_service: CacheServiceInterface,
-        settings_provider: SettingsProviderInterface,
+        user_repository: IAppUserRepository,
+        cache_service: ICacheService,
+        settings_provider: ISettingsProvider,
     ):
         self.user_repository = user_repository
         self.cache_service = cache_service

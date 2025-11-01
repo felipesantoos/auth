@@ -6,6 +6,7 @@ from .user_session import DBUserSession
 from .audit_log import DBAuditLog
 from .api_key import DBApiKey
 from .webauthn_credential import DBWebAuthnCredential
+from .permission import PermissionModel
 
 __all__ = [
     "DBAppUser",
@@ -15,5 +16,6 @@ __all__ = [
     "DBAuditLog",
     "DBApiKey",
     "DBWebAuthnCredential",
+    "PermissionModel",
 ]
 

@@ -7,10 +7,10 @@ from typing import Tuple
 from datetime import datetime, timedelta
 import jwt
 from core.interfaces.primary.password_reset_service_interface import IPasswordResetService
-from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
-from core.interfaces.secondary.cache_service_interface import CacheServiceInterface
-from core.interfaces.secondary.email_service_interface import EmailServiceInterface
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
+from core.interfaces.secondary.cache_service_interface import ICacheService
+from core.interfaces.secondary.email_service_interface import IEmailService
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.domain.auth.app_user import AppUser
 from core.exceptions import (
     InvalidTokenException,
@@ -33,10 +33,10 @@ class PasswordResetService(AuthServiceBase, IPasswordResetService):
     
     def __init__(
         self,
-        repository: AppUserRepositoryInterface,
-        cache_service: CacheServiceInterface,
-        settings_provider: SettingsProviderInterface,
-        email_service: EmailServiceInterface,
+        repository: IAppUserRepository,
+        cache_service: ICacheService,
+        settings_provider: ISettingsProvider,
+        email_service: IEmailService,
     ):
         """
         Constructor for PasswordResetService.

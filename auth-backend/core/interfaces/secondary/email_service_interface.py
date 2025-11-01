@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 
-class EmailServiceInterface(ABC):
+class IEmailService(ABC):
     """
     Email service interface - defines email sending contract.
     

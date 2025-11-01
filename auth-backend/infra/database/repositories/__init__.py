@@ -6,6 +6,7 @@ from .backup_code_repository import BackupCodeRepository
 from .user_session_repository import UserSessionRepository
 from .api_key_repository import ApiKeyRepository
 from .webauthn_credential_repository import WebAuthnCredentialRepository
+from .permission_repository import PermissionRepository
 
 __all__ = [
     "AppUserRepository",
@@ -15,5 +16,6 @@ __all__ = [
     "UserSessionRepository",
     "ApiKeyRepository",
     "WebAuthnCredentialRepository",
+    "PermissionRepository",
 ]
 

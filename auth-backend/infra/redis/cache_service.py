@@ -7,12 +7,12 @@ import logging
 from typing import Optional, Any, Callable
 from functools import wraps
 from infra.redis.redis_client import get_redis_client
-from core.interfaces.secondary.cache_service_interface import CacheServiceInterface
+from core.interfaces.secondary.cache_service_interface import ICacheService
 
 logger = logging.getLogger(__name__)
 
 
-class CacheService(CacheServiceInterface):
+class CacheService(ICacheService):
     """
     Redis cache service for application data
     

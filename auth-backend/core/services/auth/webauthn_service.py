@@ -11,9 +11,9 @@ import uuid
 
 from core.domain.auth.webauthn_credential import WebAuthnCredential
 from core.domain.auth.app_user import AppUser
-from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
 from infra.database.repositories.webauthn_credential_repository import WebAuthnCredentialRepository
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import (
     BusinessRuleException,
     ValidationException,
@@ -37,9 +37,9 @@ class WebAuthnService:
     
     def __init__(
         self,
-        user_repository: AppUserRepositoryInterface,
+        user_repository: IAppUserRepository,
         credential_repository: WebAuthnCredentialRepository,
-        settings_provider: SettingsProviderInterface,
+        settings_provider: ISettingsProvider,
     ):
         self.user_repository = user_repository
         self.credential_repository = credential_repository

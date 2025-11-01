@@ -7,7 +7,7 @@ from typing import List, Optional
 from core.domain.client.client import Client
 
 
-class ClientServiceInterface(ABC):
+class IClientService(ABC):
     """
     Service interface for client business operations.
     

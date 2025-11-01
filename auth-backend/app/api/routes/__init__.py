@@ -10,6 +10,8 @@ from . import passwordless_routes
 from . import audit_routes
 from . import webauthn_routes
 from . import sso_routes
+from . import permission_routes
+from . import profile_routes
 
 __all__ = [
     "auth_routes",
@@ -23,5 +25,7 @@ __all__ = [
     "audit_routes",
     "webauthn_routes",
     "sso_routes",
+    "permission_routes",
+    "profile_routes",
 ]
 

@@ -3,7 +3,7 @@ Client Routes
 API endpoints for client management (admin only)
 """
 from fastapi import APIRouter, Depends, HTTPException, status
-from core.interfaces.primary.client_service_interface import ClientServiceInterface
+from core.interfaces.primary.client_service_interface import IClientService
 from app.api.dtos.request.client_request import CreateClientRequest, UpdateClientRequest
 from app.api.dtos.response.client_response import ClientResponse, ClientResponseWithApiKey
 from app.api.mappers.client_mapper import ClientMapper
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/clients", tags=["Clients"])
 @router.post("", response_model=ClientResponseWithApiKey, status_code=status.HTTP_201_CREATED)
 async def create_client(
     request: CreateClientRequest,
-    service: ClientServiceInterface = Depends(get_client_service),
+    service: IClientService = Depends(get_client_service),
 ):
     """
     Create a new client (tenant).
@@ -34,7 +34,7 @@ async def create_client(
 
 @router.get("", response_model=list[ClientResponse])
 async def list_clients(
-    service: ClientServiceInterface = Depends(get_client_service),
+    service: IClientService = Depends(get_client_service),
 ):
     """
     List all clients (admin only).
@@ -48,7 +48,7 @@ async def list_clients(
 @router.get("/{client_id}", response_model=ClientResponse)
 async def get_client(
     client_id: str,
-    service: ClientServiceInterface = Depends(get_client_service),
+    service: IClientService = Depends(get_client_service),
 ):
     """
     Get client by ID (admin only).
@@ -70,7 +70,7 @@ async def get_client(
 async def update_client(
     client_id: str,
     request: UpdateClientRequest,
-    service: ClientServiceInterface = Depends(get_client_service),
+    service: IClientService = Depends(get_client_service),
 ):
     """
     Update client (admin only).
@@ -99,7 +99,7 @@ async def update_client(
 @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_client(
     client_id: str,
-    service: ClientServiceInterface = Depends(get_client_service),
+    service: IClientService = Depends(get_client_service),
 ):
     """
     Delete client (admin only).
@@ -124,7 +124,7 @@ async def delete_client(
 @router.post("/{client_id}/regenerate-api-key", response_model=ClientResponseWithApiKey)
 async def regenerate_api_key(
     client_id: str,
-    service: ClientServiceInterface = Depends(get_client_service),
+    service: IClientService = Depends(get_client_service),
 ):
     """
     Regenerate API key for client (admin only).

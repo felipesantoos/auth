@@ -14,9 +14,9 @@ from datetime import datetime
 
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.backup_code import BackupCode
-from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
 from infra.database.repositories.backup_code_repository import BackupCodeRepository
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import (
     BusinessRuleException,
     ValidationException,
@@ -38,9 +38,9 @@ class MFAService:
     
     def __init__(
         self,
-        user_repository: AppUserRepositoryInterface,
+        user_repository: IAppUserRepository,
         backup_code_repository: BackupCodeRepository,
-        settings_provider: SettingsProviderInterface,
+        settings_provider: ISettingsProvider,
     ):
         self.user_repository = user_repository
         self.backup_code_repository = backup_code_repository

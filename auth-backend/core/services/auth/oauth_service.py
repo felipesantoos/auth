@@ -7,9 +7,9 @@ import uuid
 from typing import Optional, Tuple
 from datetime import datetime
 from core.interfaces.primary.oauth_service_interface import IOAuthService
-from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
-from core.interfaces.secondary.cache_service_interface import CacheServiceInterface
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
+from core.interfaces.secondary.cache_service_interface import ICacheService
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
 from core.exceptions import (
@@ -32,9 +32,9 @@ class OAuthService(AuthServiceBase, IOAuthService):
     
     def __init__(
         self,
-        repository: AppUserRepositoryInterface,
-        cache_service: CacheServiceInterface,
-        settings_provider: SettingsProviderInterface,
+        repository: IAppUserRepository,
+        cache_service: ICacheService,
+        settings_provider: ISettingsProvider,
     ):
         """
         Constructor for OAuthService.

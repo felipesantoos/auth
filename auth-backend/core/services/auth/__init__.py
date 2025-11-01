@@ -11,6 +11,9 @@ from .webauthn_service import WebAuthnService
 from .saml_service import SAMLService
 from .oidc_service import OIDCService
 from .ldap_service import LDAPService
+from .login_notification_service import LoginNotificationService
+from .permission_service import PermissionService
+from .user_profile_service import UserProfileService
 
 __all__ = [
     "AuthService",
@@ -25,5 +28,8 @@ __all__ = [
     "SAMLService",
     "OIDCService",
     "LDAPService",
+    "LoginNotificationService",
+    "PermissionService",
+    "UserProfileService",
 ]
 

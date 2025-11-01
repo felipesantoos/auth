@@ -2,7 +2,7 @@
 from .auth_service_interface import IAuthService
 from .password_reset_service_interface import IPasswordResetService
 from .oauth_service_interface import IOAuthService
-from .client_service_interface import ClientServiceInterface
+from .client_service_interface import IClientService
 from .mfa_service_interface import IMFAService
 from .session_service_interface import ISessionService
 from .email_verification_service_interface import IEmailVerificationService
@@ -12,7 +12,7 @@ __all__ = [
     "IAuthService",
     "IPasswordResetService",
     "IOAuthService",
-    "ClientServiceInterface",
+    "IClientService",
     "IMFAService",
     "ISessionService",
     "IEmailVerificationService",

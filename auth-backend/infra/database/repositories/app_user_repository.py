@@ -26,7 +26,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class AppUserRepository(AppUserRepositoryInterface):
+class AppUserRepository(IAppUserRepository):
     """
     PostgreSQL repository implementation.
     

@@ -7,7 +7,7 @@ from typing import List
 from core.domain.auth.backup_code import BackupCode
 
 
-class BackupCodeRepositoryInterface(ABC):
+class IBackupCodeRepository(ABC):
     """Interface for backup code repository operations"""
     
     @abstractmethod

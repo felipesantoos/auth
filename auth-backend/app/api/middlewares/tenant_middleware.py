@@ -4,7 +4,7 @@ Extracts client_id (tenant) from request for multi-tenant isolation
 """
 from fastapi import Request, HTTPException, status
 from typing import Optional
-from core.interfaces.secondary.client_repository_interface import ClientRepositoryInterface
+from core.interfaces.secondary.client_repository_interface import IClientRepository
 
 
 def get_client_id_from_request(request: Request) -> Optional[str]:
@@ -54,7 +54,7 @@ def get_client_id_from_request(request: Request) -> Optional[str]:
 
 async def get_client_from_request(
     request: Request,
-    client_repository: Optional[ClientRepositoryInterface] = None
+    client_repository: Optional[IClientRepository] = None
 ) -> Optional[str]:
     """
     Get client_id from request, looking up by subdomain if needed.

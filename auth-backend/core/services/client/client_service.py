@@ -5,8 +5,8 @@ Orchestrates client business logic
 import logging
 from typing import List, Optional
 from datetime import datetime
-from core.interfaces.primary.client_service_interface import ClientServiceInterface
-from core.interfaces.secondary.client_repository_interface import ClientRepositoryInterface
+from core.interfaces.primary.client_service_interface import IClientService
+from core.interfaces.secondary.client_repository_interface import IClientRepository
 from core.domain.client.client import Client
 from core.exceptions import (
     DuplicateEntityException,
@@ -18,7 +18,7 @@ from core.exceptions import (
 logger = logging.getLogger(__name__)
 
 
-class ClientService(ClientServiceInterface):
+class ClientService(IClientService):
     """
     Service implementation - orchestrates client business logic.
     

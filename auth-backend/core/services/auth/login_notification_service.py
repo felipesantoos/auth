@@ -9,8 +9,8 @@ from datetime import datetime
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_session import UserSession
 from core.domain.auth.audit_event_type import AuditEventType
-from core.interfaces.secondary.email_service_interface import EmailServiceInterface
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.email_service_interface import IEmailService
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.services.audit.audit_service import AuditService
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,8 @@ class LoginNotificationService:
     
     def __init__(
         self,
-        email_service: EmailServiceInterface,
-        settings_provider: SettingsProviderInterface
+        email_service: IEmailService,
+        settings_provider: ISettingsProvider
     ):
         self.email_service = email_service
         self.settings = settings_provider.get_settings()

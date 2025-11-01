@@ -23,12 +23,15 @@ Multi-tenant Authentication and Authorization System built with FastAPI.
 - ✅ **API Keys** - Personal Access Tokens for programmatic API access
 - ✅ **Passwordless Auth** - Magic links for email-based login
 - ✅ **Suspicious Activity Detection** - Alert on logins from new devices/locations
+- ✅ **Login Notifications** - Email alerts for new device logins
+- ✅ **Fine-Grained Permissions** - Resource-level access control beyond RBAC
+- ✅ **User Profile Management** - Self-service profile updates and account deletion
 
-### Enterprise Features (Pending Integration)
-- ⏳ **WebAuthn/Passkeys** - Biometric authentication support
-- ⏳ **SAML 2.0** - Enterprise SSO integration
-- ⏳ **OIDC** - OpenID Connect support
-- ⏳ **LDAP/AD** - Active Directory integration
+### Enterprise Features
+- ✅ **WebAuthn/Passkeys** - Biometric authentication support (Face ID, Touch ID, YubiKey)
+- ✅ **SAML 2.0** - Enterprise SSO integration
+- ✅ **OIDC** - OpenID Connect support
+- ✅ **LDAP/AD** - Active Directory integration
 
 ## Setup
 
@@ -77,34 +80,47 @@ API docs at `http://localhost:8080/docs`
 ```
 auth-backend/
 ├── alembic/              # Database migrations
-│   └── versions/        # Migration files (20250131_0001_add_advanced_auth_features.py)
+│   └── versions/        # Migration files (20251102_0001_add_permissions_table.py)
 ├── app/                  # Application layer
 │   └── api/             
-│       ├── routes/      # REST API endpoints (8 route files)
-│       ├── dtos/        # Request/Response DTOs (12+ DTOs)
-│       ├── middlewares/ # Auth, API Key, Rate Limiting, etc.
+│       ├── routes/      # REST API endpoints (14 route files)
+│       │   ├── auth_routes.py
+│       │   ├── oauth_routes.py
+│       │   ├── mfa_routes.py
+│       │   ├── session_routes.py
+│       │   ├── email_verification_routes.py
+│       │   ├── passwordless_routes.py
+│       │   ├── api_key_routes.py
+│       │   ├── webauthn_routes.py
+│       │   ├── audit_routes.py
+│       │   ├── sso_routes.py
+│       │   ├── permission_routes.py ✨
+│       │   └── profile_routes.py ✨
+│       ├── dtos/        # Request/Response DTOs (15+ DTOs)
+│       ├── middlewares/ # Auth, API Key, Rate Limiting, HTTPS, etc.
 │       └── dicontainer/ # Dependency Injection
 ├── config/              # Configuration (settings, logging)
 ├── core/                # Core business logic (Hexagonal Architecture)
-│   ├── domain/         # Domain models (AppUser, BackupCode, UserSession, AuditLog, ApiKey, WebAuthnCredential)
-│   ├── interfaces/     # Port interfaces
-│   └── services/       # Business services (10+ services)
-│       ├── auth/       # Auth services (MFA, Sessions, Email, Passwordless, API Keys)
+│   ├── domain/         # Domain models (AppUser, Permission ✨, BackupCode, UserSession, AuditLog, ApiKey, WebAuthnCredential)
+│   ├── interfaces/     # Port interfaces (primary & secondary)
+│   └── services/       # Business services (15+ services)
+│       ├── auth/       # Auth services (MFA, Permissions ✨, Profile ✨, Sessions, Email, Passwordless, API Keys, etc.)
 │       └── audit/      # Audit service
 ├── infra/              # Infrastructure (Adapters)
 │   ├── database/       # Database models, repositories, mappers
-│   │   ├── models/     # SQLAlchemy models (7 models)
-│   │   ├── repositories/ # Data access (6 repositories)
-│   │   └── mappers/    # Domain ↔ DB mappers
+│   │   ├── models/     # SQLAlchemy models (8 models + PermissionModel ✨)
+│   │   ├── repositories/ # Data access (8 repositories + PermissionRepository ✨)
+│   │   └── mappers/    # Domain ↔ DB mappers (8 mappers + PermissionMapper ✨)
 │   ├── email/         # Email service (SMTP)
 │   └── redis/         # Redis client and cache
+├── tests/              # Test suite
+│   ├── unit/          # Unit tests (permission_service ✨, profile_service ✨, auth_service, etc.)
+│   └── integration/   # Integration tests (permissions_api ✨, profile_api ✨, auth_security, etc.)
 ├── docs/               # Documentation
-│   ├── IMPLEMENTATION_STATUS.md
-│   ├── IMPLEMENTATION_SUMMARY.md
-│   ├── INTEGRATION_GUIDE.md
-│   └── ENVIRONMENT_VARIABLES.md
 └── main.py            # Application entry point
 ```
+
+✨ = **New in this update**
 
 ## Architecture
 
@@ -237,6 +253,69 @@ MAGIC_LINK_RATE_LIMIT=2  # per 5 minutes
 ```bash
 MAX_LOGIN_ATTEMPTS=5
 ACCOUNT_LOCKOUT_DURATION_MINUTES=30
+```
+
+### 🔐 Fine-Grained Permissions
+
+Resource-level access control beyond basic RBAC:
+
+**Features**:
+- Assign permissions per resource (e.g., Project #123)
+- Actions: CREATE, READ, UPDATE, DELETE, MANAGE
+- Resource types: PROJECT, TEAM, DOCUMENT, REPORT, USER, CLIENT
+- Admin can grant/revoke permissions
+- Users can view their own permissions
+
+**Endpoints**:
+- `POST /api/auth/permissions` - Grant permission (admin only)
+- `GET /api/auth/permissions/user/{user_id}` - List user permissions
+- `DELETE /api/auth/permissions/{permission_id}` - Revoke permission
+
+**Example**:
+```bash
+# Grant user UPDATE permission on Project #123
+POST /api/auth/permissions
+{
+  "user_id": "user-456",
+  "resource_type": "project",
+  "action": "update",
+  "resource_id": "project-123"
+}
+
+# Grant user MANAGE permission on all teams
+POST /api/auth/permissions
+{
+  "user_id": "user-456",
+  "resource_type": "team",
+  "action": "manage",
+  "resource_id": null
+}
+```
+
+### 👤 User Profile Management
+
+Self-service profile management endpoints:
+
+**Endpoints**:
+- `GET /api/auth/profile/me` - Get own profile
+- `PUT /api/auth/profile/me` - Update profile (name, username)
+- `POST /api/auth/profile/change-email` - Request email change (requires password)
+- `DELETE /api/auth/profile/me` - Delete account (soft delete, requires password)
+
+**Example**:
+```bash
+# Update profile
+PUT /api/auth/profile/me
+{
+  "name": "John Doe",
+  "username": "johndoe"
+}
+
+# Delete account (requires password confirmation)
+DELETE /api/auth/profile/me
+{
+  "password": "current_password"
+}
 ```
 
 ## Database Migrations
@@ -509,6 +588,8 @@ Complete API reference and guides:
 - [MFA Setup](docs/API_ENDPOINTS.md#multi-factor-authentication-mfa)
 - [Session Management](docs/API_ENDPOINTS.md#session-management)
 - [Admin User Management](docs/API_ENDPOINTS.md#authentication)
+- [Permissions & Access Control](docs/API_ENDPOINTS.md#permissions)
+- [User Profile Management](docs/API_ENDPOINTS.md#profile)
 
 ---
 

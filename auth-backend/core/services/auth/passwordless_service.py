@@ -7,9 +7,9 @@ from typing import Tuple
 from datetime import datetime
 
 from core.domain.auth.app_user import AppUser
-from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
-from core.interfaces.secondary.email_service_interface import EmailServiceInterface
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
+from core.interfaces.secondary.email_service_interface import IEmailService
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import (
     BusinessRuleException,
     InvalidTokenException,
@@ -32,9 +32,9 @@ class PasswordlessService:
     
     def __init__(
         self,
-        user_repository: AppUserRepositoryInterface,
-        email_service: EmailServiceInterface,
-        settings_provider: SettingsProviderInterface,
+        user_repository: IAppUserRepository,
+        email_service: IEmailService,
+        settings_provider: ISettingsProvider,
     ):
         self.user_repository = user_repository
         self.email_service = email_service

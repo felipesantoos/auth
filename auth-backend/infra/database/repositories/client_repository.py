@@ -7,7 +7,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete as sql_delete
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, DatabaseError
-from core.interfaces.secondary.client_repository_interface import ClientRepositoryInterface
+from core.interfaces.secondary.client_repository_interface import IClientRepository
 from core.domain.client.client import Client
 from infra.database.models.client import DBClient
 from infra.database.mappers.client_mapper import ClientMapper
@@ -21,7 +21,7 @@ from core.exceptions import (
 logger = logging.getLogger(__name__)
 
 
-class ClientRepository(ClientRepositoryInterface):
+class ClientRepository(IClientRepository):
     """
     PostgreSQL implementation of ClientRepositoryInterface.
     

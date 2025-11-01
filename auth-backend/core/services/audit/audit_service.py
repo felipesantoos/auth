@@ -9,7 +9,7 @@ import uuid
 
 from core.domain.auth.audit_log import AuditLog
 from core.domain.auth.audit_event_type import AuditEventType
-from core.interfaces.secondary.audit_log_repository_interface import AuditLogRepositoryInterface
+from core.interfaces.secondary.audit_log_repository_interface import IAuditLogRepository
 from core.exceptions import DomainException
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class AuditService:
     Follows OWASP logging best practices.
     """
     
-    def __init__(self, repository: AuditLogRepositoryInterface):
+    def __init__(self, repository: IAuditLogRepository):
         self.repository = repository
     
     async def log_event(

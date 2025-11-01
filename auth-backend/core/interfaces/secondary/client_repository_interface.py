@@ -7,7 +7,7 @@ from typing import List, Optional
 from core.domain.client.client import Client
 
 
-class ClientRepositoryInterface(ABC):
+class IClientRepository(ABC):
     """
     Repository interface for client persistence.
     

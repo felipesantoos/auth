@@ -11,7 +11,7 @@ import uuid
 from core.domain.auth.api_key import ApiKey
 from core.domain.auth.api_key_scope import ApiKeyScope
 from infra.database.repositories.api_key_repository import ApiKeyRepository
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import (
     BusinessRuleException,
     ValidationException,
@@ -34,7 +34,7 @@ class ApiKeyService:
     def __init__(
         self,
         repository: ApiKeyRepository,
-        settings_provider: SettingsProviderInterface,
+        settings_provider: ISettingsProvider,
     ):
         self.repository = repository
         self.settings = settings_provider.get_settings()

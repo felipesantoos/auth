@@ -6,9 +6,9 @@ import logging
 from typing import Optional, Tuple, List
 from datetime import datetime
 from core.interfaces.primary.auth_service_interface import IAuthService
-from core.interfaces.secondary.app_user_repository_interface import AppUserRepositoryInterface
-from core.interfaces.secondary.cache_service_interface import CacheServiceInterface
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
+from core.interfaces.secondary.cache_service_interface import ICacheService
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
 from core.services.filters.user_filter import UserFilter
@@ -36,9 +36,9 @@ class AuthService(AuthServiceBase, IAuthService):
     
     def __init__(
         self,
-        repository: AppUserRepositoryInterface,
-        cache_service: CacheServiceInterface,
-        settings_provider: SettingsProviderInterface,
+        repository: IAppUserRepository,
+        cache_service: ICacheService,
+        settings_provider: ISettingsProvider,
     ):
         """
         Constructor for AuthService.

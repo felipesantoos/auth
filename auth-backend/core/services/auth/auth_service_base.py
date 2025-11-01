@@ -8,8 +8,8 @@ from typing import Optional
 from datetime import datetime, timedelta
 import bcrypt
 import jwt
-from core.interfaces.secondary.cache_service_interface import CacheServiceInterface
-from core.interfaces.secondary.settings_provider_interface import SettingsProviderInterface
+from core.interfaces.secondary.cache_service_interface import ICacheService
+from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import InvalidPasswordException
 
 logger = logging.getLogger(__name__)
@@ -25,8 +25,8 @@ class AuthServiceBase:
     
     def __init__(
         self,
-        cache_service: CacheServiceInterface,
-        settings_provider: SettingsProviderInterface,
+        cache_service: ICacheService,
+        settings_provider: ISettingsProvider,
     ):
         """
         Constructor for base auth service.
