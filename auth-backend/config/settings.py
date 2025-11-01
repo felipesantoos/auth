@@ -4,6 +4,7 @@ Centralized configuration using Pydantic Settings
 Loads configuration from environment variables (.env files)
 """
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import Optional
 from functools import lru_cache
 
@@ -133,6 +134,42 @@ class Settings(BaseSettings):
     
     # Monitoring (Optional)
     sentry_dsn: Optional[str] = None
+    
+    @field_validator('jwt_secret')
+    @classmethod
+    def validate_jwt_secret_production(cls, v, info):
+        """Validate JWT secret is strong in production"""
+        environment = info.data.get('environment', 'development')
+        
+        if environment == 'production':
+            # Check if using default/weak secret
+            weak_secrets = [
+                'change-this-secret-key-in-production-use-openssl-rand',
+                'dev-secret',
+                'test-secret',
+            ]
+            
+            if v in weak_secrets or len(v) < 32:
+                raise ValueError(
+                    'JWT_SECRET must be at least 32 characters in production. '
+                    'Generate a strong secret: python -c "import secrets; print(secrets.token_urlsafe(32))"'
+                )
+        
+        return v
+    
+    @field_validator('default_admin_password')
+    @classmethod
+    def validate_admin_password(cls, v, info):
+        """Warn about default admin password"""
+        environment = info.data.get('environment', 'development')
+        
+        if environment == 'production' and v == 'admin123':
+            raise ValueError(
+                'Cannot use default admin password in production. '
+                'Set DEFAULT_ADMIN_PASSWORD in environment variables.'
+            )
+        
+        return v
     
     @property
     def cors_origins_list(self) -> list[str]:

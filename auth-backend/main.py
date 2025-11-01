@@ -74,13 +74,30 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,  # Use property that converts string to list
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # Métodos específicos ao invés de "*"
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    # Headers específicos ao invés de "*"
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-Client-ID",
+        "X-Client-Subdomain",
+        "X-Request-ID",
+    ],
+    # Expor headers úteis
+    expose_headers=["X-Request-ID", "X-RateLimit-Remaining"],
 )
 
 # Configure Request/Response Logging
 from app.api.middlewares.logging_middleware import LoggingMiddleware
 app.add_middleware(LoggingMiddleware)
+
+# HTTPS Redirect (Production only)
+from app.api.middlewares.https_redirect_middleware import HTTPSRedirectMiddleware
+
+if settings.environment == "production":
+    app.add_middleware(HTTPSRedirectMiddleware)
+    logger.info("HTTPS redirect middleware enabled (production mode)")
 
 # Configure Rate Limiting
 from slowapi import _rate_limit_exceeded_handler

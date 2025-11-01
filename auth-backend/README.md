@@ -512,3 +512,61 @@ Complete API reference and guides:
 
 ---
 
+## 🔒 Security
+
+### Production Deployment Checklist
+
+Before deploying to production, ensure:
+
+- [ ] Change `JWT_SECRET` to a strong random value (32+ chars)
+- [ ] Change `DEFAULT_ADMIN_PASSWORD` to a secure password
+- [ ] Set `ENVIRONMENT=production`
+- [ ] Set `DEBUG=False`
+- [ ] Configure specific CORS origins (no wildcards)
+- [ ] Enable HTTPS (SSL certificates configured)
+- [ ] Set strong database passwords
+- [ ] Enable Redis password authentication
+- [ ] Review rate limiting settings
+- [ ] Run security tests: `pytest tests/`
+
+### Generate Secure Secrets
+
+```bash
+# JWT Secret
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Or using OpenSSL
+openssl rand -base64 32
+```
+
+### Run Tests
+
+```bash
+# Install test dependencies
+pip install -r requirements-test.txt
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=core --cov=app --cov=infra
+
+# Run security tests only
+pytest tests/integration/test_auth_security.py -v
+```
+
+### Security Features
+
+- ✅ **Password Hashing**: bcrypt with 12 rounds
+- ✅ **JWT Tokens**: HS256 with configurable expiration
+- ✅ **Rate Limiting**: SlowAPI with Redis storage
+- ✅ **CORS Protection**: Configurable origins, methods, and headers
+- ✅ **HTTPS Redirect**: Automatic in production
+- ✅ **Input Validation**: Pydantic validators on all endpoints
+- ✅ **SQL Injection Protection**: SQLAlchemy ORM
+- ✅ **Password Strength**: Minimum 8 chars, uppercase, lowercase, digit
+- ✅ **Account Lockout**: Automatic after failed login attempts
+- ✅ **Audit Logging**: Comprehensive security event tracking
+
+---
+
