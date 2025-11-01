@@ -13,6 +13,7 @@ from app.api.dtos.response import (
     FileShareResponse
 )
 from app.api.middlewares.authorization import get_current_user
+from app.api.middlewares.upload_rate_limiter import upload_rate_limit
 from app.api.dicontainer.dicontainer import get_file_service
 from core.domain.auth.app_user import AppUser
 
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/api/files", tags=["File Upload"])
 
 
 @router.post("/upload", response_model=FileUploadResponse, status_code=201)
+@upload_rate_limit(max_per_day=100, max_size_per_day_mb=1000)
 async def upload_file(
     file: UploadFile = File(...),
     current_user: AppUser = Depends(get_current_user),

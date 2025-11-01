@@ -15,7 +15,7 @@ class TestClientMapperToResponse:
     
     def test_to_response_without_api_key_returns_basic_response(self):
         """Test to_response without API key returns ClientResponse"""
-        client = ClientFactory.create(
+        client = ClientFactory.build(
             id="client-123",
             name="Test Company",
             subdomain="test-company",
@@ -39,7 +39,7 @@ class TestClientMapperToResponse:
     
     def test_to_response_with_api_key_returns_extended_response(self):
         """Test to_response with API key returns ClientResponseWithApiKey"""
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         api_key = client.api_key
         
         response = ClientMapper.to_response(client, include_api_key=True)
@@ -50,7 +50,7 @@ class TestClientMapperToResponse:
     
     def test_to_response_defaults_to_excluding_api_key(self):
         """Test to_response defaults to not including API key"""
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         
         response = ClientMapper.to_response(client)
         
@@ -58,7 +58,7 @@ class TestClientMapperToResponse:
     
     def test_to_response_maps_all_basic_fields(self):
         """Test all basic fields are mapped correctly"""
-        client = ClientFactory.create(
+        client = ClientFactory.build(
             id="client-abc",
             name="Acme Corp",
             subdomain="acme",
@@ -74,8 +74,8 @@ class TestClientMapperToResponse:
     
     def test_to_response_preserves_active_status(self):
         """Test active status is preserved"""
-        active_client = ClientFactory.create(active=True)
-        inactive_client = ClientFactory.create(active=False)
+        active_client = ClientFactory.build(active=True)
+        inactive_client = ClientFactory.build(active=False)
         
         active_response = ClientMapper.to_response(active_client)
         inactive_response = ClientMapper.to_response(inactive_client)
@@ -90,7 +90,7 @@ class TestClientMapperWithApiKey:
     
     def test_response_with_api_key_includes_all_basic_fields(self):
         """Test response with API key still includes all basic fields"""
-        client = ClientFactory.create(
+        client = ClientFactory.build(
             id="client-123",
             name="Test Co",
             subdomain="test",
@@ -111,7 +111,7 @@ class TestClientMapperWithApiKey:
     
     def test_to_response_with_api_key_when_client_has_no_key(self):
         """Test to_response handles missing API key gracefully"""
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         # Set API key to None
         client._api_key = None
         
@@ -128,7 +128,7 @@ class TestClientMapperNullHandling:
     
     def test_to_response_handles_none_created_at(self):
         """Test mapper handles None created_at"""
-        client = ClientFactory.create(created_at=None)
+        client = ClientFactory.build(created_at=None)
         
         response = ClientMapper.to_response(client)
         
@@ -136,7 +136,7 @@ class TestClientMapperNullHandling:
     
     def test_to_response_handles_none_updated_at(self):
         """Test mapper handles None updated_at"""
-        client = ClientFactory.create(updated_at=None)
+        client = ClientFactory.build(updated_at=None)
         
         response = ClientMapper.to_response(client)
         
@@ -144,7 +144,7 @@ class TestClientMapperNullHandling:
     
     def test_to_response_handles_none_id(self):
         """Test mapper handles None id (before persistence)"""
-        client = ClientFactory.create(id=None)
+        client = ClientFactory.build(id=None)
         
         response = ClientMapper.to_response(client)
         
@@ -157,7 +157,7 @@ class TestClientMapperConsistency:
     
     def test_same_client_produces_same_response(self):
         """Test mapping same client twice produces same result"""
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         
         response1 = ClientMapper.to_response(client)
         response2 = ClientMapper.to_response(client)
@@ -169,8 +169,8 @@ class TestClientMapperConsistency:
     
     def test_different_clients_produce_different_responses(self):
         """Test mapping different clients produces different results"""
-        client1 = ClientFactory.create(name="Client 1", subdomain="client1")
-        client2 = ClientFactory.create(name="Client 2", subdomain="client2")
+        client1 = ClientFactory.build(name="Client 1", subdomain="client1")
+        client2 = ClientFactory.build(name="Client 2", subdomain="client2")
         
         response1 = ClientMapper.to_response(client1)
         response2 = ClientMapper.to_response(client2)

@@ -1,0 +1,166 @@
+.kyc-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 2rem;
+}
+
+.kyc-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.kyc-container h1 {
+  color: #212529;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.kyc-loading {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+
+.kyc-status-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.kyc-status-card h2 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+}
+
+.kyc-badge {
+  display: inline-block;
+  padding: 0.5rem 1.5rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.kyc-approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.kyc-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.kyc-rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.kyc-not-submitted {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.kyc-verified-date {
+  margin-top: 1rem;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.kyc-instructions {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+}
+
+.kyc-instructions h3 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+}
+
+.kyc-instructions ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.kyc-instructions li {
+  margin-bottom: 0.75rem;
+  color: #495057;
+  line-height: 1.6;
+}
+
+.kyc-upload-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+}
+
+.kyc-upload-section h3 {
+  margin: 0 0 1.5rem 0;
+  color: #495057;
+}
+
+.kyc-error {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border: 1px solid #f5c6cb;
+}
+
+.kyc-success {
+  background: #d4edda;
+  color: #155724;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  border: 1px solid #c3e6cb;
+}
+
+.kyc-uploading {
+  text-align: center;
+  padding: 1rem;
+  color: #007bff;
+  font-weight: 500;
+}
+
+.kyc-pending-message,
+.kyc-rejected-message,
+.kyc-verified-message {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+}
+
+.kyc-pending-message h3 {
+  color: #856404;
+  margin: 0 0 1rem 0;
+}
+
+.kyc-rejected-message h3 {
+  color: #721c24;
+  margin: 0 0 1rem 0;
+}
+
+.kyc-verified-message h3 {
+  color: #155724;
+  margin: 0 0 1rem 0;
+}
+
+.kyc-pending-message p,
+.kyc-rejected-message p,
+.kyc-verified-message p {
+  margin: 0;
+  color: #495057;
+  line-height: 1.6;
+}
+

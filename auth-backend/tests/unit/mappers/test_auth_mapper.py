@@ -16,7 +16,7 @@ class TestAuthMapperToUserResponse:
     
     def test_to_user_response_maps_all_fields(self):
         """Test to_user_response maps all fields correctly"""
-        user = UserFactory.create(
+        user = UserFactory.build(
             id="user-123",
             username="testuser",
             email="test@example.com",
@@ -43,7 +43,7 @@ class TestAuthMapperToUserResponse:
         """Test role enum is converted to string value"""
         admin_user = UserFactory.create_admin()
         manager_user = UserFactory.create_manager()
-        regular_user = UserFactory.create(role=UserRole.USER)
+        regular_user = UserFactory.build(role=UserRole.USER)
         
         admin_response = AuthMapper.to_user_response(admin_user)
         manager_response = AuthMapper.to_user_response(manager_user)
@@ -55,8 +55,8 @@ class TestAuthMapperToUserResponse:
     
     def test_to_user_response_preserves_active_status(self):
         """Test active status is preserved"""
-        active_user = UserFactory.create(active=True)
-        inactive_user = UserFactory.create(active=False)
+        active_user = UserFactory.build(active=True)
+        inactive_user = UserFactory.build(active=False)
         
         active_response = AuthMapper.to_user_response(active_user)
         inactive_response = AuthMapper.to_user_response(inactive_user)
@@ -66,7 +66,7 @@ class TestAuthMapperToUserResponse:
     
     def test_to_user_response_includes_client_id(self):
         """Test client_id is included (multi-tenant)"""
-        user = UserFactory.create(client_id="client-abc")
+        user = UserFactory.build(client_id="client-abc")
         
         response = AuthMapper.to_user_response(user)
         
@@ -79,7 +79,7 @@ class TestAuthMapperToTokenResponse:
     
     def test_to_token_response_includes_all_fields(self):
         """Test to_token_response includes all required fields"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         access_token = "access_token_value"
         refresh_token = "refresh_token_value"
         
@@ -94,7 +94,7 @@ class TestAuthMapperToTokenResponse:
     
     def test_to_token_response_sets_token_type_to_bearer(self):
         """Test token_type is always 'bearer'"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         
         response = AuthMapper.to_token_response("access", "refresh", user)
         
@@ -102,7 +102,7 @@ class TestAuthMapperToTokenResponse:
     
     def test_to_token_response_includes_user_data(self):
         """Test user data is included in response"""
-        user = UserFactory.create(
+        user = UserFactory.build(
             id="user-123",
             username="testuser",
             email="test@example.com"
@@ -116,7 +116,7 @@ class TestAuthMapperToTokenResponse:
     
     def test_to_token_response_calculates_expires_in_seconds(self):
         """Test expires_in is in seconds"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         
         response = AuthMapper.to_token_response("access", "refresh", user)
         
@@ -132,7 +132,7 @@ class TestAuthMapperNullHandling:
     
     def test_to_user_response_handles_none_created_at(self):
         """Test mapper handles None created_at"""
-        user = UserFactory.create(created_at=None)
+        user = UserFactory.build(created_at=None)
         
         response = AuthMapper.to_user_response(user)
         
@@ -140,7 +140,7 @@ class TestAuthMapperNullHandling:
     
     def test_to_user_response_handles_none_id(self):
         """Test mapper handles None id (before persistence)"""
-        user = UserFactory.create(id=None)
+        user = UserFactory.build(id=None)
         
         response = AuthMapper.to_user_response(user)
         
@@ -153,7 +153,7 @@ class TestAuthMapperConsistency:
     
     def test_same_user_produces_same_response(self):
         """Test mapping same user twice produces same result"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         
         response1 = AuthMapper.to_user_response(user)
         response2 = AuthMapper.to_user_response(user)
@@ -165,8 +165,8 @@ class TestAuthMapperConsistency:
     
     def test_different_users_produce_different_responses(self):
         """Test mapping different users produces different results"""
-        user1 = UserFactory.create(username="user1", email="user1@example.com")
-        user2 = UserFactory.create(username="user2", email="user2@example.com")
+        user1 = UserFactory.build(username="user1", email="user1@example.com")
+        user2 = UserFactory.build(username="user2", email="user2@example.com")
         
         response1 = AuthMapper.to_user_response(user1)
         response2 = AuthMapper.to_user_response(user2)

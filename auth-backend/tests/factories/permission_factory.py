@@ -16,7 +16,7 @@ class PermissionFactory:
     """Factory for creating Permission instances with realistic data"""
     
     @staticmethod
-    def create(
+    def build(
         id: Optional[str] = None,
         user_id: Optional[str] = None,
         client_id: str = "test-client-id",
@@ -63,6 +63,17 @@ class PermissionFactory:
         )
     
     @staticmethod
+    async def create_persisted(db_session, **kwargs) -> Permission:
+        """Create and persist permission to database"""
+        from infra.database.repositories.permission_repository import PermissionRepository
+        
+        permission = PermissionFactory.build(**kwargs)
+        repository = PermissionRepository(db_session)
+        saved = await repository.save(permission)
+        await db_session.commit()
+        return saved
+    
+    @staticmethod
     def create_manage_permission(
         user_id: str,
         client_id: str = "test-client-id",
@@ -71,7 +82,7 @@ class PermissionFactory:
         **kwargs
     ) -> Permission:
         """Create a MANAGE permission (grants all actions)"""
-        return PermissionFactory.create(
+        return PermissionFactory.build(
             user_id=user_id,
             client_id=client_id,
             resource_type=resource_type,
@@ -89,11 +100,49 @@ class PermissionFactory:
         **kwargs
     ) -> Permission:
         """Create a wildcard permission (applies to all resources of a type)"""
-        return PermissionFactory.create(
+        return PermissionFactory.build(
             user_id=user_id,
             client_id=client_id,
             resource_type=resource_type,
             resource_id=None,  # None means all resources
             action=action,
             **kwargs
+        )
+
+
+class PermissionFactoryTraits:
+    """Predefined permission configurations (Trait pattern)"""
+    
+    @staticmethod
+    def read_only(user_id: str, resource_type: str = "project") -> Permission:
+        """Create read-only permission"""
+        return PermissionFactory.build(
+            user_id=user_id,
+            resource_type=resource_type,
+            action=PermissionAction.READ
+        )
+    
+    @staticmethod
+    def full_access(user_id: str, resource_type: str = "project") -> Permission:
+        """Create full access (MANAGE) permission"""
+        return PermissionFactory.create_manage_permission(
+            user_id=user_id,
+            resource_type=resource_type
+        )
+    
+    @staticmethod
+    def wildcard(user_id: str, resource_type: str = "project") -> Permission:
+        """Create wildcard permission (all resources of type)"""
+        return PermissionFactory.create_wildcard_permission(
+            user_id=user_id,
+            resource_type=resource_type
+        )
+    
+    @staticmethod
+    def minimal(user_id: str) -> Permission:
+        """Create minimal valid permission"""
+        return PermissionFactory.build(
+            user_id=user_id,
+            resource_type="test",
+            action=PermissionAction.READ
         )

@@ -54,6 +54,14 @@ class DBAppUser(Base):
     magic_link_token = Column(String(255), nullable=True)
     magic_link_sent_at = Column(DateTime, nullable=True)
     
+    # Avatar / Profile Picture
+    avatar_url = Column(String(1000), nullable=True)
+    
+    # KYC (Know Your Customer) / Identity Verification
+    kyc_document_id = Column(String(255), nullable=True)  # Foreign key to files table
+    kyc_status = Column(String(50), nullable=True)  # pending, approved, rejected
+    kyc_verified_at = Column(DateTime(timezone=True), nullable=True)
+    
     # Audit fields
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(

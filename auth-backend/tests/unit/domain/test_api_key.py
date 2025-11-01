@@ -20,48 +20,48 @@ class TestApiKeyValidation:
     
     def test_valid_api_key_passes_validation(self):
         """Test that a valid API key passes validation"""
-        api_key = ApiKeyFactory.create()
+        api_key = ApiKeyFactory.build()
         # Should not raise
         api_key.validate()
     
     def test_missing_user_id_raises_exception(self):
         """Test that missing user_id raises exception"""
-        api_key = ApiKeyFactory.create(user_id="")
+        api_key = ApiKeyFactory.build(user_id="")
         
         with pytest.raises(MissingRequiredFieldException, match="user_id"):
             api_key.validate()
     
     def test_missing_client_id_raises_exception(self):
         """Test that missing client_id raises exception"""
-        api_key = ApiKeyFactory.create(client_id="")
+        api_key = ApiKeyFactory.build(client_id="")
         
         with pytest.raises(MissingRequiredFieldException, match="client_id"):
             api_key.validate()
     
     def test_missing_name_raises_exception(self):
         """Test that missing name raises exception"""
-        api_key = ApiKeyFactory.create(name="")
+        api_key = ApiKeyFactory.build(name="")
         
         with pytest.raises(MissingRequiredFieldException, match="name"):
             api_key.validate()
     
     def test_name_too_short_raises_exception(self):
         """Test that name shorter than 3 chars raises exception"""
-        api_key = ApiKeyFactory.create(name="ab")
+        api_key = ApiKeyFactory.build(name="ab")
         
         with pytest.raises(InvalidValueException, match="at least 3 characters"):
             api_key.validate()
     
     def test_name_too_long_raises_exception(self):
         """Test that name longer than 100 chars raises exception"""
-        api_key = ApiKeyFactory.create(name="a" * 101)
+        api_key = ApiKeyFactory.build(name="a" * 101)
         
         with pytest.raises(InvalidValueException, match="not exceed 100 characters"):
             api_key.validate()
     
     def test_missing_key_hash_raises_exception(self):
         """Test that missing key_hash raises exception"""
-        api_key = ApiKeyFactory.create()
+        api_key = ApiKeyFactory.build()
         api_key.key_hash = ""
         
         with pytest.raises(MissingRequiredFieldException, match="key_hash"):
@@ -69,7 +69,7 @@ class TestApiKeyValidation:
     
     def test_empty_scopes_raises_exception(self):
         """Test that empty scopes list raises exception"""
-        api_key = ApiKeyFactory.create(scopes=[])
+        api_key = ApiKeyFactory.build(scopes=[])
         
         with pytest.raises(InvalidValueException, match="at least one scope"):
             api_key.validate()
@@ -81,7 +81,7 @@ class TestApiKeyIsActive:
     
     def test_is_active_returns_true_for_valid_key(self):
         """Test is_active returns True for non-revoked, non-expired key"""
-        api_key = ApiKeyFactory.create(
+        api_key = ApiKeyFactory.build(
             revoked_at=None,
             expires_at=datetime.utcnow() + timedelta(days=30)
         )
@@ -102,7 +102,7 @@ class TestApiKeyIsActive:
     
     def test_is_active_returns_true_for_key_without_expiration(self):
         """Test is_active returns True for key without expiration"""
-        api_key = ApiKeyFactory.create(
+        api_key = ApiKeyFactory.build(
             revoked_at=None,
             expires_at=None  # Never expires
         )
@@ -116,7 +116,7 @@ class TestApiKeyExpiration:
     
     def test_is_expired_returns_false_for_future_expiration(self):
         """Test is_expired returns False when expiration is in future"""
-        api_key = ApiKeyFactory.create(
+        api_key = ApiKeyFactory.build(
             expires_at=datetime.utcnow() + timedelta(days=30)
         )
         
@@ -130,7 +130,7 @@ class TestApiKeyExpiration:
     
     def test_is_expired_returns_false_when_no_expiration(self):
         """Test is_expired returns False when expires_at is None"""
-        api_key = ApiKeyFactory.create(expires_at=None)
+        api_key = ApiKeyFactory.build(expires_at=None)
         
         assert api_key.is_expired() is False
 
@@ -141,7 +141,7 @@ class TestApiKeyRevocation:
     
     def test_is_revoked_returns_false_for_active_key(self):
         """Test is_revoked returns False for non-revoked key"""
-        api_key = ApiKeyFactory.create(revoked_at=None)
+        api_key = ApiKeyFactory.build(revoked_at=None)
         
         assert api_key.is_revoked() is False
     
@@ -153,7 +153,7 @@ class TestApiKeyRevocation:
     
     def test_revoke_sets_revoked_at(self):
         """Test revoke() sets revoked_at timestamp"""
-        api_key = ApiKeyFactory.create()
+        api_key = ApiKeyFactory.build()
         
         api_key.revoke()
         
@@ -174,7 +174,7 @@ class TestApiKeyLastUsed:
     
     def test_update_last_used_sets_timestamp(self):
         """Test update_last_used() sets last_used_at"""
-        api_key = ApiKeyFactory.create()
+        api_key = ApiKeyFactory.build()
         
         assert api_key.last_used_at is None
         
@@ -185,7 +185,7 @@ class TestApiKeyLastUsed:
     
     def test_update_last_used_updates_existing_timestamp(self):
         """Test update_last_used() updates existing timestamp"""
-        api_key = ApiKeyFactory.create(
+        api_key = ApiKeyFactory.build(
             last_used_at=datetime.utcnow() - timedelta(days=1)
         )
         old_timestamp = api_key.last_used_at
@@ -201,14 +201,14 @@ class TestApiKeyScopes:
     
     def test_has_scope_returns_true_for_matching_scope(self):
         """Test has_scope returns True when key has the scope"""
-        api_key = ApiKeyFactory.create(scopes=[ApiKeyScope.READ, ApiKeyScope.WRITE])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ, ApiKeyScope.WRITE])
         
         assert api_key.has_scope(ApiKeyScope.READ) is True
         assert api_key.has_scope(ApiKeyScope.WRITE) is True
     
     def test_has_scope_returns_false_for_missing_scope(self):
         """Test has_scope returns False when key doesn't have the scope"""
-        api_key = ApiKeyFactory.create(scopes=[ApiKeyScope.READ])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ])
         
         assert api_key.has_scope(ApiKeyScope.WRITE) is False
         assert api_key.has_scope(ApiKeyScope.DELETE) is False
@@ -224,21 +224,21 @@ class TestApiKeyScopes:
     
     def test_has_any_scope_returns_true_when_has_one(self):
         """Test has_any_scope returns True when key has at least one scope"""
-        api_key = ApiKeyFactory.create(scopes=[ApiKeyScope.READ])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ])
         
         result = api_key.has_any_scope([ApiKeyScope.READ, ApiKeyScope.WRITE])
         assert result is True
     
     def test_has_any_scope_returns_false_when_has_none(self):
         """Test has_any_scope returns False when key has none of the scopes"""
-        api_key = ApiKeyFactory.create(scopes=[ApiKeyScope.READ])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ])
         
         result = api_key.has_any_scope([ApiKeyScope.WRITE, ApiKeyScope.DELETE])
         assert result is False
     
     def test_has_all_scopes_returns_true_when_has_all(self):
         """Test has_all_scopes returns True when key has all scopes"""
-        api_key = ApiKeyFactory.create(
+        api_key = ApiKeyFactory.build(
             scopes=[ApiKeyScope.READ, ApiKeyScope.WRITE, ApiKeyScope.DELETE]
         )
         
@@ -247,14 +247,14 @@ class TestApiKeyScopes:
     
     def test_has_all_scopes_returns_false_when_missing_one(self):
         """Test has_all_scopes returns False when key is missing a scope"""
-        api_key = ApiKeyFactory.create(scopes=[ApiKeyScope.READ])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ])
         
         result = api_key.has_all_scopes([ApiKeyScope.READ, ApiKeyScope.WRITE])
         assert result is False
     
     def test_get_scopes_list_returns_string_values(self):
         """Test get_scopes_list returns scope values as strings"""
-        api_key = ApiKeyFactory.create(
+        api_key = ApiKeyFactory.build(
             scopes=[ApiKeyScope.READ, ApiKeyScope.WRITE]
         )
         

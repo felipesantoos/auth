@@ -61,7 +61,7 @@ class TestSendVerificationEmail:
         self, email_verification_service, mock_repository, mock_email_service
     ):
         """Test sending verification email generates token"""
-        user = UserFactory.create(email_verified=False)
+        user = UserFactory.build(email_verified=False)
         mock_repository.find_by_id.return_value = user
         mock_repository.save.return_value = user
         
@@ -77,7 +77,7 @@ class TestSendVerificationEmail:
         self, email_verification_service, mock_repository, mock_email_service
     ):
         """Test verification email includes link"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         mock_repository.find_by_id.return_value = user
         mock_repository.save.return_value = user
         
@@ -104,7 +104,7 @@ class TestSendVerificationEmail:
         self, email_verification_service, mock_repository
     ):
         """Test sending verification to already verified user raises exception"""
-        user = UserFactory.create(email_verified=True)
+        user = UserFactory.build(email_verified=True)
         mock_repository.find_by_id.return_value = user
         
         with pytest.raises(BusinessRuleException, match="already verified"):
@@ -120,7 +120,7 @@ class TestVerifyEmail:
         self, email_verification_service, mock_repository
     ):
         """Test verifying email with valid token"""
-        user = UserFactory.create(email_verified=False)
+        user = UserFactory.build(email_verified=False)
         # Generate token
         user.generate_email_verification_token()
         token = user.email_verification_token
@@ -139,7 +139,7 @@ class TestVerifyEmail:
         self, email_verification_service, mock_repository
     ):
         """Test verifying email with invalid token raises exception"""
-        user = UserFactory.create(email_verified=False)
+        user = UserFactory.build(email_verified=False)
         user.generate_email_verification_token()
         
         mock_repository.find_by_email.return_value = user
@@ -152,7 +152,7 @@ class TestVerifyEmail:
         self, email_verification_service, mock_repository
     ):
         """Test verifying email with expired token raises exception"""
-        user = UserFactory.create(email_verified=False)
+        user = UserFactory.build(email_verified=False)
         user.generate_email_verification_token()
         # Set sent_at to 25 hours ago (expired)
         user.email_verification_sent_at = datetime.utcnow() - timedelta(hours=25)
@@ -183,7 +183,7 @@ class TestResendVerificationEmail:
         self, email_verification_service, mock_repository, mock_email_service
     ):
         """Test resending verification email"""
-        user = UserFactory.create(email_verified=False)
+        user = UserFactory.build(email_verified=False)
         mock_repository.find_by_email.return_value = user
         mock_repository.save.return_value = user
         
@@ -197,7 +197,7 @@ class TestResendVerificationEmail:
         self, email_verification_service, mock_repository
     ):
         """Test resending to already verified user raises exception"""
-        user = UserFactory.create(email_verified=True)
+        user = UserFactory.build(email_verified=True)
         mock_repository.find_by_email.return_value = user
         
         with pytest.raises(BusinessRuleException, match="already verified"):
@@ -208,7 +208,7 @@ class TestResendVerificationEmail:
         self, email_verification_service, mock_repository, mock_email_service
     ):
         """Test resending generates new token"""
-        user = UserFactory.create(email_verified=False)
+        user = UserFactory.build(email_verified=False)
         user.generate_email_verification_token()
         old_token = user.email_verification_token
         
@@ -264,7 +264,7 @@ class TestEmailVerificationStatus:
         self, email_verification_service, mock_repository
     ):
         """Test checking status for verified user"""
-        user = UserFactory.create(email_verified=True)
+        user = UserFactory.build(email_verified=True)
         mock_repository.find_by_id.return_value = user
         
         status = await email_verification_service.get_verification_status(user.id, user.client_id)
@@ -277,7 +277,7 @@ class TestEmailVerificationStatus:
         self, email_verification_service, mock_repository
     ):
         """Test checking status for unverified user"""
-        user = UserFactory.create(email_verified=False)
+        user = UserFactory.build(email_verified=False)
         mock_repository.find_by_id.return_value = user
         
         status = await email_verification_service.get_verification_status(user.id, user.client_id)

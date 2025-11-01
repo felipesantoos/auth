@@ -17,7 +17,7 @@ class ClientFactory:
     """Factory for creating Client instances with realistic data"""
     
     @staticmethod
-    def create(
+    def build(
         id: Optional[str] = None,
         name: Optional[str] = None,
         subdomain: Optional[str] = None,
@@ -56,4 +56,46 @@ class ClientFactory:
             _api_key=api_key,
             created_at=kwargs.get('created_at', datetime.utcnow()),
             updated_at=kwargs.get('updated_at', datetime.utcnow())
+        )
+    
+    @staticmethod
+    async def create_persisted(db_session, **kwargs) -> Client:
+        """
+        Create and persist client to database.
+        
+        Args:
+            db_session: Database session
+            **kwargs: Client attributes
+        
+        Returns:
+            Persisted Client with ID from database
+        """
+        from infra.database.repositories.client_repository import ClientRepository
+        
+        client = ClientFactory.build(**kwargs)
+        repository = ClientRepository(db_session)
+        saved = await repository.save(client)
+        await db_session.commit()
+        return saved
+
+
+class ClientFactoryTraits:
+    """Predefined client configurations (Trait pattern)"""
+    
+    @staticmethod
+    def active() -> Client:
+        """Create active client"""
+        return ClientFactory.build(active=True)
+    
+    @staticmethod
+    def inactive() -> Client:
+        """Create inactive client"""
+        return ClientFactory.build(active=False)
+    
+    @staticmethod
+    def minimal() -> Client:
+        """Create minimal valid client"""
+        return ClientFactory.build(
+            name="Test",
+            subdomain="test"
         )

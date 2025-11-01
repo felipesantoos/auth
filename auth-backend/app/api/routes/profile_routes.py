@@ -2,7 +2,7 @@
 User Profile Routes
 Self-service profile management endpoints
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from typing import Annotated
 import logging
 
@@ -173,5 +173,137 @@ async def delete_account(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete account"
+        )
+
+
+@router.post("/avatar", status_code=status.HTTP_200_OK)
+async def upload_avatar(
+    avatar: UploadFile = File(...),
+    current_user: Annotated[AppUser, Depends(get_current_user)],
+    profile_service: Annotated[UserProfileService, Depends(get_user_profile_service)]
+):
+    """
+    Upload user avatar.
+    
+    Accepts image files (JPEG, PNG, GIF, WebP).
+    Image will be automatically optimized and resized.
+    """
+    try:
+        avatar_url = await profile_service.update_avatar(
+            user_id=current_user.id,
+            client_id=current_user.client_id,
+            avatar_file=avatar
+        )
+        
+        return {"avatar_url": avatar_url, "message": "Avatar uploaded successfully"}
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error uploading avatar: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload avatar"
+        )
+
+
+@router.delete("/avatar", status_code=status.HTTP_200_OK)
+async def delete_avatar(
+    current_user: Annotated[AppUser, Depends(get_current_user)],
+    profile_service: Annotated[UserProfileService, Depends(get_user_profile_service)]
+):
+    """Delete user avatar."""
+    try:
+        await profile_service.delete_avatar(
+            user_id=current_user.id,
+            client_id=current_user.client_id
+        )
+        
+        return {"message": "Avatar deleted successfully"}
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error deleting avatar: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete avatar"
+        )
+
+
+# KYC Endpoints
+class KYCStatusResponse(BaseModel):
+    """KYC status response"""
+    kyc_status: str
+    kyc_verified: bool
+    kyc_pending: bool
+    kyc_verified_at: str = None
+
+
+@router.post("/kyc/document", status_code=status.HTTP_201_CREATED)
+async def submit_kyc_document(
+    document: UploadFile = File(...),
+    current_user: Annotated[AppUser, Depends(get_current_user)] = None,
+    profile_service: Annotated[UserProfileService, Depends(get_user_profile_service)] = None
+):
+    """
+    Submit KYC document for verification.
+    
+    - **document**: Identity document (passport, ID card, driver's license)
+    - Accepted formats: PDF, JPG, PNG
+    - Max size: 10MB
+    """
+    try:
+        result = await profile_service.submit_kyc_document(
+            user_id=current_user.id,
+            client_id=current_user.client_id,
+            document_file=document
+        )
+        
+        return result
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error submitting KYC document: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to submit KYC document"
+        )
+
+
+@router.get("/kyc/status", response_model=KYCStatusResponse)
+async def get_kyc_status(
+    current_user: Annotated[AppUser, Depends(get_current_user)],
+    profile_service: Annotated[UserProfileService, Depends(get_user_profile_service)]
+):
+    """Get KYC verification status."""
+    try:
+        status_info = await profile_service.get_kyc_status(
+            user_id=current_user.id,
+            client_id=current_user.client_id
+        )
+        
+        return status_info
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error getting KYC status: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get KYC status"
         )
 

@@ -4,6 +4,7 @@ Tests database operations for user entity
 """
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from infra.database.repositories.app_user_repository import AppUserRepository
 from core.services.filters.user_filter import UserFilter
 from core.domain.auth.user_role import UserRole
@@ -19,7 +20,7 @@ class TestAppUserRepositorySave:
     async def test_save_new_user(self, db_session: AsyncSession):
         """Test saving a new user"""
         repository = AppUserRepository(db_session)
-        user = UserFactory.create()
+        user = UserFactory.build()
         
         saved_user = await repository.save(user)
         await db_session.commit()
@@ -34,12 +35,12 @@ class TestAppUserRepositorySave:
         repository = AppUserRepository(db_session)
         
         # Create first user
-        user1 = UserFactory.create(email="duplicate@example.com")
+        user1 = UserFactory.build(email="duplicate@example.com")
         await repository.save(user1)
         await db_session.commit()
         
         # Try to create second user with same email
-        user2 = UserFactory.create(email="duplicate@example.com")
+        user2 = UserFactory.build(email="duplicate@example.com")
         
         with pytest.raises(DuplicateEntityException):
             await repository.save(user2)
@@ -51,7 +52,7 @@ class TestAppUserRepositorySave:
         repository = AppUserRepository(db_session)
         
         # Create user
-        user = UserFactory.create(name="Original Name")
+        user = UserFactory.build(name="Original Name")
         saved_user = await repository.save(user)
         await db_session.commit()
         
@@ -74,7 +75,7 @@ class TestAppUserRepositoryFind:
         repository = AppUserRepository(db_session)
         
         # Create user
-        user = UserFactory.create()
+        user = UserFactory.build()
         saved_user = await repository.save(user)
         await db_session.commit()
         
@@ -100,7 +101,7 @@ class TestAppUserRepositoryFind:
         repository = AppUserRepository(db_session)
         
         # Create user
-        user = UserFactory.create(email="findme@example.com")
+        user = UserFactory.build(email="findme@example.com")
         await repository.save(user)
         await db_session.commit()
         
@@ -125,7 +126,7 @@ class TestAppUserRepositoryFind:
         repository = AppUserRepository(db_session)
         
         # Create user in client A
-        user_a = UserFactory.create(
+        user_a = UserFactory.build(
             email="user@example.com",
             client_id="client-a"
         )
@@ -150,7 +151,7 @@ class TestAppUserRepositoryFindAll:
         
         # Create multiple users
         for i in range(3):
-            user = UserFactory.create(client_id="client-123")
+            user = UserFactory.build(client_id="client-123")
             await repository.save(user)
         await db_session.commit()
         
@@ -167,7 +168,7 @@ class TestAppUserRepositoryFindAll:
         
         # Create users with different roles
         admin = UserFactory.create_admin(client_id="client-123")
-        user = UserFactory.create(role=UserRole.USER, client_id="client-123")
+        user = UserFactory.build(role=UserRole.USER, client_id="client-123")
         await repository.save(admin)
         await repository.save(user)
         await db_session.commit()
@@ -184,8 +185,8 @@ class TestAppUserRepositoryFindAll:
         repository = AppUserRepository(db_session)
         
         # Create active and inactive users
-        active_user = UserFactory.create(active=True, client_id="client-123")
-        inactive_user = UserFactory.create(active=False, client_id="client-123")
+        active_user = UserFactory.build(active=True, client_id="client-123")
+        inactive_user = UserFactory.build(active=False, client_id="client-123")
         await repository.save(active_user)
         await repository.save(inactive_user)
         await db_session.commit()
@@ -203,7 +204,7 @@ class TestAppUserRepositoryFindAll:
         
         # Create 5 users
         for i in range(5):
-            user = UserFactory.create(client_id="client-123")
+            user = UserFactory.build(client_id="client-123")
             await repository.save(user)
         await db_session.commit()
         
@@ -231,7 +232,7 @@ class TestAppUserRepositoryDelete:
         repository = AppUserRepository(db_session)
         
         # Create user
-        user = UserFactory.create()
+        user = UserFactory.build()
         saved_user = await repository.save(user)
         await db_session.commit()
         
@@ -270,7 +271,7 @@ class TestAppUserRepositoryCount:
         
         # Create users
         for i in range(3):
-            user = UserFactory.create(client_id="client-test-count")
+            user = UserFactory.build(client_id="client-test-count")
             await repository.save(user)
         await db_session.commit()
         
@@ -285,8 +286,8 @@ class TestAppUserRepositoryCount:
         repository = AppUserRepository(db_session)
         
         # Create active and inactive users
-        active_user = UserFactory.create(active=True, client_id="client-count-filter")
-        inactive_user = UserFactory.create(active=False, client_id="client-count-filter")
+        active_user = UserFactory.build(active=True, client_id="client-count-filter")
+        inactive_user = UserFactory.build(active=False, client_id="client-count-filter")
         await repository.save(active_user)
         await repository.save(inactive_user)
         await db_session.commit()
@@ -301,4 +302,75 @@ class TestAppUserRepositoryCount:
         
         assert active_count >= 1
         assert inactive_count >= 1
+
+
+@pytest.mark.integration
+class TestAppUserRepositoryTransactions:
+    """Test transaction handling and rollback"""
+    
+    @pytest.mark.asyncio
+    async def test_transaction_rollback_on_error(self, db_session: AsyncSession):
+        """
+        Test that transaction rolls back on error (critical for data integrity).
+        
+        Validates that failed operations don't leave partial data.
+        """
+        repository = AppUserRepository(db_session)
+        
+        # Create first user successfully
+        user1 = UserFactory.build(email="original@test.com", client_id="rollback-test")
+        saved_user = await repository.save(user1)
+        await db_session.commit()
+        
+        user_id = saved_user.id
+        
+        # Verify user exists
+        found = await repository.find_by_id(user_id, "rollback-test")
+        assert found is not None
+        assert found.email == "original@test.com"
+        
+        # Try to create duplicate email (should fail and rollback)
+        try:
+            user2 = UserFactory.build(email="original@test.com", client_id="rollback-test")
+            await repository.save(user2)
+            await db_session.commit()
+            assert False, "Should have raised DuplicateEntityException"
+        except (DuplicateEntityException, IntegrityError):
+            # Expected - rollback the failed transaction
+            await db_session.rollback()
+        
+        # Original user should still exist and be unchanged
+        found_after = await repository.find_by_id(user_id, "rollback-test")
+        assert found_after is not None
+        assert found_after.email == "original@test.com"
+        
+        # Verify no duplicate was created
+        all_users = await repository.find_all(UserFilter(client_id="rollback-test"))
+        emails = [u.email for u in all_users]
+        assert emails.count("original@test.com") == 1, "Should have exactly 1 user with this email"
+    
+    @pytest.mark.asyncio
+    async def test_concurrent_operations_isolation(self, db_session: AsyncSession):
+        """
+        Test that operations within a session are isolated.
+        
+        Changes should not be visible until commit.
+        """
+        repository = AppUserRepository(db_session)
+        
+        # Create user but don't commit
+        user = UserFactory.build(email="isolated@test.com", client_id="isolation-test")
+        await repository.save(user)
+        # NOTE: Not committing yet
+        
+        # In same session, should be able to find it
+        found_in_session = await repository.find_by_email("isolated@test.com", "isolation-test")
+        assert found_in_session is not None
+        
+        # Rollback
+        await db_session.rollback()
+        
+        # After rollback, should not exist
+        found_after_rollback = await repository.find_by_email("isolated@test.com", "isolation-test")
+        assert found_after_rollback is None
 

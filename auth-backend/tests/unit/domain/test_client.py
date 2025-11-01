@@ -13,68 +13,68 @@ class TestClientValidation:
     
     def test_valid_client_passes_validation(self):
         """Test that a valid client passes validation"""
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         # Should not raise
         client.validate()
     
     def test_name_too_short_raises_exception(self):
         """Test that name shorter than 3 chars raises exception"""
-        client = ClientFactory.create(name="ab")
+        client = ClientFactory.build(name="ab")
         
         with pytest.raises(ValueError, match="at least 3 characters"):
             client.validate()
     
     def test_empty_name_raises_exception(self):
         """Test that empty name raises exception"""
-        client = ClientFactory.create(name="")
+        client = ClientFactory.build(name="")
         
         with pytest.raises(ValueError, match="at least 3 characters"):
             client.validate()
     
     def test_subdomain_too_short_raises_exception(self):
         """Test that subdomain shorter than 2 chars raises exception"""
-        client = ClientFactory.create(subdomain="a")
+        client = ClientFactory.build(subdomain="a")
         
         with pytest.raises(ValueError, match="at least 2 characters"):
             client.validate()
     
     def test_empty_subdomain_raises_exception(self):
         """Test that empty subdomain raises exception"""
-        client = ClientFactory.create(subdomain="")
+        client = ClientFactory.build(subdomain="")
         
         with pytest.raises(ValueError, match="at least 2 characters"):
             client.validate()
     
     def test_subdomain_with_special_chars_raises_exception(self):
         """Test that subdomain with special characters raises exception"""
-        client = ClientFactory.create(subdomain="test@client")
+        client = ClientFactory.build(subdomain="test@client")
         
         with pytest.raises(ValueError, match="alphanumeric characters and hyphens"):
             client.validate()
     
     def test_subdomain_with_spaces_raises_exception(self):
         """Test that subdomain with spaces raises exception"""
-        client = ClientFactory.create(subdomain="test client")
+        client = ClientFactory.build(subdomain="test client")
         
         with pytest.raises(ValueError, match="alphanumeric characters and hyphens"):
             client.validate()
     
     def test_subdomain_with_underscores_raises_exception(self):
         """Test that subdomain with underscores raises exception"""
-        client = ClientFactory.create(subdomain="test_client")
+        client = ClientFactory.build(subdomain="test_client")
         
         with pytest.raises(ValueError, match="alphanumeric characters and hyphens"):
             client.validate()
     
     def test_valid_subdomain_with_hyphens_passes(self):
         """Test that subdomain with hyphens is valid"""
-        client = ClientFactory.create(subdomain="test-client-123")
+        client = ClientFactory.build(subdomain="test-client-123")
         # Should not raise
         client.validate()
     
     def test_valid_subdomain_alphanumeric_passes(self):
         """Test that alphanumeric subdomain is valid"""
-        client = ClientFactory.create(subdomain="testclient123")
+        client = ClientFactory.build(subdomain="testclient123")
         # Should not raise
         client.validate()
 
@@ -85,13 +85,13 @@ class TestClientActivation:
     
     def test_activate_sets_active_to_true(self):
         """Test activate() sets active to True"""
-        client = ClientFactory.create(active=False)
+        client = ClientFactory.build(active=False)
         client.activate()
         assert client.active is True
     
     def test_deactivate_sets_active_to_false(self):
         """Test deactivate() sets active to False"""
-        client = ClientFactory.create(active=True)
+        client = ClientFactory.build(active=True)
         client.deactivate()
         assert client.active is False
 
@@ -102,7 +102,7 @@ class TestClientApiKey:
     
     def test_api_key_property_returns_key(self):
         """Test api_key property returns the key"""
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         assert client.api_key is not None
         assert len(client.api_key) > 0
     
@@ -126,7 +126,7 @@ class TestClientApiKey:
     
     def test_generate_api_key_overwrites_existing_key(self):
         """Test generate_api_key replaces existing key"""
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         old_key = client.api_key
         
         new_key = client.generate_api_key()
@@ -136,7 +136,7 @@ class TestClientApiKey:
     
     def test_api_key_cannot_be_set_directly(self):
         """Test api_key property is read-only"""
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         
         # api_key is a property without setter, so direct assignment should fail
         # This is tested by attempting to set it

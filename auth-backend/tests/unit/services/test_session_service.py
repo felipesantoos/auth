@@ -58,7 +58,7 @@ class TestSessionCreation:
     @pytest.mark.asyncio
     async def test_create_session_saves_to_repository(self, session_service, mock_repository):
         """Test creating session saves to repository"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         refresh_token = "test-refresh-token"
         user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
         ip_address = "192.168.1.1"
@@ -90,7 +90,7 @@ class TestSessionCreation:
     @pytest.mark.asyncio
     async def test_create_session_parses_device_info(self, session_service, mock_repository):
         """Test session creation parses device information"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         
         # Mock return value
         mock_repository.save.return_value = UserSession(
@@ -123,7 +123,7 @@ class TestSessionRetrieval:
     @pytest.mark.asyncio
     async def test_get_active_sessions_for_user(self, session_service, mock_repository):
         """Test getting active sessions for a user"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         
         # Mock multiple sessions
         sessions = [
@@ -207,7 +207,7 @@ class TestSessionMaxDevices:
     @pytest.mark.asyncio
     async def test_create_session_enforces_max_devices_limit(self, session_service, mock_repository):
         """Test creating session when max devices reached"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         
         # Mock 10 existing sessions (max limit)
         existing_sessions = [

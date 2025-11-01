@@ -73,7 +73,7 @@ class TestRequestPasswordReset:
         self, password_reset_service, mock_repository, mock_cache, mock_email_service
     ):
         """Test requesting reset generates token"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         mock_repository.find_by_email.return_value = user
         
         await password_reset_service.request_password_reset(user.email, user.client_id)
@@ -99,7 +99,7 @@ class TestRequestPasswordReset:
         self, password_reset_service, mock_repository, mock_email_service
     ):
         """Test reset request sends email with reset link"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         mock_repository.find_by_email.return_value = user
         
         await password_reset_service.request_password_reset(user.email, user.client_id)
@@ -119,7 +119,7 @@ class TestVerifyResetToken:
         self, password_reset_service, mock_cache
     ):
         """Test verifying valid reset token"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         
         # Generate valid token
         token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
@@ -137,7 +137,7 @@ class TestVerifyResetToken:
         self, password_reset_service, mock_cache
     ):
         """Test verifying expired token raises exception"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         
         # Generate expired token
         with patch('core.services.auth.password_reset_service.datetime') as mock_datetime:
@@ -164,7 +164,7 @@ class TestVerifyResetToken:
         self, password_reset_service, mock_cache
     ):
         """Test verifying token not in cache raises exception"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
         
         # Token not in cache (already used or never existed)
@@ -183,7 +183,7 @@ class TestResetPassword:
         self, password_reset_service, mock_repository, mock_cache
     ):
         """Test resetting password with valid token"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
         new_password = "NewSecurePass123"
         
@@ -203,7 +203,7 @@ class TestResetPassword:
         self, password_reset_service, mock_cache
     ):
         """Test resetting with weak password raises exception"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
         
         mock_cache.get.return_value = "exists"
@@ -216,7 +216,7 @@ class TestResetPassword:
         self, password_reset_service, mock_repository, mock_cache
     ):
         """Test reset password invalidates token (one-time use)"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
         
         mock_cache.get.return_value = "exists"

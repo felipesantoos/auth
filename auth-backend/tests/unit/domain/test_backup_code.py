@@ -15,27 +15,27 @@ class TestBackupCodeValidation:
     
     def test_valid_backup_code_passes_validation(self):
         """Test that a valid backup code passes validation"""
-        code = BackupCodeFactory.create()
+        code = BackupCodeFactory.build()
         # Should not raise
         code.validate()
     
     def test_missing_user_id_raises_exception(self):
         """Test that missing user_id raises exception"""
-        code = BackupCodeFactory.create(user_id="")
+        code = BackupCodeFactory.build(user_id="")
         
         with pytest.raises(MissingRequiredFieldException, match="user_id"):
             code.validate()
     
     def test_missing_client_id_raises_exception(self):
         """Test that missing client_id raises exception"""
-        code = BackupCodeFactory.create(client_id="")
+        code = BackupCodeFactory.build(client_id="")
         
         with pytest.raises(MissingRequiredFieldException, match="client_id"):
             code.validate()
     
     def test_missing_code_hash_raises_exception(self):
         """Test that missing code_hash raises exception"""
-        code = BackupCodeFactory.create()
+        code = BackupCodeFactory.build()
         code.code_hash = ""
         
         with pytest.raises(MissingRequiredFieldException, match="code_hash"):
@@ -48,7 +48,7 @@ class TestBackupCodeUsage:
     
     def test_is_used_returns_false_for_new_code(self):
         """Test is_used returns False for unused code"""
-        code = BackupCodeFactory.create(used=False)
+        code = BackupCodeFactory.build(used=False)
         
         assert code.is_used() is False
     
@@ -60,7 +60,7 @@ class TestBackupCodeUsage:
     
     def test_can_be_used_returns_true_for_unused_code(self):
         """Test can_be_used returns True for unused code"""
-        code = BackupCodeFactory.create(used=False)
+        code = BackupCodeFactory.build(used=False)
         
         assert code.can_be_used() is True
     
@@ -72,7 +72,7 @@ class TestBackupCodeUsage:
     
     def test_mark_as_used_sets_used_to_true(self):
         """Test mark_as_used sets used flag and timestamp"""
-        code = BackupCodeFactory.create(used=False)
+        code = BackupCodeFactory.build(used=False)
         
         code.mark_as_used()
         

@@ -19,7 +19,7 @@ class UserFactory:
     """Factory for creating AppUser instances with realistic data"""
     
     @staticmethod
-    def create(
+    def build(
         id: Optional[str] = None,
         username: Optional[str] = None,
         email: Optional[str] = None,
@@ -84,12 +84,51 @@ class UserFactory:
         )
     
     @staticmethod
+    async def create_persisted(db_session, **kwargs) -> AppUser:
+        """
+        Create and persist user to database.
+        
+        Args:
+            db_session: Database session
+            **kwargs: User attributes
+        
+        Returns:
+            Persisted AppUser with ID from database
+        """
+        from infra.database.repositories.app_user_repository import AppUserRepository
+        
+        user = UserFactory.build(**kwargs)
+        repository = AppUserRepository(db_session)
+        saved = await repository.save(user)
+        await db_session.commit()
+        return saved
+    
+    @staticmethod
+    async def create_batch_persisted(db_session, count: int, **kwargs) -> list[AppUser]:
+        """
+        Create and persist multiple users to database.
+        
+        Args:
+            db_session: Database session
+            count: Number of users to create
+            **kwargs: Common attributes for all users
+        
+        Returns:
+            List of persisted AppUser instances
+        """
+        users = []
+        for _ in range(count):
+            user = await UserFactory.create_persisted(db_session, **kwargs)
+            users.append(user)
+        return users
+    
+    @staticmethod
     def create_admin(
         client_id: str = "test-client-id",
         **kwargs
     ) -> AppUser:
-        """Create a test admin user"""
-        return UserFactory.create(
+        """Create a test admin user (in-memory)"""
+        return UserFactory.build(
             role=UserRole.ADMIN,
             client_id=client_id,
             email_verified=True,
@@ -101,8 +140,8 @@ class UserFactory:
         client_id: str = "test-client-id",
         **kwargs
     ) -> AppUser:
-        """Create a test manager user"""
-        return UserFactory.create(
+        """Create a test manager user (in-memory)"""
+        return UserFactory.build(
             role=UserRole.MANAGER,
             client_id=client_id,
             email_verified=True,
@@ -114,8 +153,8 @@ class UserFactory:
         client_id: str = "test-client-id",
         **kwargs
     ) -> AppUser:
-        """Create a test user with MFA enabled"""
-        return UserFactory.create(
+        """Create a test user with MFA enabled (in-memory)"""
+        return UserFactory.build(
             client_id=client_id,
             mfa_enabled=True,
             mfa_secret=secrets.token_hex(16),
@@ -128,8 +167,8 @@ class UserFactory:
         client_id: str = "test-client-id",
         **kwargs
     ) -> AppUser:
-        """Create a test user with locked account"""
-        return UserFactory.create(
+        """Create a test user with locked account (in-memory)"""
+        return UserFactory.build(
             client_id=client_id,
             failed_login_attempts=5,
             locked_until=datetime.utcnow() + timedelta(minutes=30),
@@ -138,6 +177,49 @@ class UserFactory:
     
     @staticmethod
     def create_batch(count: int = 5, **kwargs) -> list[AppUser]:
-        """Create multiple test users"""
-        return [UserFactory.create(**kwargs) for _ in range(count)]
+        """Create multiple test users (in-memory)"""
+        return [UserFactory.build(**kwargs) for _ in range(count)]
+
+
+class UserFactoryTraits:
+    """Predefined user configurations (Trait pattern)"""
+    
+    @staticmethod
+    def active() -> AppUser:
+        """Create active user"""
+        return UserFactory.build(active=True)
+    
+    @staticmethod
+    def inactive() -> AppUser:
+        """Create inactive user"""
+        return UserFactory.build(active=False)
+    
+    @staticmethod
+    def with_verified_email() -> AppUser:
+        """Create user with verified email"""
+        return UserFactory.build(email_verified=True)
+    
+    @staticmethod
+    def with_unverified_email() -> AppUser:
+        """Create user with unverified email"""
+        return UserFactory.build(email_verified=False)
+    
+    @staticmethod
+    def with_mfa() -> AppUser:
+        """Create user with MFA enabled"""
+        return UserFactory.create_with_mfa()
+    
+    @staticmethod
+    def locked() -> AppUser:
+        """Create locked user"""
+        return UserFactory.create_locked()
+    
+    @staticmethod
+    def minimal() -> AppUser:
+        """Create minimal valid user"""
+        return UserFactory.build(
+            username="test",
+            email="test@test.com",
+            name="Test User"
+        )
 

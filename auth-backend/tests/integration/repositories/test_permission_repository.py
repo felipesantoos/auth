@@ -17,7 +17,7 @@ class TestPermissionRepositorySave:
     async def test_save_new_permission(self, db_session: AsyncSession):
         """Test saving a new permission"""
         repository = PermissionRepository(db_session)
-        permission = PermissionFactory.create()
+        permission = PermissionFactory.build()
         
         saved_permission = await repository.save(permission)
         
@@ -31,7 +31,7 @@ class TestPermissionRepositorySave:
         repository = PermissionRepository(db_session)
         
         # Create permission
-        permission = PermissionFactory.create(action=PermissionAction.READ)
+        permission = PermissionFactory.build(action=PermissionAction.READ)
         saved_permission = await repository.save(permission)
         
         # Update permission
@@ -52,7 +52,7 @@ class TestPermissionRepositoryFind:
         repository = PermissionRepository(db_session)
         
         # Create permission
-        permission = PermissionFactory.create()
+        permission = PermissionFactory.build()
         saved_permission = await repository.save(permission)
         
         # Find permission
@@ -79,12 +79,12 @@ class TestPermissionRepositoryFind:
         client_id = "client-456"
         
         # Create multiple permissions for user
-        perm1 = PermissionFactory.create(
+        perm1 = PermissionFactory.build(
             user_id=user_id,
             client_id=client_id,
             resource_type="project"
         )
-        perm2 = PermissionFactory.create(
+        perm2 = PermissionFactory.build(
             user_id=user_id,
             client_id=client_id,
             resource_type="ticket"
@@ -104,7 +104,7 @@ class TestPermissionRepositoryFind:
         repository = PermissionRepository(db_session)
         
         # Create permission in client A
-        perm_a = PermissionFactory.create(
+        perm_a = PermissionFactory.build(
             user_id="user-123",
             client_id="client-a"
         )
@@ -125,12 +125,12 @@ class TestPermissionRepositoryFind:
         client_id = "client-456"
         
         # Create permissions for different resource types
-        project_perm = PermissionFactory.create(
+        project_perm = PermissionFactory.build(
             user_id=user_id,
             client_id=client_id,
             resource_type="project"
         )
-        ticket_perm = PermissionFactory.create(
+        ticket_perm = PermissionFactory.build(
             user_id=user_id,
             client_id=client_id,
             resource_type="ticket"
@@ -159,7 +159,7 @@ class TestPermissionRepositoryDelete:
         repository = PermissionRepository(db_session)
         
         # Create permission
-        permission = PermissionFactory.create()
+        permission = PermissionFactory.build()
         saved_permission = await repository.save(permission)
         
         # Delete permission
@@ -191,12 +191,12 @@ class TestPermissionRepositoryMultiTenant:
         repository = PermissionRepository(db_session)
         
         # Create permissions for different clients
-        perm_client_a = PermissionFactory.create(
+        perm_client_a = PermissionFactory.build(
             user_id="user-123",
             client_id="client-a",
             resource_type="project"
         )
-        perm_client_b = PermissionFactory.create(
+        perm_client_b = PermissionFactory.build(
             user_id="user-123",
             client_id="client-b",
             resource_type="project"

@@ -14,7 +14,7 @@ class TestPermissionAllows:
     
     def test_allows_returns_true_for_matching_action(self):
         """Test allows returns True when action matches"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             resource_type="project",
             resource_id="project-123",
             action=PermissionAction.READ
@@ -25,7 +25,7 @@ class TestPermissionAllows:
     
     def test_allows_returns_false_for_different_action(self):
         """Test allows returns False when action doesn't match"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             resource_type="project",
             resource_id="project-123",
             action=PermissionAction.READ
@@ -36,7 +36,7 @@ class TestPermissionAllows:
     
     def test_allows_returns_false_for_different_resource_id(self):
         """Test allows returns False when resource_id doesn't match"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             resource_type="project",
             resource_id="project-123",
             action=PermissionAction.READ
@@ -110,19 +110,19 @@ class TestPermissionResourceTypes:
     def test_permission_works_with_custom_resource_types(self):
         """Test permission works with any resource type (free string)"""
         # Test various resource types
-        ticket_perm = PermissionFactory.create(
+        ticket_perm = PermissionFactory.build(
             resource_type="ticket",
             resource_id="ticket-123",
             action=PermissionAction.UPDATE
         )
         
-        invoice_perm = PermissionFactory.create(
+        invoice_perm = PermissionFactory.build(
             resource_type="invoice",
             resource_id="inv-456",
             action=PermissionAction.READ
         )
         
-        deal_perm = PermissionFactory.create(
+        deal_perm = PermissionFactory.build(
             resource_type="deal",
             resource_id="deal-789",
             action=PermissionAction.DELETE
@@ -190,7 +190,7 @@ class TestPermissionCreation:
     
     def test_permission_stores_granted_by_user_id(self):
         """Test permission stores who granted it"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             granted_by="admin-456"
         )
         
@@ -203,7 +203,7 @@ class TestPermissionActions:
     
     def test_create_action_permission(self):
         """Test CREATE action permission"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             action=PermissionAction.CREATE
         )
         
@@ -212,7 +212,7 @@ class TestPermissionActions:
     
     def test_read_action_permission(self):
         """Test READ action permission"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             action=PermissionAction.READ
         )
         
@@ -221,7 +221,7 @@ class TestPermissionActions:
     
     def test_update_action_permission(self):
         """Test UPDATE action permission"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             action=PermissionAction.UPDATE
         )
         
@@ -230,7 +230,7 @@ class TestPermissionActions:
     
     def test_delete_action_permission(self):
         """Test DELETE action permission"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             action=PermissionAction.DELETE
         )
         
@@ -244,7 +244,7 @@ class TestPermissionMultiTenant:
     
     def test_permission_belongs_to_client(self):
         """Test permission is scoped to client"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             client_id="client-abc"
         )
         
@@ -252,7 +252,7 @@ class TestPermissionMultiTenant:
     
     def test_permission_belongs_to_user(self):
         """Test permission is assigned to specific user"""
-        permission = PermissionFactory.create(
+        permission = PermissionFactory.build(
             user_id="user-123"
         )
         

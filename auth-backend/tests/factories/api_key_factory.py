@@ -18,7 +18,7 @@ class ApiKeyFactory:
     """Factory for creating ApiKey instances with realistic data"""
     
     @staticmethod
-    def create(
+    def build(
         id: Optional[str] = None,
         user_id: Optional[str] = None,
         client_id: str = "test-client-id",
@@ -77,13 +77,24 @@ class ApiKeyFactory:
         )
     
     @staticmethod
+    async def create_persisted(db_session, **kwargs) -> ApiKey:
+        """Create and persist API key to database"""
+        from infra.database.repositories.api_key_repository import ApiKeyRepository
+        
+        api_key = ApiKeyFactory.build(**kwargs)
+        repository = ApiKeyRepository(db_session)
+        saved = await repository.save(api_key)
+        await db_session.commit()
+        return saved
+    
+    @staticmethod
     def create_admin_key(
         user_id: str,
         client_id: str = "test-client-id",
         **kwargs
     ) -> ApiKey:
         """Create an API key with admin scope"""
-        return ApiKeyFactory.create(
+        return ApiKeyFactory.build(
             user_id=user_id,
             client_id=client_id,
             scopes=[ApiKeyScope.ADMIN],
@@ -97,7 +108,7 @@ class ApiKeyFactory:
         **kwargs
     ) -> ApiKey:
         """Create an expired API key"""
-        return ApiKeyFactory.create(
+        return ApiKeyFactory.build(
             user_id=user_id,
             client_id=client_id,
             expires_at=datetime.utcnow() - timedelta(days=1),
@@ -111,10 +122,47 @@ class ApiKeyFactory:
         **kwargs
     ) -> ApiKey:
         """Create a revoked API key"""
-        return ApiKeyFactory.create(
+        return ApiKeyFactory.build(
             user_id=user_id,
             client_id=client_id,
             revoked_at=datetime.utcnow(),
             **kwargs
+        )
+
+
+class ApiKeyFactoryTraits:
+    """Predefined API key configurations (Trait pattern)"""
+    
+    @staticmethod
+    def active(user_id: str) -> ApiKey:
+        """Create active API key"""
+        return ApiKeyFactory.build(
+            user_id=user_id,
+            revoked_at=None,
+            expires_at=datetime.utcnow() + timedelta(days=365)
+        )
+    
+    @staticmethod
+    def expired(user_id: str) -> ApiKey:
+        """Create expired API key"""
+        return ApiKeyFactory.create_expired_key(user_id=user_id)
+    
+    @staticmethod
+    def revoked(user_id: str) -> ApiKey:
+        """Create revoked API key"""
+        return ApiKeyFactory.create_revoked_key(user_id=user_id)
+    
+    @staticmethod
+    def admin_scope(user_id: str) -> ApiKey:
+        """Create API key with admin scope"""
+        return ApiKeyFactory.create_admin_key(user_id=user_id)
+    
+    @staticmethod
+    def minimal(user_id: str) -> ApiKey:
+        """Create minimal valid API key"""
+        return ApiKeyFactory.build(
+            user_id=user_id,
+            name="Test Key",
+            scopes=[ApiKeyScope.READ]
         )
 

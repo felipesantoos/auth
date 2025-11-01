@@ -51,7 +51,7 @@ class TestMFASetup:
     @pytest.mark.asyncio
     async def test_setup_mfa_generates_secret_and_qr(self, mfa_service, mock_repositories):
         """Test MFA setup generates TOTP secret and QR code"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         user_repo, backup_repo = mock_repositories
         user_repo.find_by_id.return_value = user
         user_repo.save.return_value = user
@@ -68,7 +68,7 @@ class TestMFASetup:
     @pytest.mark.asyncio
     async def test_setup_mfa_generates_backup_codes(self, mfa_service, mock_repositories):
         """Test MFA setup generates backup codes"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         user_repo, backup_repo = mock_repositories
         user_repo.find_by_id.return_value = user
         user_repo.save.return_value = user
@@ -83,7 +83,7 @@ class TestMFASetup:
     @pytest.mark.asyncio
     async def test_setup_mfa_does_not_enable_immediately(self, mfa_service, mock_repositories):
         """Test MFA setup doesn't enable MFA immediately"""
-        user = UserFactory.create(mfa_enabled=False)
+        user = UserFactory.build(mfa_enabled=False)
         user_repo, backup_repo = mock_repositories
         user_repo.find_by_id.return_value = user
         user_repo.save.return_value = user
@@ -101,7 +101,7 @@ class TestMFAEnable:
     @pytest.mark.asyncio
     async def test_enable_mfa_with_valid_totp(self, mfa_service, mock_repositories):
         """Test enabling MFA with valid TOTP code"""
-        user = UserFactory.create(mfa_enabled=False)
+        user = UserFactory.build(mfa_enabled=False)
         secret = pyotp.random_base32()
         user.mfa_secret = secret
         
@@ -121,7 +121,7 @@ class TestMFAEnable:
     @pytest.mark.asyncio
     async def test_enable_mfa_with_invalid_totp_fails(self, mfa_service, mock_repositories):
         """Test enabling MFA with invalid TOTP fails"""
-        user = UserFactory.create(mfa_enabled=False)
+        user = UserFactory.build(mfa_enabled=False)
         user.mfa_secret = pyotp.random_base32()
         
         user_repo, backup_repo = mock_repositories
@@ -178,7 +178,7 @@ class TestMFAVerification:
         plain_code = "12345678"
         
         # Create backup code
-        backup_code = BackupCodeFactory.create(
+        backup_code = BackupCodeFactory.build(
             user_id=user.id,
             client_id=user.client_id,
             code=plain_code,
@@ -246,7 +246,7 @@ class TestBackupCodeRegeneration:
     @pytest.mark.asyncio
     async def test_regenerate_backup_codes_without_mfa_enabled_fails(self, mfa_service, mock_repositories):
         """Test regenerating backup codes without MFA enabled fails"""
-        user = UserFactory.create(mfa_enabled=False)
+        user = UserFactory.build(mfa_enabled=False)
         
         user_repo, backup_repo = mock_repositories
         user_repo.find_by_id.return_value = user

@@ -17,7 +17,7 @@ class BackupCodeFactory:
     """Factory for creating BackupCode instances with realistic data"""
     
     @staticmethod
-    def create(
+    def build(
         id: Optional[str] = None,
         user_id: Optional[str] = None,
         client_id: str = "test-client-id",
@@ -63,13 +63,24 @@ class BackupCodeFactory:
         )
     
     @staticmethod
+    async def create_persisted(db_session, **kwargs) -> BackupCode:
+        """Create and persist backup code to database"""
+        from infra.database.repositories.backup_code_repository import BackupCodeRepository
+        
+        code = BackupCodeFactory.build(**kwargs)
+        repository = BackupCodeRepository(db_session)
+        saved = await repository.save(code)
+        await db_session.commit()
+        return saved
+    
+    @staticmethod
     def create_used(
         user_id: str,
         client_id: str = "test-client-id",
         **kwargs
     ) -> BackupCode:
         """Create a used backup code"""
-        return BackupCodeFactory.create(
+        return BackupCodeFactory.build(
             user_id=user_id,
             client_id=client_id,
             used=True,
@@ -83,13 +94,38 @@ class BackupCodeFactory:
         client_id: str = "test-client-id",
         count: int = 10
     ) -> List[BackupCode]:
-        """Create a batch of backup codes for a user"""
+        """Create a batch of backup codes for a user (in-memory)"""
         return [
-            BackupCodeFactory.create(
+            BackupCodeFactory.build(
                 user_id=user_id,
                 client_id=client_id,
                 code=f"{fake.random_number(digits=8, fix_len=True)}"
             )
             for _ in range(count)
         ]
+
+
+class BackupCodeFactoryTraits:
+    """Predefined backup code configurations (Trait pattern)"""
+    
+    @staticmethod
+    def unused(user_id: str) -> BackupCode:
+        """Create unused backup code"""
+        return BackupCodeFactory.build(
+            user_id=user_id,
+            used=False
+        )
+    
+    @staticmethod
+    def used(user_id: str) -> BackupCode:
+        """Create used backup code"""
+        return BackupCodeFactory.create_used(user_id=user_id)
+    
+    @staticmethod
+    def minimal(user_id: str) -> BackupCode:
+        """Create minimal valid backup code"""
+        return BackupCodeFactory.build(
+            user_id=user_id,
+            code="12345678"
+        )
 

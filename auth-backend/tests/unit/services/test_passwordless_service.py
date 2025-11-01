@@ -58,7 +58,7 @@ class TestSendMagicLink:
         self, passwordless_service, mock_repository, mock_email_service
     ):
         """Test sending magic link generates token"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         mock_repository.find_by_email.return_value = user
         mock_repository.save.return_value = user
         
@@ -84,7 +84,7 @@ class TestSendMagicLink:
         self, passwordless_service, mock_repository, mock_email_service
     ):
         """Test magic link email includes link"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         mock_repository.find_by_email.return_value = user
         mock_repository.save.return_value = user
         
@@ -104,7 +104,7 @@ class TestVerifyMagicLink:
         self, passwordless_service, mock_repository
     ):
         """Test verifying valid magic link"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         user.generate_magic_link_token()
         token = user.magic_link_token
         
@@ -124,7 +124,7 @@ class TestVerifyMagicLink:
         self, passwordless_service, mock_repository
     ):
         """Test verifying invalid magic link raises exception"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         user.generate_magic_link_token()
         
         mock_repository.find_by_email.return_value = user
@@ -137,7 +137,7 @@ class TestVerifyMagicLink:
         self, passwordless_service, mock_repository
     ):
         """Test verifying expired magic link raises exception"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         user.generate_magic_link_token()
         # Set sent_at to 20 minutes ago (expired)
         user.magic_link_sent_at = datetime.utcnow() - timedelta(minutes=20)
@@ -193,7 +193,7 @@ class TestMagicLinkSecurity:
         self, passwordless_service, mock_repository
     ):
         """Test magic link can only be used once"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         user.generate_magic_link_token()
         token = user.magic_link_token
         
@@ -215,7 +215,7 @@ class TestMagicLinkSecurity:
         self, passwordless_service, mock_repository, mock_email_service
     ):
         """Test sending new magic link invalidates old one"""
-        user = UserFactory.create()
+        user = UserFactory.build()
         user.generate_magic_link_token()
         old_token = user.magic_link_token
         

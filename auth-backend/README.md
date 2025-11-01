@@ -45,6 +45,64 @@ Multi-tenant Authentication and Authorization System built with FastAPI.
 - ✅ **Attachments** - Support for email attachments and inline images
 - ✅ **Bulk Email** - Send emails in batches with rate limiting
 
+### File Upload & Storage
+- ✅ **Multiple Storage Providers** - Local, AWS S3, Azure Blob, Google Cloud Storage, Cloudinary, Cloudflare Images
+- ✅ **Image Processing** - Automatic optimization, thumbnails, responsive images, watermarks
+- ✅ **Video Processing** - Compression, thumbnail extraction, metadata (FFmpeg)
+- ✅ **Audio Processing** - Format conversion, compression (FFmpeg)
+- ✅ **File Validation** - MIME type detection, magic numbers, size limits, malware scanning (ClamAV)
+- ✅ **Presigned URLs** - Direct upload to S3/Azure/GCS without backend proxy
+- ✅ **Chunked Upload** - Multipart upload for large files (unlimited size)
+- ✅ **CDN Integration** - CloudFront signed URLs for secure delivery
+- ✅ **File Sharing** - Share files with other users with granular permissions
+- ✅ **Background Processing** - Async image/video processing with Celery
+- ✅ **Avatar Upload** - Integrated user avatar management
+- ✅ **Security** - Access control, virus scanning, audit logging
+
+## File Upload & Storage
+
+### Quick Start
+
+**Upload a file:**
+```bash
+curl -X POST "http://localhost:8080/api/files/upload" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@image.jpg"
+```
+
+**List files:**
+```bash
+curl "http://localhost:8080/api/files?page=1&per_page=20" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Supported Storage Providers
+
+| Provider | Configuration | Use Case |
+|----------|--------------|----------|
+| **Local** | `STORAGE_PROVIDER=local` | Development |
+| **AWS S3** | `STORAGE_PROVIDER=s3` | Production (general) |
+| **S3 + CloudFront** | `STORAGE_PROVIDER=s3-cdn` | Production (CDN) |
+| **Azure Blob** | `STORAGE_PROVIDER=azure` | Azure ecosystem |
+| **Google Cloud Storage** | `STORAGE_PROVIDER=gcs` | GCP ecosystem |
+| **Cloudinary** | `STORAGE_PROVIDER=cloudinary` | Image/video optimization |
+| **Cloudflare Images** | `STORAGE_PROVIDER=cloudflare` | Premium images |
+
+### Features
+
+- **Multiple Upload Methods**: Direct upload, presigned URLs, chunked upload
+- **Image Processing**: Auto-optimization, thumbnails, responsive images, watermarks
+- **Video Processing**: Compression, thumbnail extraction (requires FFmpeg)
+- **Security**: File validation, malware scanning (ClamAV), access control
+- **Performance**: Background processing, CDN integration, async operations
+
+### Documentation
+
+- [File Upload API](docs/FILE_UPLOAD_API.md) - Complete API reference with examples
+- [Storage Setup Guide](docs/FILE_STORAGE_SETUP.md) - Provider configuration guides
+
+---
+
 ## Setup
 
 ### Prerequisites
@@ -52,6 +110,8 @@ Multi-tenant Authentication and Authorization System built with FastAPI.
 - Python 3.12+
 - PostgreSQL
 - Redis
+- **Optional**: FFmpeg (for video/audio processing)
+- **Optional**: ClamAV (for malware scanning)
 
 ### Installation
 
@@ -102,6 +162,8 @@ pytest --cov=core --cov=app --cov-report=html --cov-report=term
 pytest -m unit           # Unit tests only
 pytest -m integration    # Integration tests only
 pytest -m e2e           # E2E tests only
+pytest -m performance    # Performance tests only (10K+ records, SLOW ~5-10 min)
+pytest -m "not performance"  # Skip slow performance tests
 
 # Run tests in parallel (faster)
 pytest -n 4
@@ -140,26 +202,48 @@ ptw
 
 ### Test Structure
 
+**443+ tests across 56 files**
+
+Factories support build/create_persisted pattern with Traits:
+
+```python
+# In-memory (unit tests - fast, no DB)
+user = UserFactory.build(username="test")
+
+# Persisted to DB (integration tests)
+user = await UserFactory.create_persisted(db_session, username="test")
+
+# Batch persisted (performance tests)
+users = await UserFactory.create_batch_persisted(db_session, count=10000)
+
+# Using Traits (predefined configurations)
+active_user = UserFactoryTraits.active()
+verified_user = UserFactoryTraits.with_verified_email()
+read_perm = PermissionFactoryTraits.read_only(user_id="123")
+full_perm = PermissionFactoryTraits.full_access(user_id="123")
+```
+
 ```
 tests/
 ├── conftest.py              # Shared fixtures
-├── factories.py             # Test data factories (Faker)
-├── unit/                    # Unit tests (fast, isolated)
-│   ├── domain/             # Domain model tests
+├── factories/               # Test data factories (build/create/Traits)
+│   ├── user_factory.py      # UserFactory + UserFactoryTraits
+│   ├── client_factory.py
+│   ├── permission_factory.py
+│   ├── api_key_factory.py
+│   └── backup_code_factory.py
+├── unit/                    # Unit tests (fast, isolated, 336+ tests)
+│   ├── domain/             # Domain model tests (130+ tests)
 │   │   ├── test_app_user.py
 │   │   ├── test_permission.py
 │   │   ├── test_client.py
 │   │   ├── test_api_key.py
 │   │   └── test_backup_code.py
-│   ├── mappers/            # Mapper tests
-│   │   ├── test_auth_mapper.py
-│   │   └── test_client_mapper.py
-│   └── *.py                # Service tests
-├── repositories/            # Repository tests (with DB)
-│   ├── test_app_user_repository.py
-│   ├── test_permission_repository.py
-│   └── test_client_repository.py
-├── integration/             # Integration tests (API + DB)
+│   ├── services/           # Service layer tests (144+ tests)
+│   ├── mappers/            # Mapper tests (28+ tests)
+│   ├── repositories/       # Mocked repository tests (34+ tests)
+│   └── test_error_handling.py  # Error handling tests (16+ tests)
+├── integration/             # Integration tests (102+ tests)
 │   ├── test_auth_security.py
 │   ├── test_permissions_api.py
 │   └── test_profile_api.py

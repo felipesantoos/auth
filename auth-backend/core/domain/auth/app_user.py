@@ -59,6 +59,14 @@ class AppUser:
     magic_link_token: Optional[str] = None
     magic_link_sent_at: Optional[datetime] = None
     
+    # Avatar / Profile Picture
+    avatar_url: Optional[str] = None
+    
+    # KYC (Know Your Customer) / Identity Verification
+    kyc_document_id: Optional[str] = None
+    kyc_status: Optional[str] = None  # pending, approved, rejected
+    kyc_verified_at: Optional[datetime] = None
+    
     @property
     def password_hash(self) -> str:
         """Read-only access to password hash (encapsulation)"""
@@ -294,4 +302,58 @@ class AppUser:
         """Clear magic link token after successful use"""
         self.magic_link_token = None
         self.magic_link_sent_at = None
+    
+    # Avatar Methods
+    def update_avatar(self, avatar_url: str) -> None:
+        """
+        Update user's avatar URL.
+        
+        Args:
+            avatar_url: URL to avatar image
+        """
+        self.avatar_url = avatar_url
+    
+    def remove_avatar(self) -> None:
+        """Remove user's avatar."""
+        self.avatar_url = None
+    
+    def has_avatar(self) -> bool:
+        """Check if user has avatar set."""
+        return self.avatar_url is not None
+    
+    # KYC Methods
+    def submit_kyc_document(self, document_id: str) -> None:
+        """
+        Submit KYC document for verification.
+        
+        Args:
+            document_id: ID of uploaded document file
+        """
+        self.kyc_document_id = document_id
+        self.kyc_status = "pending"
+        self.kyc_verified_at = None
+    
+    def approve_kyc(self) -> None:
+        """Approve KYC verification (admin only)."""
+        self.kyc_status = "approved"
+        self.kyc_verified_at = datetime.utcnow()
+    
+    def reject_kyc(self, reason: str = None) -> None:
+        """
+        Reject KYC verification (admin only).
+        
+        Args:
+            reason: Optional reason for rejection
+        """
+        self.kyc_status = "rejected"
+        self.kyc_verified_at = None
+        # Reason could be stored in a separate field or audit log
+    
+    def is_kyc_verified(self) -> bool:
+        """Check if user has completed KYC verification."""
+        return self.kyc_status == "approved"
+    
+    def kyc_pending(self) -> bool:
+        """Check if KYC is pending review."""
+        return self.kyc_status == "pending"
 

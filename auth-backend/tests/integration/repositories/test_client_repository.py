@@ -17,7 +17,7 @@ class TestClientRepositorySave:
     async def test_save_new_client(self, db_session: AsyncSession):
         """Test saving a new client"""
         repository = ClientRepository(db_session)
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         
         saved_client = await repository.save(client)
         await db_session.commit()
@@ -32,12 +32,12 @@ class TestClientRepositorySave:
         repository = ClientRepository(db_session)
         
         # Create first client
-        client1 = ClientFactory.create(subdomain="duplicate-subdomain")
+        client1 = ClientFactory.build(subdomain="duplicate-subdomain")
         await repository.save(client1)
         await db_session.commit()
         
         # Try to create second client with same subdomain
-        client2 = ClientFactory.create(subdomain="duplicate-subdomain")
+        client2 = ClientFactory.build(subdomain="duplicate-subdomain")
         
         with pytest.raises(DuplicateEntityException):
             await repository.save(client2)
@@ -49,7 +49,7 @@ class TestClientRepositorySave:
         repository = ClientRepository(db_session)
         
         # Create client
-        client = ClientFactory.create(name="Original Name")
+        client = ClientFactory.build(name="Original Name")
         saved_client = await repository.save(client)
         await db_session.commit()
         
@@ -72,7 +72,7 @@ class TestClientRepositoryFind:
         repository = ClientRepository(db_session)
         
         # Create client
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         saved_client = await repository.save(client)
         await db_session.commit()
         
@@ -98,7 +98,7 @@ class TestClientRepositoryFind:
         repository = ClientRepository(db_session)
         
         # Create client
-        client = ClientFactory.create(subdomain="test-subdomain")
+        client = ClientFactory.build(subdomain="test-subdomain")
         await repository.save(client)
         await db_session.commit()
         
@@ -123,7 +123,7 @@ class TestClientRepositoryFind:
         repository = ClientRepository(db_session)
         
         # Create client
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         api_key = client.api_key
         await repository.save(client)
         await db_session.commit()
@@ -159,7 +159,7 @@ class TestClientRepositoryFindAll:
         
         # Create multiple clients
         for i in range(3):
-            client = ClientFactory.create()
+            client = ClientFactory.build()
             await repository.save(client)
         await db_session.commit()
         
@@ -174,8 +174,8 @@ class TestClientRepositoryFindAll:
         repository = ClientRepository(db_session)
         
         # Create active and inactive clients
-        active_client = ClientFactory.create(active=True)
-        inactive_client = ClientFactory.create(active=False)
+        active_client = ClientFactory.build(active=True)
+        inactive_client = ClientFactory.build(active=False)
         await repository.save(active_client)
         await repository.save(inactive_client)
         await db_session.commit()
@@ -197,7 +197,7 @@ class TestClientRepositoryDelete:
         repository = ClientRepository(db_session)
         
         # Create client
-        client = ClientFactory.create()
+        client = ClientFactory.build()
         saved_client = await repository.save(client)
         await db_session.commit()
         
@@ -231,12 +231,12 @@ class TestClientRepositoryUniqueness:
         repository = ClientRepository(db_session)
         
         # Create first client
-        client1 = ClientFactory.create(subdomain="unique-test")
+        client1 = ClientFactory.build(subdomain="unique-test")
         await repository.save(client1)
         await db_session.commit()
         
         # Try to create second client with same subdomain
-        client2 = ClientFactory.create(subdomain="unique-test")
+        client2 = ClientFactory.build(subdomain="unique-test")
         
         with pytest.raises(DuplicateEntityException):
             await repository.save(client2)

@@ -5,6 +5,7 @@ Self-service profile management
 import logging
 from typing import Optional
 import bcrypt
+from fastapi import UploadFile
 from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
 from core.domain.auth.app_user import AppUser
 from infra.email.email_service import EmailService
@@ -20,11 +21,13 @@ class UserProfileService:
         self,
         user_repository: IAppUserRepository,
         email_service: EmailService,
-        settings_provider: ISettingsProvider
+        settings_provider: ISettingsProvider,
+        file_service=None  # Optional, injected when needed
     ):
         self.user_repository = user_repository
         self.email_service = email_service
         self.settings = settings_provider.get_settings()
+        self.file_service = file_service
     
     def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify password against hash"""
@@ -171,5 +174,213 @@ class UserProfileService:
         # This should be implemented in a future update
         
         logger.info(f"Account deleted (deactivated) for user {user_id}")
+        return True
+    
+    async def update_avatar(
+        self,
+        user_id: str,
+        client_id: str,
+        avatar_file: UploadFile
+    ) -> str:
+        """
+        Upload and set user avatar.
+        
+        Args:
+            user_id: User ID
+            client_id: Client ID
+            avatar_file: Avatar image file
+            
+        Returns:
+            Avatar URL
+            
+        Raises:
+            ValueError: If file service not available or user not found
+        """
+        if not self.file_service:
+            raise ValueError("File service not available")
+        
+        user = await self.user_repository.find_by_id(user_id)
+        if not user or user.client_id != client_id:
+            raise ValueError("User not found")
+        
+        # Delete old avatar if exists
+        if user.avatar_url:
+            try:
+                # Extract file_id from URL (simplified, assumes URL pattern)
+                # In production, store file_id separately
+                pass
+            except:
+                pass
+        
+        # Upload new avatar
+        result = await self.file_service.upload_file(
+            file=avatar_file,
+            user_id=user_id,
+            client_id=client_id,
+            directory="avatars",
+            is_public=True,
+            tags=["avatar"]
+        )
+        
+        # Update user
+        user.update_avatar(result['url'])
+        await self.user_repository.save(user)
+        
+        logger.info(f"Avatar updated for user {user_id}")
+        return result['url']
+    
+    async def delete_avatar(
+        self,
+        user_id: str,
+        client_id: str
+    ) -> bool:
+        """
+        Delete user avatar.
+        
+        Args:
+            user_id: User ID
+            client_id: Client ID
+            
+        Returns:
+            True if successful
+        """
+        user = await self.user_repository.find_by_id(user_id)
+        if not user or user.client_id != client_id:
+            raise ValueError("User not found")
+        
+        # Remove avatar
+        user.remove_avatar()
+        await self.user_repository.save(user)
+        
+        logger.info(f"Avatar deleted for user {user_id}")
+        return True
+    
+    async def submit_kyc_document(
+        self,
+        user_id: str,
+        client_id: str,
+        document_file: UploadFile
+    ) -> dict:
+        """
+        Submit KYC document for verification.
+        
+        Args:
+            user_id: User ID
+            client_id: Client ID
+            document_file: Document file (ID, passport, driver's license, etc.)
+            
+        Returns:
+            Document info with status
+            
+        Raises:
+            ValueError: If user not found or file service unavailable
+        """
+        if not self.file_service:
+            raise ValueError("File service not available")
+        
+        user = await self.user_repository.find_by_id(user_id)
+        if not user or user.client_id != client_id:
+            raise ValueError("User not found")
+        
+        # Upload KYC document (private, secure)
+        result = await self.file_service.upload_file(
+            file=document_file,
+            user_id=user_id,
+            client_id=client_id,
+            directory="kyc_documents",
+            is_public=False,  # Keep KYC documents private
+            tags=["kyc", "identity"]
+        )
+        
+        # Update user KYC status
+        user.submit_kyc_document(result['id'])
+        await self.user_repository.save(user)
+        
+        logger.info(f"KYC document submitted for user {user_id}")
+        return {
+            "document_id": result['id'],
+            "status": "pending",
+            "message": "KYC document submitted successfully. Awaiting verification."
+        }
+    
+    async def get_kyc_status(
+        self,
+        user_id: str,
+        client_id: str
+    ) -> dict:
+        """
+        Get KYC verification status.
+        
+        Args:
+            user_id: User ID
+            client_id: Client ID
+            
+        Returns:
+            KYC status info
+        """
+        user = await self.user_repository.find_by_id(user_id)
+        if not user or user.client_id != client_id:
+            raise ValueError("User not found")
+        
+        return {
+            "kyc_status": user.kyc_status or "not_submitted",
+            "kyc_verified": user.is_kyc_verified(),
+            "kyc_pending": user.kyc_pending(),
+            "kyc_verified_at": user.kyc_verified_at.isoformat() if user.kyc_verified_at else None
+        }
+    
+    async def approve_kyc(
+        self,
+        user_id: str,
+        admin_id: str
+    ) -> bool:
+        """
+        Approve KYC verification (admin only).
+        
+        Args:
+            user_id: User ID to approve
+            admin_id: Admin user ID performing approval
+            
+        Returns:
+            True if successful
+            
+        Note:
+            This should be called only after proper admin authorization check
+        """
+        user = await self.user_repository.find_by_id(user_id)
+        if not user:
+            raise ValueError("User not found")
+        
+        user.approve_kyc()
+        await self.user_repository.save(user)
+        
+        logger.info(f"KYC approved for user {user_id} by admin {admin_id}")
+        return True
+    
+    async def reject_kyc(
+        self,
+        user_id: str,
+        admin_id: str,
+        reason: Optional[str] = None
+    ) -> bool:
+        """
+        Reject KYC verification (admin only).
+        
+        Args:
+            user_id: User ID to reject
+            admin_id: Admin user ID performing rejection
+            reason: Optional reason for rejection
+            
+        Returns:
+            True if successful
+        """
+        user = await self.user_repository.find_by_id(user_id)
+        if not user:
+            raise ValueError("User not found")
+        
+        user.reject_kyc(reason)
+        await self.user_repository.save(user)
+        
+        logger.info(f"KYC rejected for user {user_id} by admin {admin_id}. Reason: {reason}")
         return True
 

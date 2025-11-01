@@ -52,7 +52,7 @@ class TestApiKeyCreation:
         client_id = "client-456"
         
         mock_repository.count_by_user.return_value = 5
-        mock_repository.save.return_value = ApiKeyFactory.create(user_id=user_id)
+        mock_repository.save.return_value = ApiKeyFactory.build(user_id=user_id)
         
         api_key, plain_key = await api_key_service.create_api_key(
             user_id=user_id,
@@ -70,7 +70,7 @@ class TestApiKeyCreation:
     async def test_create_api_key_with_expiration(self, api_key_service, mock_repository):
         """Test creating API key with custom expiration"""
         mock_repository.count_by_user.return_value = 0
-        created_key = ApiKeyFactory.create()
+        created_key = ApiKeyFactory.build()
         mock_repository.save.return_value = created_key
         
         api_key, _ = await api_key_service.create_api_key(
@@ -107,7 +107,7 @@ class TestApiKeyValidation:
         plain_key = "ask_test1234567890"
         
         # Mock active API key
-        api_key = ApiKeyFactory.create(
+        api_key = ApiKeyFactory.build(
             revoked_at=None,
             expires_at=datetime.utcnow() + timedelta(days=30)
         )
@@ -155,7 +155,7 @@ class TestApiKeyRevocation:
     @pytest.mark.asyncio
     async def test_revoke_api_key(self, api_key_service, mock_repository):
         """Test revoking API key"""
-        api_key = ApiKeyFactory.create()
+        api_key = ApiKeyFactory.build()
         mock_repository.find_by_id = AsyncMock(return_value=api_key)
         mock_repository.save.return_value = api_key
         
@@ -172,7 +172,7 @@ class TestApiKeyListing:
     @pytest.mark.asyncio
     async def test_list_api_keys_for_user(self, api_key_service, mock_repository):
         """Test listing user's API keys"""
-        keys = [ApiKeyFactory.create() for _ in range(3)]
+        keys = [ApiKeyFactory.build() for _ in range(3)]
         mock_repository.find_by_user.return_value = keys
         
         result = await api_key_service.list_api_keys("user-123", "client-456")
@@ -182,7 +182,7 @@ class TestApiKeyListing:
     @pytest.mark.asyncio
     async def test_list_active_api_keys(self, api_key_service, mock_repository):
         """Test listing only active API keys"""
-        active_keys = [ApiKeyFactory.create() for _ in range(2)]
+        active_keys = [ApiKeyFactory.build() for _ in range(2)]
         mock_repository.find_active_by_user.return_value = active_keys
         
         result = await api_key_service.list_active_api_keys("user-123", "client-456")
@@ -198,7 +198,7 @@ class TestApiKeyScopes:
     async def test_create_key_with_valid_scopes(self, api_key_service, mock_repository):
         """Test creating key with valid scopes"""
         mock_repository.count_by_user.return_value = 0
-        mock_repository.save.return_value = ApiKeyFactory.create()
+        mock_repository.save.return_value = ApiKeyFactory.build()
         
         api_key, _ = await api_key_service.create_api_key(
             user_id="user-123",
