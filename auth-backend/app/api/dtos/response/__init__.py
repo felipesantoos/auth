@@ -35,6 +35,15 @@ from .audit_response import (
     AuditLogsResponse,
     SecurityEventsResponse,
 )
+from .email_tracking_response import (
+    EmailAnalyticsResponse,
+    EmailAnalyticsMetrics,
+    EmailAnalyticsFilters,
+    EmailPreferencesResponse,
+    EmailPreferences,
+    UnsubscribeResponse,
+    UpdatePreferencesResponse,
+)
 
 __all__ = [
     # Auth
@@ -72,5 +81,13 @@ __all__ = [
     "AuditLogResponse",
     "AuditLogsResponse",
     "SecurityEventsResponse",
+    # Email Tracking
+    "EmailAnalyticsResponse",
+    "EmailAnalyticsMetrics",
+    "EmailAnalyticsFilters",
+    "EmailPreferencesResponse",
+    "EmailPreferences",
+    "UnsubscribeResponse",
+    "UpdatePreferencesResponse",
 ]
 

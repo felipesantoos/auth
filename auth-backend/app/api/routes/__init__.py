@@ -12,6 +12,8 @@ from . import webauthn_routes
 from . import sso_routes
 from . import permission_routes
 from . import profile_routes
+from . import email_tracking_routes
+from .webhooks import email_webhooks
 
 __all__ = [
     "auth_routes",
@@ -27,5 +29,7 @@ __all__ = [
     "sso_routes",
     "permission_routes",
     "profile_routes",
+    "email_tracking_routes",
+    "email_webhooks",
 ]
 

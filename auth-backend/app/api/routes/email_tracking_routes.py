@@ -16,6 +16,15 @@ from fastapi.responses import RedirectResponse
 
 from core.interfaces.primary.email_tracking_service_interface import IEmailTrackingService
 from app.api.dicontainer.dicontainer import get_email_tracking_service
+from app.api.dtos.response.email_tracking_response import (
+    EmailAnalyticsResponse,
+    EmailAnalyticsMetrics,
+    EmailAnalyticsFilters,
+    EmailPreferencesResponse,
+    EmailPreferences,
+    UnsubscribeResponse,
+    UpdatePreferencesResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -91,13 +100,13 @@ async def track_email_click(
     return RedirectResponse(url=url)
 
 
-@router.get("/analytics")
+@router.get("/analytics", response_model=EmailAnalyticsResponse)
 async def get_email_analytics(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     template_name: Optional[str] = None,
     tracking_service: IEmailTrackingService = Depends(get_email_tracking_service)
-):
+) -> EmailAnalyticsResponse:
     """
     Get email analytics and metrics.
     
@@ -108,7 +117,7 @@ async def get_email_analytics(
         tracking_service: Injected email tracking service
         
     Returns:
-        Analytics metrics
+        Analytics metrics with filters
     """
     try:
         analytics = await tracking_service.get_analytics(
@@ -117,25 +126,25 @@ async def get_email_analytics(
             template_name=template_name
         )
         
-        return {
-            "metrics": analytics,
-            "filters": {
-                "start_date": start_date.isoformat() if start_date else None,
-                "end_date": end_date.isoformat() if end_date else None,
-                "template_name": template_name
-            }
-        }
+        return EmailAnalyticsResponse(
+            metrics=EmailAnalyticsMetrics(**analytics),
+            filters=EmailAnalyticsFilters(
+                start_date=start_date.isoformat() if start_date else None,
+                end_date=end_date.isoformat() if end_date else None,
+                template_name=template_name
+            )
+        )
     
     except Exception as e:
         logger.error(f"Error getting email analytics: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to get analytics")
 
 
-@router.post("/unsubscribe")
+@router.post("/unsubscribe", response_model=UnsubscribeResponse)
 async def unsubscribe_one_click(
     token: str = Query(..., description="Unsubscribe token"),
     tracking_service: IEmailTrackingService = Depends(get_email_tracking_service)
-):
+) -> UnsubscribeResponse:
     """
     One-click unsubscribe (RFC 8058).
     
@@ -153,7 +162,10 @@ async def unsubscribe_one_click(
         )
         
         if success:
-            return {"status": "unsubscribed", "message": "You have been unsubscribed successfully"}
+            return UnsubscribeResponse(
+                status="unsubscribed",
+                message="You have been unsubscribed successfully"
+            )
         else:
             raise HTTPException(status_code=404, detail="Invalid unsubscribe token")
     
@@ -164,11 +176,11 @@ async def unsubscribe_one_click(
         raise HTTPException(status_code=500, detail="Failed to unsubscribe")
 
 
-@router.get("/unsubscribe")
+@router.get("/unsubscribe", response_model=EmailPreferencesResponse)
 async def get_unsubscribe_preferences(
     token: str = Query(..., description="Unsubscribe token"),
     tracking_service: IEmailTrackingService = Depends(get_email_tracking_service)
-):
+) -> EmailPreferencesResponse:
     """
     Get email subscription preferences page.
     
@@ -180,12 +192,16 @@ async def get_unsubscribe_preferences(
         Email preferences
     """
     try:
-        preferences = await tracking_service.get_preferences(token)
+        preferences_data = await tracking_service.get_preferences(token)
         
-        if not preferences:
+        if not preferences_data:
             raise HTTPException(status_code=404, detail="Invalid token")
         
-        return preferences
+        return EmailPreferencesResponse(
+            email=preferences_data["email"],
+            preferences=EmailPreferences(**preferences_data["preferences"]),
+            unsubscribed_at=preferences_data.get("unsubscribed_at")
+        )
     
     except HTTPException:
         raise
@@ -194,7 +210,7 @@ async def get_unsubscribe_preferences(
         raise HTTPException(status_code=500, detail="Failed to get preferences")
 
 
-@router.put("/preferences")
+@router.put("/preferences", response_model=UpdatePreferencesResponse)
 async def update_email_preferences(
     token: str = Query(..., description="Unsubscribe token"),
     marketing: Optional[bool] = None,
@@ -202,7 +218,7 @@ async def update_email_preferences(
     updates: Optional[bool] = None,
     newsletter: Optional[bool] = None,
     tracking_service: IEmailTrackingService = Depends(get_email_tracking_service)
-):
+) -> UpdatePreferencesResponse:
     """
     Update email subscription preferences.
     
@@ -229,7 +245,10 @@ async def update_email_preferences(
         if not result:
             raise HTTPException(status_code=404, detail="Invalid token")
         
-        return result
+        return UpdatePreferencesResponse(
+            status=result["status"],
+            preferences=EmailPreferences(**result["preferences"])
+        )
     
     except HTTPException:
         raise
