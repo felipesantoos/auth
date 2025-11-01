@@ -8,7 +8,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, RegisterFormData } from '../schemas/auth.schema';
-import { useRegister } from '../hooks/useAuthMutations';
+import { useAuth } from '../contexts/AuthContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -18,7 +18,7 @@ import { AlertCircle } from 'lucide-react';
 export const Register: React.FC = () => {
   const [clientId, setClientId] = useState('');
   const navigate = useNavigate();
-  const registerMutation = useRegister();
+  const { register: registerUser, registering, error, clearError } = useAuth();
 
   const {
     register,
@@ -36,13 +36,10 @@ export const Register: React.FC = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      await registerMutation.mutateAsync({
-        ...data,
-        client_id: clientId || undefined,
-      });
+      await registerUser(data.username, data.email, data.password, data.name, clientId || undefined);
       navigate('/dashboard');
     } catch (error) {
-      // Error is handled by React Query and shown below
+      // Error is handled by Context and shown below
     }
   };
 
@@ -55,11 +52,20 @@ export const Register: React.FC = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {registerMutation.isError && (
+            {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {(registerMutation.error as any)?.response?.data?.detail || 'Falha no registro. Tente novamente.'}
+                  <div className="flex items-center justify-between">
+                    <span>{error}</span>
+                    <button
+                      type="button"
+                      onClick={clearError}
+                      className="ml-2 text-sm underline hover:no-underline"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
@@ -104,7 +110,7 @@ export const Register: React.FC = () => {
               placeholder="••••••••"
             />
 
-            <Button type="submit" className="w-full" loading={registerMutation.isPending}>
+            <Button type="submit" className="w-full" loading={registering}>
               Criar Conta
             </Button>
           </form>

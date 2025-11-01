@@ -7,13 +7,16 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryProvider } from '../../providers/QueryProvider';
+import { AuthProvider } from '../../contexts/AuthContext';
 import { Login } from '../Login';
 
 const renderLogin = () => {
   return render(
     <BrowserRouter>
       <QueryProvider>
-        <Login />
+        <AuthProvider>
+          <Login />
+        </AuthProvider>
       </QueryProvider>
     </BrowserRouter>
   );

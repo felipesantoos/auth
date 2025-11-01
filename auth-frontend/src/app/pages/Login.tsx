@@ -7,7 +7,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, LoginFormData } from '../schemas/auth.schema';
-import { useLogin } from '../hooks/useAuthMutations';
+import { useAuth } from '../contexts/AuthContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -17,7 +17,7 @@ import { AlertCircle } from 'lucide-react';
 export const Login: React.FC = () => {
   const [clientId, setClientId] = useState('');
   const navigate = useNavigate();
-  const loginMutation = useLogin();
+  const { login, loggingIn, error, clearError } = useAuth();
 
   const {
     register,
@@ -33,13 +33,10 @@ export const Login: React.FC = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      await loginMutation.mutateAsync({
-        ...data,
-        client_id: clientId || undefined,
-      });
+      await login(data.email, data.password, clientId || undefined);
       navigate('/dashboard');
     } catch (error) {
-      // Error is handled by React Query and shown below
+      // Error is handled by Context and shown below
     }
   };
 
@@ -63,11 +60,20 @@ export const Login: React.FC = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {loginMutation.isError && (
+            {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {(loginMutation.error as any)?.response?.data?.detail || 'Falha no login. Verifique suas credenciais.'}
+                  <div className="flex items-center justify-between">
+                    <span>{error}</span>
+                    <button
+                      type="button"
+                      onClick={clearError}
+                      className="ml-2 text-sm underline hover:no-underline"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
@@ -96,7 +102,7 @@ export const Login: React.FC = () => {
               placeholder="••••••••"
             />
 
-            <Button type="submit" className="w-full" loading={loginMutation.isPending}>
+            <Button type="submit" className="w-full" loading={loggingIn}>
               Entrar
             </Button>
           </form>

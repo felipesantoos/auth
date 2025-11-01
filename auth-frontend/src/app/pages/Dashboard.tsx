@@ -5,19 +5,17 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useLogout } from '../hooks/useAuthMutations';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { LogOut, User, Mail, Shield, Building } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { user } = useAuth();
-  const logoutMutation = useLogout();
+  const { user, logout, loggingOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
-      await logoutMutation.mutateAsync();
+      await logout();
       navigate('/login');
     } catch (error) {
       // Even if logout fails, navigate to login
@@ -31,7 +29,7 @@ export const Dashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-            <Button variant="outline" onClick={handleLogout} loading={logoutMutation.isPending}>
+            <Button variant="outline" onClick={handleLogout} loading={loggingOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Sair
             </Button>
