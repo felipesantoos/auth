@@ -7,6 +7,9 @@ from .mfa_service_interface import IMFAService
 from .session_service_interface import ISessionService
 from .email_verification_service_interface import IEmailVerificationService
 from .audit_service_interface import IAuditService
+from .file_service_interface import IFileService
+from .image_processing_service_interface import IImageProcessingService
+from .video_processing_service_interface import IVideoProcessingService
 
 __all__ = [
     "IAuthService",
@@ -17,4 +20,7 @@ __all__ = [
     "ISessionService",
     "IEmailVerificationService",
     "IAuditService",
+    "IFileService",
+    "IImageProcessingService",
+    "IVideoProcessingService",
 ]

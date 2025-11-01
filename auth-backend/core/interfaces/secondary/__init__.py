@@ -10,6 +10,7 @@ from .user_session_repository_interface import IUserSessionRepository
 from .api_key_repository_interface import IApiKeyRepository
 from .webauthn_credential_repository_interface import IWebAuthnCredentialRepository
 from .permission_repository_interface import IPermissionRepository
+from .i_file_storage import IFileStorage, UploadedFile, StorageProvider
 
 __all__ = [
     "IAppUserRepository",
@@ -23,5 +24,8 @@ __all__ = [
     "IApiKeyRepository",
     "IWebAuthnCredentialRepository",
     "IPermissionRepository",
+    "IFileStorage",
+    "UploadedFile",
+    "StorageProvider",
 ]
 

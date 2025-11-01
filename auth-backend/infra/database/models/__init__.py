@@ -12,6 +12,9 @@ from .email_click import DBEmailClick
 from .email_subscription import DBEmailSubscription
 from .email_ab_test import DBEmailABTest
 from .email_ab_variant import DBEmailABVariant
+from .file import DBFile
+from .pending_upload import DBPendingUpload
+from .file_share import DBFileShare
 
 __all__ = [
     "DBAppUser",
@@ -27,5 +30,8 @@ __all__ = [
     "DBEmailSubscription",
     "DBEmailABTest",
     "DBEmailABVariant",
+    "DBFile",
+    "DBPendingUpload",
+    "DBFileShare",
 ]
 

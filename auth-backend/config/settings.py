@@ -155,6 +155,25 @@ class Settings(BaseSettings):
     celery_result_backend: str = "redis://localhost:6379/1"
     email_use_background_queue: bool = False
     
+    # File Upload & Storage
+    file_upload_max_size: int = 100 * 1024 * 1024  # 100MB default
+    allowed_file_types: list = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'application/pdf', 'video/mp4', 'audio/mpeg', 'text/plain'
+    ]
+    storage_provider: str = "local"  # local, s3, azure, gcs, cloudinary
+    local_storage_path: str = "uploads"
+    
+    # AWS S3 Storage
+    aws_s3_bucket: Optional[str] = None
+    aws_s3_region: Optional[str] = None
+    aws_s3_base_url: Optional[str] = None
+    # aws_access_key_id and aws_secret_access_key already defined above
+    
+    # ClamAV (Malware Scanning)
+    clamav_enabled: bool = False
+    clamav_socket_path: str = "/var/run/clamav/clamd.ctl"
+    
     # Monitoring (Optional)
     sentry_dsn: Optional[str] = None
     

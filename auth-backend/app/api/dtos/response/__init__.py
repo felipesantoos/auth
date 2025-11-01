@@ -44,6 +44,15 @@ from .email_tracking_response import (
     UnsubscribeResponse,
     UpdatePreferencesResponse,
 )
+from .file_response import (
+    FileUploadResponse,
+    FileInfoResponse,
+    FileListResponse,
+    FileListItemResponse,
+    PaginationResponse,
+    PresignedUrlResponse,
+    FileShareResponse,
+)
 
 __all__ = [
     # Auth
@@ -89,5 +98,13 @@ __all__ = [
     "EmailPreferences",
     "UnsubscribeResponse",
     "UpdatePreferencesResponse",
+    # File Upload
+    "FileUploadResponse",
+    "FileInfoResponse",
+    "FileListResponse",
+    "FileListItemResponse",
+    "PaginationResponse",
+    "PresignedUrlResponse",
+    "FileShareResponse",
 ]
 

@@ -15,6 +15,8 @@ from . import profile_routes
 from . import email_tracking_routes
 from . import email_ab_test_routes
 from .webhooks import email_webhooks
+from . import file_routes
+from . import serve_files_routes
 
 __all__ = [
     "auth_routes",
@@ -33,5 +35,7 @@ __all__ = [
     "email_tracking_routes",
     "email_ab_test_routes",
     "email_webhooks",
+    "file_routes",
+    "serve_files_routes",
 ]
 

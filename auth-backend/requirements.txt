@@ -61,6 +61,14 @@ boto3>=1.28.0
 # Background Jobs
 celery[redis]>=5.3.0
 
+# File Upload & Storage
+aiofiles>=23.2.1
+python-magic>=0.4.27
+# Pillow already included above for MFA
+# boto3 already included above for Email providers
+botocore>=1.31.0
+clamd>=1.0.2
+
 # Development & Testing
 pytest>=7.4.0
 pytest-asyncio>=0.21.0

@@ -11,6 +11,9 @@ from .email_tracking_repository import EmailTrackingRepository
 from .email_click_repository import EmailClickRepository
 from .email_subscription_repository import EmailSubscriptionRepository
 from .email_ab_test_repository import EmailABTestRepository
+from .file_repository import FileRepository
+from .pending_upload_repository import PendingUploadRepository
+from .file_share_repository import FileShareRepository
 
 __all__ = [
     "AppUserRepository",
@@ -25,5 +28,8 @@ __all__ = [
     "EmailClickRepository",
     "EmailSubscriptionRepository",
     "EmailABTestRepository",
+    "FileRepository",
+    "PendingUploadRepository",
+    "FileShareRepository",
 ]
 

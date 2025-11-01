@@ -74,6 +74,16 @@ from core.interfaces.primary.email_webhook_service_interface import IEmailWebhoo
 from core.interfaces.primary.unsubscribe_service_interface import IUnsubscribeService
 from core.interfaces.primary.email_ab_test_service_interface import IEmailABTestService
 
+# File Upload
+from infra.database.repositories.file_repository import FileRepository
+from infra.database.repositories.pending_upload_repository import PendingUploadRepository
+from infra.database.repositories.file_share_repository import FileShareRepository
+from core.services.files.file_service import FileService
+from core.interfaces.primary.file_service_interface import IFileService
+from infra.storage.storage_factory import StorageFactory
+from core.interfaces.secondary import IFileStorage
+from app.api.utils.file_validator import FileValidator
+
 logger = logging.getLogger(__name__)
 
 
@@ -391,6 +401,68 @@ async def get_email_ab_test_service(
     )
 
 
+# ===========================================
+# File Upload Factories
+# ===========================================
+
+def get_file_storage() -> IFileStorage:
+    """
+    Factory for file storage provider.
+    
+    Returns appropriate storage implementation based on settings.
+    """
+    return StorageFactory.get_default_storage()
+
+
+def get_file_repository(
+    session: AsyncSession = Depends(get_db_session)
+) -> FileRepository:
+    """Factory for FileRepository."""
+    return FileRepository(session)
+
+
+def get_pending_upload_repository(
+    session: AsyncSession = Depends(get_db_session)
+) -> PendingUploadRepository:
+    """Factory for PendingUploadRepository."""
+    return PendingUploadRepository(session)
+
+
+def get_file_share_repository(
+    session: AsyncSession = Depends(get_db_session)
+) -> FileShareRepository:
+    """Factory for FileShareRepository."""
+    return FileShareRepository(session)
+
+
+def get_file_validator() -> FileValidator:
+    """Factory for FileValidator."""
+    return FileValidator()
+
+
+async def get_file_service(
+    session: AsyncSession = Depends(get_db_session),
+    storage: IFileStorage = Depends(get_file_storage),
+    validator: FileValidator = Depends(get_file_validator)
+) -> IFileService:
+    """
+    Factory for IFileService interface.
+    
+    Returns FileService instance following hexagonal architecture.
+    """
+    file_repository = FileRepository(session)
+    pending_upload_repository = PendingUploadRepository(session)
+    file_share_repository = FileShareRepository(session)
+    
+    return FileService(
+        storage=storage,
+        file_repository=file_repository,
+        pending_upload_repository=pending_upload_repository,
+        file_share_repository=file_share_repository,
+        validator=validator
+    )
+
+
 # Export all factories
 __all__ = [
     "get_client_repository",
@@ -416,5 +488,12 @@ __all__ = [
     "get_email_webhook_service",
     "get_unsubscribe_service",
     "get_email_ab_test_service",
+    # File Upload
+    "get_file_storage",
+    "get_file_repository",
+    "get_pending_upload_repository",
+    "get_file_share_repository",
+    "get_file_validator",
+    "get_file_service",
 ]
 

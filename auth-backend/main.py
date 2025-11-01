@@ -39,6 +39,14 @@ async def lifespan(app: FastAPI):
         await init_redis()
         logger.info("Redis initialized successfully")
         
+        # Create uploads directory for local storage
+        if settings.storage_provider == "local":
+            import os
+            from pathlib import Path
+            uploads_dir = Path(settings.local_storage_path)
+            uploads_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Uploads directory ensured: {uploads_dir}")
+        
         logger.info("Auth System API started successfully!")
         
     except Exception as e:
@@ -156,6 +164,8 @@ from app.api.routes import profile_routes
 from app.api.routes import email_tracking_routes
 from app.api.routes import email_ab_test_routes
 from app.api.routes.webhooks import email_webhooks
+from app.api.routes import file_routes
+from app.api.routes import serve_files_routes
 
 # Register routers
 logger.info("Registering API routes...")
@@ -189,6 +199,10 @@ app.include_router(profile_routes.router)
 app.include_router(email_tracking_routes.router)
 app.include_router(email_ab_test_routes.router)
 app.include_router(email_webhooks.router)
+
+# File Upload & Storage
+app.include_router(file_routes.router)
+app.include_router(serve_files_routes.router)
 
 logger.info("All routes registered successfully")
 
