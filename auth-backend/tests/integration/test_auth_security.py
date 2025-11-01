@@ -5,6 +5,7 @@ import pytest
 from httpx import AsyncClient
 
 
+@pytest.mark.integration
 class TestAuthenticationSecurity:
     """Test authentication security features"""
     
@@ -46,6 +47,7 @@ class TestAuthenticationSecurity:
         assert response.status_code == 403  # Forbidden
 
 
+@pytest.mark.integration
 class TestRateLimiting:
     """Test rate limiting security"""
     
@@ -66,6 +68,7 @@ class TestRateLimiting:
                 assert response.status_code == 429  # Too many requests
 
 
+@pytest.mark.integration
 class TestCORSSecurity:
     """Test CORS security"""
     

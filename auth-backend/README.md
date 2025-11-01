@@ -33,6 +33,18 @@ Multi-tenant Authentication and Authorization System built with FastAPI.
 - ✅ **OIDC** - OpenID Connect support
 - ✅ **LDAP/AD** - Active Directory integration
 
+### Email Service
+- ✅ **Production-Ready Email Service** - Comprehensive email sending with multiple backends
+- ✅ **Template System** - Jinja2-based email templates with inheritance
+- ✅ **Multiple Providers** - Support for SMTP, SendGrid, AWS SES, Mailgun
+- ✅ **Email Tracking** - Track opens, clicks, and engagement metrics
+- ✅ **Email Validation** - Format validation, MX records check, disposable email detection
+- ✅ **Bounce Handling** - Automatic handling of hard/soft bounces and spam complaints
+- ✅ **Unsubscribe Management** - One-click unsubscribe and granular preferences
+- ✅ **Email Analytics** - Dashboard with delivery, open, and click rates
+- ✅ **Attachments** - Support for email attachments and inline images
+- ✅ **Bulk Email** - Send emails in batches with rate limiting
+
 ## Setup
 
 ### Prerequisites
@@ -74,6 +86,338 @@ Multi-tenant Authentication and Authorization System built with FastAPI.
 
 The API will be available at `http://localhost:8080`
 API docs at `http://localhost:8080/docs`
+
+## Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov=core --cov=app --cov-report=html --cov-report=term
+
+# Run specific test types
+pytest -m unit           # Unit tests only
+pytest -m integration    # Integration tests only
+pytest -m e2e           # E2E tests only
+
+# Run tests in parallel (faster)
+pytest -n 4
+
+# Run specific test file
+pytest tests/unit/domain/test_app_user.py
+
+# Run with verbose output
+pytest -v
+
+# Watch mode (auto-run on file changes)
+ptw
+```
+
+### Coverage Goals
+
+- **Domain layer**: 95%+ coverage
+- **Service layer**: 90%+ coverage
+- **API layer**: 85%+ coverage
+- **Overall**: 80%+ coverage
+
+### Test Structure
+
+```
+tests/
+├── conftest.py              # Shared fixtures
+├── factories.py             # Test data factories (Faker)
+├── unit/                    # Unit tests (fast, isolated)
+│   ├── domain/             # Domain model tests
+│   │   ├── test_app_user.py
+│   │   ├── test_permission.py
+│   │   ├── test_client.py
+│   │   ├── test_api_key.py
+│   │   └── test_backup_code.py
+│   ├── mappers/            # Mapper tests
+│   │   ├── test_auth_mapper.py
+│   │   └── test_client_mapper.py
+│   └── *.py                # Service tests
+├── repositories/            # Repository tests (with DB)
+│   ├── test_app_user_repository.py
+│   ├── test_permission_repository.py
+│   └── test_client_repository.py
+├── integration/             # Integration tests (API + DB)
+│   ├── test_auth_security.py
+│   ├── test_permissions_api.py
+│   └── test_profile_api.py
+└── e2e/                     # End-to-end tests (user journeys)
+    ├── test_registration_login_journey.py
+    └── test_permission_journey.py
+```
+
+### Test Database
+
+Tests use a separate test database to avoid affecting development data:
+
+```bash
+# Create test database
+createdb auth_system_test
+
+# Run migrations for test database
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/auth_system_test alembic upgrade head
+```
+
+### Continuous Integration
+
+Tests run automatically on every push and pull request via GitHub Actions. See `.github/workflows/backend-tests.yml` for CI/CD configuration.
+
+## Email Service
+
+The auth system includes a production-ready email service with comprehensive features for transactional emails, tracking, and analytics.
+
+### Email Backends
+
+The email service supports multiple backends:
+
+- **console** - Print emails to console (development)
+- **smtp** - Send via SMTP server (Gmail, custom SMTP)
+- **sendgrid** - Use SendGrid API (recommended for production)
+- **ses** - Use AWS SES
+- **mailgun** - Use Mailgun API
+
+Configure via `EMAIL_BACKEND` environment variable.
+
+### Configuration
+
+#### SMTP Configuration (Gmail Example)
+
+```env
+EMAIL_BACKEND=smtp
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM_EMAIL=noreply@yourapp.com
+SMTP_FROM_NAME=Your App
+SMTP_USE_TLS=true
+```
+
+#### SendGrid Configuration
+
+```env
+EMAIL_BACKEND=sendgrid
+SENDGRID_API_KEY=your_sendgrid_api_key
+```
+
+#### Console Backend (Development)
+
+```env
+EMAIL_BACKEND=console
+```
+
+### Email Templates
+
+Email templates are located in `templates/emails/` and use Jinja2:
+
+Available templates:
+- `base.html` - Base template with responsive design
+- `password_reset.html` - Password reset email
+- `welcome.html` - Welcome email for new users
+- `email_verification.html` - Email verification
+- `login_notification.html` - New device login notification
+
+#### Creating Custom Templates
+
+Create a new template that extends `base.html`:
+
+```html
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Custom Email</h1>
+<p>Hi {{ user_name }},</p>
+<p>Your custom content here.</p>
+{% endblock %}
+```
+
+Send using the template:
+
+```python
+from infra.email.email_service import EmailService
+
+email_service = EmailService()
+
+result = await email_service.send_template_email(
+    to=["user@example.com"],
+    subject="Custom Email",
+    template_name="custom_email",
+    context={"user_name": "John Doe"}
+)
+```
+
+### Email Tracking
+
+Email tracking is automatically enabled when `EMAIL_TRACKING_ENABLED=true`.
+
+**Features:**
+- **Open Tracking** - Track when emails are opened (1x1 pixel)
+- **Click Tracking** - Track link clicks with redirects
+- **Analytics Dashboard** - View delivery, open, and click rates
+- **Bounce Handling** - Automatic handling of bounces and spam complaints
+
+**Tracking Endpoints:**
+- `GET /api/email/track/open/{message_id}` - Open tracking pixel
+- `GET /api/email/track/click/{message_id}?url=...` - Click tracking
+- `GET /api/email/analytics` - Analytics dashboard
+
+**Example Analytics Response:**
+
+```json
+{
+  "metrics": {
+    "total_sent": 1000,
+    "delivered": 980,
+    "delivery_rate": "98.0%",
+    "opened": 450,
+    "open_rate": "45.9%",
+    "clicked": 120,
+    "click_rate": "12.2%",
+    "bounced": 20,
+    "bounce_rate": "2.0%"
+  }
+}
+```
+
+### Unsubscribe Management
+
+The system includes one-click unsubscribe (RFC 8058) and granular preferences:
+
+**Endpoints:**
+- `POST /api/email/unsubscribe?token=...` - One-click unsubscribe
+- `GET /api/email/unsubscribe?token=...` - Get preferences
+- `PUT /api/email/preferences?token=...` - Update preferences
+
+**Preference Types:**
+- Marketing emails
+- Notification emails
+- Product updates
+- Newsletter
+
+### Sending Emails
+
+#### Basic Email
+
+```python
+from core.interfaces.secondary.email_service_interface import EmailMessage
+
+message = EmailMessage(
+    to=["user@example.com"],
+    subject="Test Email",
+    html_content="<p>Hello!</p>",
+    text_content="Hello!"
+)
+
+result = await email_service.send_email(message)
+```
+
+#### Template Email
+
+```python
+result = await email_service.send_template_email(
+    to=["user@example.com"],
+    subject="Welcome!",
+    template_name="welcome",
+    context={
+        "user_name": "John Doe",
+        "user_email": "john@example.com"
+    }
+)
+```
+
+#### Email with Attachments
+
+```python
+from core.interfaces.secondary.email_service_interface import EmailAttachment
+
+attachment = EmailAttachment(
+    filename="document.pdf",
+    content=pdf_bytes,
+    content_type="application/pdf"
+)
+
+message = EmailMessage(
+    to=["user@example.com"],
+    subject="Your Document",
+    html_content="<p>Please find attached.</p>",
+    attachments=[attachment]
+)
+```
+
+#### Bulk Email
+
+```python
+messages = [
+    EmailMessage(
+        to=[f"user{i}@example.com"],
+        subject=f"Notification {i}",
+        html_content=f"<p>Message {i}</p>"
+    )
+    for i in range(100)
+]
+
+results = await email_service.send_bulk_email(messages, batch_size=50)
+```
+
+### Webhooks (Bounce Handling)
+
+Configure webhooks to handle bounces, spam complaints, and delivery confirmations:
+
+**Endpoints:**
+- `POST /api/webhooks/email/bounce` - Generic bounce webhook
+- `POST /api/webhooks/email/sendgrid` - SendGrid-specific webhook
+- `POST /api/webhooks/email/ses` - AWS SES SNS notifications
+
+The system automatically:
+- Marks hard bounces (invalid email addresses)
+- Tracks soft bounces (temporary failures)
+- Unsubscribes users who mark emails as spam
+- Updates delivery status
+
+### Email Validation
+
+The service includes comprehensive email validation:
+
+```python
+is_valid = await email_service.validate_email("user@example.com")
+```
+
+**Validation checks:**
+- Format validation (regex)
+- MX record verification (DNS)
+- Disposable email detection (tempmail, etc.)
+
+### Testing Emails
+
+Run tests for email service:
+
+```bash
+# Unit tests
+pytest tests/unit/test_email_service.py
+
+# Integration tests
+pytest tests/integration/test_email_tracking.py
+```
+
+### Database Migration
+
+Run the email tracking migration:
+
+```bash
+alembic upgrade head
+```
+
+This creates tables:
+- `email_tracking` - Email delivery and engagement tracking
+- `email_clicks` - Individual click tracking
+- `email_subscriptions` - User email preferences
 
 ## Project Structure
 

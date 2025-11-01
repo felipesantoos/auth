@@ -7,6 +7,9 @@ from .audit_log import DBAuditLog
 from .api_key import DBApiKey
 from .webauthn_credential import DBWebAuthnCredential
 from .permission import PermissionModel
+from .email_tracking import DBEmailTracking
+from .email_click import DBEmailClick
+from .email_subscription import DBEmailSubscription
 
 __all__ = [
     "DBAppUser",
@@ -17,5 +20,8 @@ __all__ = [
     "DBApiKey",
     "DBWebAuthnCredential",
     "PermissionModel",
+    "DBEmailTracking",
+    "DBEmailClick",
+    "DBEmailSubscription",
 ]
 

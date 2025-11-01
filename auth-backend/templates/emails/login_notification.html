@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>New Login to Your Account</h1>
+
+<p>Hi {{ user_name }},</p>
+
+<p>We detected a new login to your {{ app_name }} account. If this was you, you can safely ignore this email.</p>
+
+<div class="info-box">
+    <strong>Login Details:</strong><br>
+    <strong>Time:</strong> {{ login_time }}<br>
+    <strong>Device:</strong> {{ device_name | default('Unknown Device') }}<br>
+    <strong>Location:</strong> {{ location | default('Unknown') }}<br>
+    <strong>IP Address:</strong> {{ ip_address }}
+</div>
+
+<h2>Was this you?</h2>
+
+<p>If you recognize this activity, no action is needed.</p>
+
+<p><strong>If you didn't log in:</strong></p>
+<ul>
+    <li>Change your password immediately</li>
+    <li>Review your recent account activity</li>
+    <li>Enable two-factor authentication for extra security</li>
+</ul>
+
+<div style="text-align: center;">
+    <a href="{{ security_url }}" class="email-button">Review Account Security</a>
+</div>
+
+<p>You can also revoke access to any device you don't recognize from your account settings.</p>
+
+<p>For your security, we recommend:</p>
+<ul>
+    <li>Using a strong, unique password</li>
+    <li>Enabling two-factor authentication (2FA)</li>
+    <li>Keeping your recovery email up to date</li>
+</ul>
+
+<p>If you need assistance, please contact our support team immediately.</p>
+
+<p>Best regards,<br>
+The {{ app_name | default('Auth System') }} Security Team</p>
+{% endblock %}
+

@@ -7,6 +7,9 @@ from .user_session_repository import UserSessionRepository
 from .api_key_repository import ApiKeyRepository
 from .webauthn_credential_repository import WebAuthnCredentialRepository
 from .permission_repository import PermissionRepository
+from .email_tracking_repository import EmailTrackingRepository
+from .email_click_repository import EmailClickRepository
+from .email_subscription_repository import EmailSubscriptionRepository
 
 __all__ = [
     "AppUserRepository",
@@ -17,5 +20,8 @@ __all__ = [
     "ApiKeyRepository",
     "WebAuthnCredentialRepository",
     "PermissionRepository",
+    "EmailTrackingRepository",
+    "EmailClickRepository",
+    "EmailSubscriptionRepository",
 ]
 

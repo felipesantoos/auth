@@ -51,6 +51,7 @@ def regular_user():
     )
 
 
+@pytest.mark.unit
 class TestPermissionService:
     """Test permission service"""
     

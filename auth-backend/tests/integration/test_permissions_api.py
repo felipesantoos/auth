@@ -5,6 +5,7 @@ import pytest
 from httpx import AsyncClient
 
 
+@pytest.mark.integration
 class TestPermissionsAPI:
     """Integration tests for fine-grained permissions"""
     

@@ -9,6 +9,7 @@ from core.domain.auth.user_role import UserRole
 from core.exceptions import InvalidPasswordException
 
 
+@pytest.mark.unit
 class TestPasswordSecurity:
     """Test password security features"""
     
@@ -63,6 +64,7 @@ class TestPasswordSecurity:
             auth_service._validate_password_strength("PasswordOnly")
 
 
+@pytest.mark.unit
 class TestJWTSecurity:
     """Test JWT token security"""
     

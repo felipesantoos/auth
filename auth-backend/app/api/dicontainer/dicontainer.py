@@ -60,6 +60,13 @@ from core.services.auth.user_profile_service import UserProfileService
 # New Repositories (WebAuthn)
 from infra.database.repositories.webauthn_credential_repository import WebAuthnCredentialRepository
 
+# Email Tracking
+from infra.database.repositories.email_tracking_repository import EmailTrackingRepository
+from infra.database.repositories.email_click_repository import EmailClickRepository
+from infra.database.repositories.email_subscription_repository import EmailSubscriptionRepository
+from core.services.email.email_tracking_service import EmailTrackingService
+from core.interfaces.primary.email_tracking_service_interface import IEmailTrackingService
+
 logger = logging.getLogger(__name__)
 
 
@@ -309,6 +316,25 @@ async def get_user_profile_service(
     )
 
 
+async def get_email_tracking_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> IEmailTrackingService:
+    """
+    Factory for IEmailTrackingService interface.
+    
+    Returns EmailTrackingService instance following hexagonal architecture.
+    """
+    tracking_repository = EmailTrackingRepository(session)
+    click_repository = EmailClickRepository(session)
+    subscription_repository = EmailSubscriptionRepository(session)
+    
+    return EmailTrackingService(
+        tracking_repository=tracking_repository,
+        click_repository=click_repository,
+        subscription_repository=subscription_repository
+    )
+
+
 # Export all factories
 __all__ = [
     "get_client_repository",
@@ -330,5 +356,6 @@ __all__ = [
     "get_login_notification_service",
     "get_permission_service",
     "get_user_profile_service",
+    "get_email_tracking_service",
 ]
 
