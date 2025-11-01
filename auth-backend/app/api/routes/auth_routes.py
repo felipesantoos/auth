@@ -208,14 +208,39 @@ async def login(
             )
         
         # 6. CREATE SESSION
+        session = None
         try:
-            await session_service.create_session(
+            session = await session_service.create_session(
                 user_id=user.id,
                 client_id=client_id,
                 refresh_token=refresh_token,
                 ip_address=ip_address,
                 user_agent=user_agent
             )
+            
+            # Send login notification if enabled and new device detected
+            from config.settings import settings
+            if settings.send_login_notifications and session:
+                try:
+                    from app.api.dicontainer.dicontainer import get_login_notification_service
+                    notification_service = get_login_notification_service()
+                    
+                    # Check if should send (new device/IP)
+                    should_send = await notification_service.should_send_notification(
+                        user_id=user.id,
+                        client_id=client_id,
+                        current_ip=ip_address or "",
+                        current_user_agent=user_agent or "",
+                        audit_service=audit_service
+                    )
+                    
+                    if should_send:
+                        await notification_service.send_new_login_notification(user, session)
+                        logger.info(f"Login notification sent for new device login: {user.id}")
+                except Exception as e:
+                    logger.error(f"Error sending login notification: {e}", exc_info=True)
+                    # Don't fail login if notification fails
+                    
         except Exception as e:
             logger.error(f"Error creating session: {e}", exc_info=True)
             # Don't fail login if session creation fails

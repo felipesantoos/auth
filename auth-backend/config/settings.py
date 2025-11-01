@@ -132,6 +132,9 @@ class Settings(BaseSettings):
     ldap_base_dn: Optional[str] = None
     ldap_user_filter: str = "(uid={username})"
     
+    # Login Notifications
+    send_login_notifications: bool = False  # Send email on new device login
+    
     # Monitoring (Optional)
     sentry_dsn: Optional[str] = None
     

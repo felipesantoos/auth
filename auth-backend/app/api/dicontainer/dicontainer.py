@@ -52,6 +52,7 @@ from core.services.auth.webauthn_service import WebAuthnService
 from core.services.auth.saml_service import SAMLService
 from core.services.auth.oidc_service import OIDCService
 from core.services.auth.ldap_service import LDAPService
+from core.services.auth.login_notification_service import LoginNotificationService
 
 # New Repositories (WebAuthn)
 from infra.database.repositories.webauthn_credential_repository import WebAuthnCredentialRepository
@@ -273,6 +274,16 @@ async def get_ldap_service(
     )
 
 
+def get_login_notification_service() -> LoginNotificationService:
+    """Factory for LoginNotificationService"""
+    email_service = EmailService()
+    settings_provider = SettingsProvider()
+    return LoginNotificationService(
+        email_service=email_service,
+        settings_provider=settings_provider
+    )
+
+
 # Export all factories
 __all__ = [
     "get_client_repository",
@@ -291,5 +302,6 @@ __all__ = [
     "get_saml_service",
     "get_oidc_service",
     "get_ldap_service",
+    "get_login_notification_service",
 ]
 
