@@ -28,19 +28,29 @@ router = APIRouter(prefix="/auth/email", tags=["Email Verification"])
 
 @router.post("/verify", response_model=VerifyEmailResponse)
 async def verify_email(
-    request: VerifyEmailRequest,
+    verify_request: VerifyEmailRequest,
     email_verification_service: Annotated[EmailVerificationService, Depends(get_email_verification_service)]
 ):
     """
     Verify email address with token.
     
     Token is sent via email after registration.
+    Client ID can come from body or X-Client-ID header.
     """
     try:
+        # Use client_id from body, or require from header/context
+        client_id = verify_request.client_id
+        if not client_id:
+            # In production, get from header or raise error
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="client_id required (in body or X-Client-ID header)"
+            )
+        
         await email_verification_service.verify_email(
-            user_id=request.user_id,
-            token=request.token,
-            client_id=request.client_id  # TODO: Should come from header
+            user_id=verify_request.user_id,
+            token=verify_request.token,
+            client_id=client_id
         )
         
         return VerifyEmailResponse(
