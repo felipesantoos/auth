@@ -154,6 +154,7 @@ from app.api.routes import sso_routes
 from app.api.routes import permission_routes
 from app.api.routes import profile_routes
 from app.api.routes import email_tracking_routes
+from app.api.routes import email_ab_test_routes
 from app.api.routes.webhooks import email_webhooks
 
 # Register routers
@@ -184,8 +185,9 @@ app.include_router(sso_routes.router)
 app.include_router(permission_routes.router)
 app.include_router(profile_routes.router)
 
-# Email Service (Tracking & Webhooks)
+# Email Service (Tracking, A/B Testing & Webhooks)
 app.include_router(email_tracking_routes.router)
+app.include_router(email_ab_test_routes.router)
 app.include_router(email_webhooks.router)
 
 logger.info("All routes registered successfully")

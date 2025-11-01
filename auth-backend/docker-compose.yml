@@ -113,6 +113,33 @@ services:
     networks:
       - backend-network
 
+  # Celery Worker (Background Jobs)
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    command: celery -A infra.celery.celery_app worker --loglevel=info --concurrency=4
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend-network
+    volumes:
+      - .:/app
+
 networks:
   backend-network:
     driver: bridge

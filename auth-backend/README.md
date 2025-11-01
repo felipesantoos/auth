@@ -418,6 +418,132 @@ This creates tables:
 - `email_tracking` - Email delivery and engagement tracking
 - `email_clicks` - Individual click tracking
 - `email_subscriptions` - User email preferences
+- `email_ab_tests` - A/B testing campaigns
+- `email_ab_variants` - A/B test variants
+
+### Background Jobs (Celery)
+
+The email service supports background job processing with Celery for async email sending.
+
+**Configuration:**
+
+```env
+EMAIL_USE_BACKGROUND_QUEUE=true
+CELERY_BROKER_URL=redis://redis:6379/1
+CELERY_RESULT_BACKEND=redis://redis:6379/1
+```
+
+**Starting Celery Worker:**
+
+```bash
+# Local
+./scripts/celery_worker.sh
+
+# Docker
+docker-compose up celery-worker
+```
+
+**Usage:**
+
+```python
+from infra.email.email_service import EmailService
+
+email_service = EmailService()
+
+# Send email in background
+result = email_service.send_email_background(message)
+# Returns: {"task_id": "...", "status": "queued"}
+
+# Schedule email for later
+from datetime import datetime, timedelta
+send_at = datetime.utcnow() + timedelta(hours=1)
+result = email_service.schedule_email(message, send_at)
+# Returns: {"task_id": "...", "scheduled_for": "...", "status": "scheduled"}
+
+# Send bulk emails in background
+result = email_service.send_bulk_email_background(messages)
+# Returns: {"task_id": "...", "total_emails": 100, "status": "queued"}
+```
+
+**Features:**
+- Async email sending (non-blocking)
+- Automatic retry on failure (3 attempts)
+- Rate limiting (100 emails/minute)
+- Scheduled email delivery
+- Bulk email processing
+
+### A/B Testing
+
+Test different email variations to optimize open and click rates.
+
+**Endpoints:**
+- `POST /api/email/ab-test` - Create A/B test
+- `POST /api/email/ab-test/{test_id}/variant` - Add variant
+- `POST /api/email/ab-test/{test_id}/start` - Start test
+- `POST /api/email/ab-test/{test_id}/send` - Send campaign
+- `GET /api/email/ab-test/{test_id}` - Get results
+- `GET /api/email/ab-test/{test_id}/winner` - Calculate winner
+- `POST /api/email/ab-test/{test_id}/winner` - Declare winner
+- `DELETE /api/email/ab-test/{test_id}` - Stop test
+
+**Example Workflow:**
+
+```python
+# 1. Create A/B test
+POST /api/email/ab-test
+{
+  "name": "Welcome Email Test",
+  "variant_count": 2,
+  "min_sample_size": 100
+}
+
+# 2. Add variants
+POST /api/email/ab-test/{test_id}/variant
+{
+  "variant_name": "A",
+  "template_name": "welcome",
+  "subject_template": "Welcome to {app_name}!",
+  "weight": 1.0
+}
+
+POST /api/email/ab-test/{test_id}/variant
+{
+  "variant_name": "B",
+  "template_name": "welcome",
+  "subject_template": "Get started with {app_name}!",
+  "weight": 1.0
+}
+
+# 3. Start test
+POST /api/email/ab-test/{test_id}/start
+
+# 4. Send campaign
+POST /api/email/ab-test/{test_id}/send
+{
+  "recipients": ["user1@example.com", "user2@example.com", ...],
+  "base_context": {"app_name": "Auth System"}
+}
+
+# 5. Get results
+GET /api/email/ab-test/{test_id}
+
+# 6. Calculate winner
+GET /api/email/ab-test/{test_id}/winner?metric=open_rate
+
+# 7. Declare winner
+POST /api/email/ab-test/{test_id}/winner
+{
+  "variant_name": "B"
+}
+```
+
+**Features:**
+- Multiple variants (A/B, A/B/C, etc)
+- Weighted distribution
+- Statistical significance testing
+- Auto winner selection
+- Metrics: open_rate, click_rate, CTR
+- Minimum sample size enforcement
 
 ## Project Structure
 

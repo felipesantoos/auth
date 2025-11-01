@@ -150,6 +150,11 @@ class Settings(BaseSettings):
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
     
+    # Background Jobs (Celery)
+    celery_broker_url: str = "redis://localhost:6379/1"
+    celery_result_backend: str = "redis://localhost:6379/1"
+    email_use_background_queue: bool = False
+    
     # Monitoring (Optional)
     sentry_dsn: Optional[str] = None
     

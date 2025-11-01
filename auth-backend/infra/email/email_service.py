@@ -503,3 +503,164 @@ class EmailService(IEmailService):
             result = await self.send_email(message)
         
         return result.get("success", False)
+    
+    # Background queue methods (Celery integration)
+    def send_email_background(self, message: EmailMessage) -> Dict:
+        """
+        Send email in background using Celery task queue.
+        
+        Args:
+            message: EmailMessage to send
+            
+        Returns:
+            Dict with task_id and status
+        """
+        try:
+            from infra.celery.tasks.email_tasks import send_email_task
+            
+            # Convert message to dict for serialization
+            message_data = {
+                "to": message.to,
+                "subject": message.subject,
+                "html_content": message.html_content,
+                "text_content": message.text_content,
+                "cc": message.cc,
+                "bcc": message.bcc,
+                "reply_to": message.reply_to,
+                "headers": message.headers,
+                "priority": message.priority.value if message.priority else "normal",
+                "track_opens": message.track_opens,
+                "track_clicks": message.track_clicks,
+                "tags": message.tags,
+            }
+            
+            # Queue task
+            task = send_email_task.delay(**message_data)
+            
+            logger.info(f"Email queued for background sending: {task.id}")
+            
+            return {
+                "success": True,
+                "task_id": task.id,
+                "status": "queued"
+            }
+        
+        except Exception as e:
+            logger.error(f"Failed to queue email: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "status": "queue_failed"
+            }
+    
+    def schedule_email(self, message: EmailMessage, send_at: datetime) -> Dict:
+        """
+        Schedule email for future delivery using Celery.
+        
+        Args:
+            message: EmailMessage to send
+            send_at: DateTime when to send the email
+            
+        Returns:
+            Dict with task_id and scheduled time
+        """
+        try:
+            from infra.celery.tasks.email_tasks import send_scheduled_email_task
+            
+            # Calculate delay
+            delay = (send_at - datetime.utcnow()).total_seconds()
+            
+            if delay < 0:
+                # Send immediately if time has passed
+                return self.send_email_background(message)
+            
+            # Convert message to dict
+            message_data = {
+                "to": message.to,
+                "subject": message.subject,
+                "html_content": message.html_content,
+                "text_content": message.text_content,
+                "cc": message.cc,
+                "bcc": message.bcc,
+                "reply_to": message.reply_to,
+                "headers": message.headers,
+                "priority": message.priority.value if message.priority else "normal",
+                "track_opens": message.track_opens,
+                "track_clicks": message.track_clicks,
+                "tags": message.tags,
+            }
+            
+            # Schedule task with countdown
+            task = send_scheduled_email_task.apply_async(
+                kwargs=message_data,
+                countdown=delay
+            )
+            
+            logger.info(f"Email scheduled for {send_at.isoformat()}: {task.id}")
+            
+            return {
+                "success": True,
+                "task_id": task.id,
+                "scheduled_for": send_at.isoformat(),
+                "status": "scheduled"
+            }
+        
+        except Exception as e:
+            logger.error(f"Failed to schedule email: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "status": "schedule_failed"
+            }
+    
+    def send_bulk_email_background(self, messages: List[EmailMessage], batch_size: int = 100) -> Dict:
+        """
+        Send bulk emails in background using Celery.
+        
+        Args:
+            messages: List of EmailMessage objects
+            batch_size: Batch size for sending
+            
+        Returns:
+            Dict with task_id and status
+        """
+        try:
+            from infra.celery.tasks.email_tasks import send_bulk_email_task
+            
+            # Convert messages to dicts
+            messages_data = []
+            for msg in messages:
+                messages_data.append({
+                    "to": msg.to,
+                    "subject": msg.subject,
+                    "html_content": msg.html_content,
+                    "text_content": msg.text_content,
+                    "cc": msg.cc,
+                    "bcc": msg.bcc,
+                    "reply_to": msg.reply_to,
+                    "headers": msg.headers,
+                    "priority": msg.priority.value if msg.priority else "normal",
+                    "track_opens": msg.track_opens,
+                    "track_clicks": msg.track_clicks,
+                    "tags": msg.tags,
+                })
+            
+            # Queue bulk task
+            task = send_bulk_email_task.delay(messages_data, batch_size)
+            
+            logger.info(f"Bulk email ({len(messages)} emails) queued: {task.id}")
+            
+            return {
+                "success": True,
+                "task_id": task.id,
+                "total_emails": len(messages),
+                "status": "queued"
+            }
+        
+        except Exception as e:
+            logger.error(f"Failed to queue bulk email: {e}", exc_info=True)
+            return {
+                "success": False,
+                "error": str(e),
+                "status": "queue_failed"
+            }

@@ -10,6 +10,7 @@ from .permission_repository import PermissionRepository
 from .email_tracking_repository import EmailTrackingRepository
 from .email_click_repository import EmailClickRepository
 from .email_subscription_repository import EmailSubscriptionRepository
+from .email_ab_test_repository import EmailABTestRepository
 
 __all__ = [
     "AppUserRepository",
@@ -23,5 +24,6 @@ __all__ = [
     "EmailTrackingRepository",
     "EmailClickRepository",
     "EmailSubscriptionRepository",
+    "EmailABTestRepository",
 ]
 

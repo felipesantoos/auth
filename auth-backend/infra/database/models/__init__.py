@@ -10,6 +10,8 @@ from .permission import PermissionModel
 from .email_tracking import DBEmailTracking
 from .email_click import DBEmailClick
 from .email_subscription import DBEmailSubscription
+from .email_ab_test import DBEmailABTest
+from .email_ab_variant import DBEmailABVariant
 
 __all__ = [
     "DBAppUser",
@@ -23,5 +25,7 @@ __all__ = [
     "DBEmailTracking",
     "DBEmailClick",
     "DBEmailSubscription",
+    "DBEmailABTest",
+    "DBEmailABVariant",
 ]
 

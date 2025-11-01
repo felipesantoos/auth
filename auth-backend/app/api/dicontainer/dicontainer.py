@@ -64,12 +64,15 @@ from infra.database.repositories.webauthn_credential_repository import WebAuthnC
 from infra.database.repositories.email_tracking_repository import EmailTrackingRepository
 from infra.database.repositories.email_click_repository import EmailClickRepository
 from infra.database.repositories.email_subscription_repository import EmailSubscriptionRepository
+from infra.database.repositories.email_ab_test_repository import EmailABTestRepository
 from core.services.email.email_tracking_service import EmailTrackingService
 from core.services.email.email_webhook_service import EmailWebhookService
 from core.services.email.unsubscribe_service import UnsubscribeService
+from core.services.email.email_ab_test_service import EmailABTestService
 from core.interfaces.primary.email_tracking_service_interface import IEmailTrackingService
 from core.interfaces.primary.email_webhook_service_interface import IEmailWebhookService
 from core.interfaces.primary.unsubscribe_service_interface import IUnsubscribeService
+from core.interfaces.primary.email_ab_test_service_interface import IEmailABTestService
 
 logger = logging.getLogger(__name__)
 
@@ -371,6 +374,23 @@ async def get_unsubscribe_service(
     )
 
 
+async def get_email_ab_test_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> IEmailABTestService:
+    """
+    Factory for IEmailABTestService interface.
+    
+    Returns EmailABTestService instance following hexagonal architecture.
+    """
+    ab_test_repository = EmailABTestRepository(session)
+    email_service = EmailService()
+    
+    return EmailABTestService(
+        ab_test_repository=ab_test_repository,
+        email_service=email_service
+    )
+
+
 # Export all factories
 __all__ = [
     "get_client_repository",
@@ -395,5 +415,6 @@ __all__ = [
     "get_email_tracking_service",
     "get_email_webhook_service",
     "get_unsubscribe_service",
+    "get_email_ab_test_service",
 ]
 
