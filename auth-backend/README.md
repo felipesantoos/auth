@@ -4,13 +4,31 @@ Multi-tenant Authentication and Authorization System built with FastAPI.
 
 ## Features
 
-- Multi-tenant architecture (clients with isolated users)
-- JWT authentication with refresh tokens
-- Role-based access control (RBAC)
-- User management per client
-- Redis caching
-- PostgreSQL database
-- Structured logging
+### Core Features
+- ✅ Multi-tenant architecture (clients with isolated users)
+- ✅ JWT authentication with refresh tokens
+- ✅ Role-based access control (RBAC)
+- ✅ User management per client
+- ✅ Redis caching
+- ✅ PostgreSQL database
+- ✅ Structured logging
+- ✅ OAuth2 integration (Google, GitHub)
+
+### Advanced Authentication Features
+- ✅ **Email Verification** - Verify user emails with secure tokens
+- ✅ **Two-Factor Authentication (2FA/MFA)** - TOTP + QR codes + backup codes
+- ✅ **Session Management** - Track and manage sessions across multiple devices
+- ✅ **Audit Logging** - Comprehensive security event tracking (70+ event types)
+- ✅ **Account Lockout** - Brute-force protection with automatic account locking
+- ✅ **API Keys** - Personal Access Tokens for programmatic API access
+- ✅ **Passwordless Auth** - Magic links for email-based login
+- ✅ **Suspicious Activity Detection** - Alert on logins from new devices/locations
+
+### Enterprise Features (Pending Integration)
+- ⏳ **WebAuthn/Passkeys** - Biometric authentication support
+- ⏳ **SAML 2.0** - Enterprise SSO integration
+- ⏳ **OIDC** - OpenID Connect support
+- ⏳ **LDAP/AD** - Active Directory integration
 
 ## Setup
 
@@ -57,18 +75,34 @@ API docs at `http://localhost:8080/docs`
 ## Project Structure
 
 ```
-auth/
+auth-backend/
 ├── alembic/              # Database migrations
+│   └── versions/        # Migration files (20250131_0001_add_advanced_auth_features.py)
 ├── app/                  # Application layer
-│   └── api/             # API routes, DTOs, middlewares
+│   └── api/             
+│       ├── routes/      # REST API endpoints (8 route files)
+│       ├── dtos/        # Request/Response DTOs (12+ DTOs)
+│       ├── middlewares/ # Auth, API Key, Rate Limiting, etc.
+│       └── dicontainer/ # Dependency Injection
 ├── config/              # Configuration (settings, logging)
-├── core/                # Core business logic
-│   ├── domain/         # Domain models
+├── core/                # Core business logic (Hexagonal Architecture)
+│   ├── domain/         # Domain models (AppUser, BackupCode, UserSession, AuditLog, ApiKey, WebAuthnCredential)
 │   ├── interfaces/     # Port interfaces
-│   └── services/       # Business services
-├── infra/              # Infrastructure
-│   ├── database/       # Database models, repositories
+│   └── services/       # Business services (10+ services)
+│       ├── auth/       # Auth services (MFA, Sessions, Email, Passwordless, API Keys)
+│       └── audit/      # Audit service
+├── infra/              # Infrastructure (Adapters)
+│   ├── database/       # Database models, repositories, mappers
+│   │   ├── models/     # SQLAlchemy models (7 models)
+│   │   ├── repositories/ # Data access (6 repositories)
+│   │   └── mappers/    # Domain ↔ DB mappers
+│   ├── email/         # Email service (SMTP)
 │   └── redis/         # Redis client and cache
+├── docs/               # Documentation
+│   ├── IMPLEMENTATION_STATUS.md
+│   ├── IMPLEMENTATION_SUMMARY.md
+│   ├── INTEGRATION_GUIDE.md
+│   └── ENVIRONMENT_VARIABLES.md
 └── main.py            # Application entry point
 ```
 
@@ -80,6 +114,130 @@ This project follows Hexagonal Architecture (Ports & Adapters) principles:
 - **Service Layer**: Business use cases, depends on interfaces
 - **Infrastructure Layer**: Database, Redis, external services
 - **API Layer**: HTTP endpoints, DTOs, validation
+
+## Advanced Features Guide
+
+### 🔒 Email Verification
+
+Verify user emails during registration:
+
+```bash
+# Enable in .env
+REQUIRE_EMAIL_VERIFICATION=true
+EMAIL_VERIFICATION_EXPIRE_HOURS=24
+
+# Configure SMTP
+SMTP_HOST="smtp.gmail.com"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASSWORD="your-app-password"
+```
+
+**Endpoints**:
+- `POST /auth/email/verify` - Verify email with token
+- `POST /auth/email/resend-verification` - Resend verification email
+- `GET /auth/email/status` - Check verification status
+
+### 🔐 Two-Factor Authentication (MFA)
+
+TOTP-based 2FA with backup codes:
+
+**Setup Flow**:
+1. `POST /auth/mfa/setup` - Get QR code + secret + backup codes
+2. Scan QR code with Google Authenticator / Authy
+3. `POST /auth/mfa/enable` - Enable with TOTP verification
+4. Save backup codes securely!
+
+**Endpoints**:
+- `POST /auth/mfa/setup` - Initialize MFA setup
+- `POST /auth/mfa/enable` - Enable MFA
+- `POST /auth/mfa/disable` - Disable MFA
+- `GET /auth/mfa/status` - Get MFA status
+- `POST /auth/mfa/backup-codes/regenerate` - Regenerate backup codes
+
+### 📱 Session Management
+
+Track and manage sessions across devices:
+
+```bash
+SESSION_MAX_DEVICES=10
+SESSION_INACTIVITY_TIMEOUT_DAYS=30
+```
+
+**Endpoints**:
+- `GET /auth/sessions` - List active sessions (shows device, IP, location)
+- `DELETE /auth/sessions/{id}` - Logout from specific device
+- `DELETE /auth/sessions/all` - Logout from all devices
+
+### 📊 Audit Logging
+
+Track all security events:
+
+**Endpoints**:
+- `GET /auth/audit` - View your own audit logs
+- `GET /admin/audit` - View all logs (admin only)
+- `GET /admin/audit/security` - Security-critical events (admin only)
+
+**Events Tracked**:
+- Login/Logout (success/failure)
+- Password changes
+- MFA enable/disable
+- Session management
+- Account lockouts
+- Suspicious activity
+- And 60+ more event types
+
+### 🔑 API Keys
+
+Create Personal Access Tokens for API integrations:
+
+```bash
+API_KEY_DEFAULT_EXPIRE_DAYS=365
+API_KEY_MAX_PER_USER=20
+```
+
+**Usage**:
+```bash
+# Create key
+POST /auth/api-keys
+{
+  "name": "My Integration",
+  "scopes": ["read:user", "write:user"],
+  "expires_in_days": 365
+}
+
+# Use key
+curl -H "X-API-Key: ask_your_key_here" http://localhost:8080/auth/me
+```
+
+**Endpoints**:
+- `POST /auth/api-keys` - Create API key (shown only once!)
+- `GET /auth/api-keys` - List your API keys
+- `DELETE /auth/api-keys/{id}` - Revoke API key
+
+### 🪄 Passwordless Authentication
+
+Login via magic links sent to email:
+
+```bash
+MAGIC_LINK_EXPIRE_MINUTES=15
+MAGIC_LINK_RATE_LIMIT=2  # per 5 minutes
+```
+
+**Endpoints**:
+- `POST /auth/passwordless/send` - Send magic link to email
+- `POST /auth/passwordless/verify` - Login with magic link
+
+### 🛡️ Account Security
+
+**Brute-Force Protection**:
+- Automatic account lockout after 5 failed attempts
+- Lock duration: 30 minutes (configurable)
+- IP-based and user-based detection
+
+```bash
+MAX_LOGIN_ATTEMPTS=5
+ACCOUNT_LOCKOUT_DURATION_MINUTES=30
+```
 
 ## Database Migrations
 

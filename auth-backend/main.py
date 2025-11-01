@@ -126,6 +126,12 @@ async def root():
 from app.api.routes import client_routes
 from app.api.routes import auth_routes
 from app.api.routes import oauth_routes
+from app.api.routes import mfa_routes
+from app.api.routes import session_routes
+from app.api.routes import email_verification_routes
+from app.api.routes import api_key_routes
+from app.api.routes import passwordless_routes
+from app.api.routes import audit_routes
 
 # Register routers
 logger.info("Registering API routes...")
@@ -133,11 +139,19 @@ logger.info("Registering API routes...")
 # Client Management (admin only)
 app.include_router(client_routes.router)
 
-# Authentication
+# Authentication (Basic)
 app.include_router(auth_routes.router)
 
 # OAuth2
 app.include_router(oauth_routes.router)
+
+# Advanced Auth Features
+app.include_router(mfa_routes.router)
+app.include_router(session_routes.router)
+app.include_router(email_verification_routes.router)
+app.include_router(api_key_routes.router)
+app.include_router(passwordless_routes.router)
+app.include_router(audit_routes.router)
 
 logger.info("All routes registered successfully")
 

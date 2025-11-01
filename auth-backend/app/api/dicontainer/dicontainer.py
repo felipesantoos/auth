@@ -35,6 +35,20 @@ from infra.redis.cache_service import CacheService
 # Settings
 from infra.config.settings_provider import SettingsProvider
 
+# New Repositories
+from infra.database.repositories.audit_log_repository import AuditLogRepository
+from infra.database.repositories.backup_code_repository import BackupCodeRepository
+from infra.database.repositories.user_session_repository import UserSessionRepository
+from infra.database.repositories.api_key_repository import ApiKeyRepository
+
+# New Services
+from core.services.audit.audit_service import AuditService
+from core.services.auth.mfa_service import MFAService
+from core.services.auth.session_service import SessionService
+from core.services.auth.email_verification_service import EmailVerificationService
+from core.services.auth.passwordless_service import PasswordlessService
+from core.services.auth.api_key_service import ApiKeyService
+
 logger = logging.getLogger(__name__)
 
 
@@ -124,6 +138,82 @@ async def get_oauth_service(
     )
 
 
+async def get_audit_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> AuditService:
+    """Factory for AuditService"""
+    repository = AuditLogRepository(session)
+    return AuditService(repository=repository)
+
+
+async def get_mfa_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> MFAService:
+    """Factory for MFAService"""
+    user_repository = await get_app_user_repository(session)
+    backup_code_repository = BackupCodeRepository(session)
+    settings_provider = SettingsProvider()
+    return MFAService(
+        user_repository=user_repository,
+        backup_code_repository=backup_code_repository,
+        settings_provider=settings_provider,
+    )
+
+
+async def get_session_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> SessionService:
+    """Factory for SessionService"""
+    repository = UserSessionRepository(session)
+    cache_service = CacheService()
+    settings_provider = SettingsProvider()
+    return SessionService(
+        repository=repository,
+        cache_service=cache_service,
+        settings_provider=settings_provider,
+    )
+
+
+async def get_email_verification_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> EmailVerificationService:
+    """Factory for EmailVerificationService"""
+    user_repository = await get_app_user_repository(session)
+    email_service = EmailService()
+    settings_provider = SettingsProvider()
+    return EmailVerificationService(
+        user_repository=user_repository,
+        email_service=email_service,
+        settings_provider=settings_provider,
+    )
+
+
+async def get_passwordless_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> PasswordlessService:
+    """Factory for PasswordlessService"""
+    user_repository = await get_app_user_repository(session)
+    email_service = EmailService()
+    settings_provider = SettingsProvider()
+    return PasswordlessService(
+        user_repository=user_repository,
+        email_service=email_service,
+        settings_provider=settings_provider,
+    )
+
+
+async def get_api_key_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> ApiKeyService:
+    """Factory for ApiKeyService"""
+    repository = ApiKeyRepository(session)
+    settings_provider = SettingsProvider()
+    return ApiKeyService(
+        repository=repository,
+        settings_provider=settings_provider,
+    )
+
+
 # Export all factories
 __all__ = [
     "get_client_repository",
@@ -132,5 +222,11 @@ __all__ = [
     "get_auth_service",
     "get_password_reset_service",
     "get_oauth_service",
+    "get_audit_service",
+    "get_mfa_service",
+    "get_session_service",
+    "get_email_verification_service",
+    "get_passwordless_service",
+    "get_api_key_service",
 ]
 

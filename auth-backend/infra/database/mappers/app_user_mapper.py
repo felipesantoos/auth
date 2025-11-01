@@ -21,6 +21,19 @@ class AppUserMapper:
             created_at=db_user.created_at,
             updated_at=db_user.updated_at,
             _password_hash=db_user.hashed_password,  # Use protected field for encapsulation
+            # Email Verification
+            email_verified=db_user.email_verified,
+            email_verification_token=db_user.email_verification_token,
+            email_verification_sent_at=db_user.email_verification_sent_at,
+            # MFA/2FA
+            mfa_enabled=db_user.mfa_enabled,
+            mfa_secret=db_user.mfa_secret,
+            # Account Security
+            failed_login_attempts=db_user.failed_login_attempts,
+            locked_until=db_user.locked_until,
+            # Passwordless Auth
+            magic_link_token=db_user.magic_link_token,
+            magic_link_sent_at=db_user.magic_link_sent_at,
         )
     
     @staticmethod
@@ -39,6 +52,23 @@ class AppUserMapper:
         db_user.client_id = user.client_id  # Multi-tenant
         db_user.created_at = user.created_at
         db_user.updated_at = user.updated_at
+        
+        # Email Verification
+        db_user.email_verified = user.email_verified
+        db_user.email_verification_token = user.email_verification_token
+        db_user.email_verification_sent_at = user.email_verification_sent_at
+        
+        # MFA/2FA
+        db_user.mfa_enabled = user.mfa_enabled
+        db_user.mfa_secret = user.mfa_secret
+        
+        # Account Security
+        db_user.failed_login_attempts = user.failed_login_attempts
+        db_user.locked_until = user.locked_until
+        
+        # Passwordless Auth
+        db_user.magic_link_token = user.magic_link_token
+        db_user.magic_link_sent_at = user.magic_link_sent_at
         
         return db_user
 
