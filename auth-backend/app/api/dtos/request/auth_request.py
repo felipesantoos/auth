@@ -3,8 +3,9 @@ Authentication Request DTOs
 Pydantic models for API request validation
 Adapted for multi-tenant architecture
 """
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional
+import re
 
 
 class LoginRequest(BaseModel):
@@ -18,15 +19,41 @@ class RegisterRequest(BaseModel):
     """DTO for user registration (multi-tenant)"""
     username: str = Field(..., min_length=3, max_length=100, description="Unique username")
     email: EmailStr = Field(..., description="User email address")
-    password: str = Field(..., min_length=6, description="User password")
+    password: str = Field(..., min_length=8, description="User password (min 8 characters)")
     name: str = Field(..., min_length=2, max_length=255, description="User full name")
     client_id: Optional[str] = Field(None, description="Client (tenant) ID. Can also be provided via X-Client-ID header or subdomain")
+    
+    @validator('password')
+    def validate_password_strength(cls, v):
+        """Validate password meets strength requirements"""
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'[0-9]', v):
+            raise ValueError('Password must contain at least one digit')
+        return v
 
 
 class ChangePasswordRequest(BaseModel):
     """DTO for password change"""
     old_password: str = Field(..., min_length=6, description="Current password")
-    new_password: str = Field(..., min_length=6, description="New password")
+    new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
+    
+    @validator('new_password')
+    def validate_password_strength(cls, v):
+        """Validate password meets strength requirements"""
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'[0-9]', v):
+            raise ValueError('Password must contain at least one digit')
+        return v
 
 
 class RefreshTokenRequest(BaseModel):
@@ -52,6 +79,19 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     """DTO for password reset with token (multi-tenant)"""
     reset_token: str = Field(..., description="Password reset token from email")
-    new_password: str = Field(..., min_length=6, description="New password")
+    new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
     client_id: Optional[str] = Field(None, description="Client (tenant) ID. Can also be provided via X-Client-ID header or subdomain")
+    
+    @validator('new_password')
+    def validate_password_strength(cls, v):
+        """Validate password meets strength requirements"""
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'[0-9]', v):
+            raise ValueError('Password must contain at least one digit')
+        return v
 
