@@ -112,6 +112,21 @@ pytest tests/unit/domain/test_app_user.py
 # Run with verbose output
 pytest -v
 
+# Run with extra verbosity (show full diffs)
+pytest -vv
+
+# Run specific test function
+pytest tests/unit/domain/test_app_user.py::TestAppUserValidation::test_valid_user_passes_validation
+
+# Run last failed tests only (fast feedback after fixing)
+pytest --lf
+
+# Skip slow tests
+pytest -m "not slow"
+
+# Show slowest 10 tests
+pytest --durations=10
+
 # Watch mode (auto-run on file changes)
 ptw
 ```

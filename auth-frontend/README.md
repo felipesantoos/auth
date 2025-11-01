@@ -134,15 +134,55 @@ npm run preview
 ### Executar Testes
 
 ```bash
-# Rodar todos os testes
+# Rodar todos os testes (watch mode)
 npm test
 
-# Rodar com UI
-npm run test:ui
+# Rodar testes uma vez (CI mode)
+npm test -- --run
 
 # Rodar com coverage
 npm run test:coverage
+
+# Rodar com UI interativa
+npm run test:ui
 ```
+
+### Comandos Avançados de Testes
+
+```bash
+# Rodar arquivo de teste específico
+npm test -- src/app/pages/__tests__/Login.test.tsx
+
+# Rodar apenas testes modificados (mais rápido)
+npm test -- --changed
+
+# Rodar com reporter verbose
+npm test -- --reporter=verbose
+
+# Watch em diretório específico
+npm test -- src/core/services
+
+# Coverage para path específico
+npm test -- --coverage src/core/services/auth
+
+# Mostrar duração dos testes
+npm test -- --reporter=verbose
+
+# Testes E2E
+npm run test:e2e
+
+# E2E com UI
+npm run test:e2e:ui
+```
+
+### Metas de Coverage
+
+- **Domain layer**: 90%+ coverage
+- **Service layer**: 85%+ coverage
+- **Component layer**: 70%+ coverage
+- **Overall**: 75%+ coverage
+
+Para ver relatório detalhado de coverage: `npm run test:coverage`
 
 ### Estrutura de Testes
 

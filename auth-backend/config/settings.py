@@ -161,7 +161,7 @@ class Settings(BaseSettings):
         'image/jpeg', 'image/png', 'image/gif', 'image/webp',
         'application/pdf', 'video/mp4', 'audio/mpeg', 'text/plain'
     ]
-    storage_provider: str = "local"  # local, s3, azure, gcs, cloudinary
+    storage_provider: str = "local"  # local, s3, s3-cdn, azure, gcs, cloudinary, cloudflare
     local_storage_path: str = "uploads"
     
     # AWS S3 Storage
@@ -169,6 +169,28 @@ class Settings(BaseSettings):
     aws_s3_region: Optional[str] = None
     aws_s3_base_url: Optional[str] = None
     # aws_access_key_id and aws_secret_access_key already defined above
+    
+    # Azure Blob Storage
+    azure_storage_connection_string: Optional[str] = None
+    azure_container_name: Optional[str] = None
+    
+    # Google Cloud Storage
+    gcp_project_id: Optional[str] = None
+    gcs_bucket_name: Optional[str] = None
+    
+    # Cloudinary
+    cloudinary_cloud_name: Optional[str] = None
+    cloudinary_api_key: Optional[str] = None
+    cloudinary_api_secret: Optional[str] = None
+    
+    # Cloudflare Images
+    cloudflare_account_id: Optional[str] = None
+    cloudflare_api_token: Optional[str] = None
+    
+    # CDN (CloudFront)
+    cloudfront_domain: Optional[str] = None
+    cloudfront_key_id: Optional[str] = None
+    cloudfront_private_key: Optional[str] = None
     
     # ClamAV (Malware Scanning)
     clamav_enabled: bool = False

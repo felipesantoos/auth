@@ -14,6 +14,8 @@ from .email_ab_test_repository import EmailABTestRepository
 from .file_repository import FileRepository
 from .pending_upload_repository import PendingUploadRepository
 from .file_share_repository import FileShareRepository
+from .multipart_upload_repository import MultipartUploadRepository
+from .upload_part_repository import UploadPartRepository
 
 __all__ = [
     "AppUserRepository",
@@ -31,5 +33,7 @@ __all__ = [
     "FileRepository",
     "PendingUploadRepository",
     "FileShareRepository",
+    "MultipartUploadRepository",
+    "UploadPartRepository",
 ]
 

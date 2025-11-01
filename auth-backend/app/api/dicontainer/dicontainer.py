@@ -78,7 +78,10 @@ from core.interfaces.primary.email_ab_test_service_interface import IEmailABTest
 from infra.database.repositories.file_repository import FileRepository
 from infra.database.repositories.pending_upload_repository import PendingUploadRepository
 from infra.database.repositories.file_share_repository import FileShareRepository
+from infra.database.repositories.multipart_upload_repository import MultipartUploadRepository
+from infra.database.repositories.upload_part_repository import UploadPartRepository
 from core.services.files.file_service import FileService
+from core.services.files.chunked_upload_manager import ChunkedUploadManager
 from core.interfaces.primary.file_service_interface import IFileService
 from infra.storage.storage_factory import StorageFactory
 from core.interfaces.secondary import IFileStorage
@@ -463,6 +466,23 @@ async def get_file_service(
     )
 
 
+async def get_chunked_upload_manager(
+    session: AsyncSession = Depends(get_db_session)
+) -> ChunkedUploadManager:
+    """
+    Factory for ChunkedUploadManager.
+    
+    Manages multipart uploads for large files.
+    """
+    multipart_upload_repository = MultipartUploadRepository(session)
+    upload_part_repository = UploadPartRepository(session)
+    
+    return ChunkedUploadManager(
+        multipart_upload_repository=multipart_upload_repository,
+        upload_part_repository=upload_part_repository
+    )
+
+
 # Export all factories
 __all__ = [
     "get_client_repository",
@@ -495,5 +515,6 @@ __all__ = [
     "get_file_share_repository",
     "get_file_validator",
     "get_file_service",
+    "get_chunked_upload_manager",
 ]
 

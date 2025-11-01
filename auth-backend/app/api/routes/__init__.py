@@ -17,6 +17,7 @@ from . import email_ab_test_routes
 from .webhooks import email_webhooks
 from . import file_routes
 from . import serve_files_routes
+from . import chunked_upload_routes
 
 __all__ = [
     "auth_routes",
@@ -37,5 +38,6 @@ __all__ = [
     "email_webhooks",
     "file_routes",
     "serve_files_routes",
+    "chunked_upload_routes",
 ]
 

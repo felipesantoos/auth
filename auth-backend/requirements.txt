@@ -68,6 +68,10 @@ python-magic>=0.4.27
 # boto3 already included above for Email providers
 botocore>=1.31.0
 clamd>=1.0.2
+azure-storage-blob>=12.17.0
+google-cloud-storage>=2.10.0
+cloudinary>=1.34.0
+cryptography>=41.0.0  # For CloudFront signed URLs
 
 # Development & Testing
 pytest>=7.4.0

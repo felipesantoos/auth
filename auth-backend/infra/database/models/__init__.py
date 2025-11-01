@@ -15,6 +15,8 @@ from .email_ab_variant import DBEmailABVariant
 from .file import DBFile
 from .pending_upload import DBPendingUpload
 from .file_share import DBFileShare
+from .multipart_upload import DBMultipartUpload
+from .upload_part import DBUploadPart
 
 __all__ = [
     "DBAppUser",
@@ -33,5 +35,7 @@ __all__ = [
     "DBFile",
     "DBPendingUpload",
     "DBFileShare",
+    "DBMultipartUpload",
+    "DBUploadPart",
 ]
 
