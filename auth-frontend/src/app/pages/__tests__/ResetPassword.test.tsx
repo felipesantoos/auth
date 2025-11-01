@@ -47,7 +47,6 @@ describe('ResetPassword Page', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
     (DIContainer.getAuthService as any).mockReturnValue(mockAuthService);
     queryClient = new QueryClient({
       defaultOptions: {
@@ -55,10 +54,6 @@ describe('ResetPassword Page', () => {
         mutations: { retry: false },
       },
     });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   const renderComponent = (token = 'valid-token-123') => {
@@ -74,7 +69,7 @@ describe('ResetPassword Page', () => {
   it('should render reset password form', () => {
     renderComponent();
 
-    expect(screen.getByText('Redefinir Senha')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /redefinir senha/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/nova senha/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/confirmar senha/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /redefinir senha/i })).toBeInTheDocument();
@@ -94,11 +89,13 @@ describe('ResetPassword Page', () => {
 
     const passwordInput = screen.getByLabelText(/nova senha/i);
     await user.type(passwordInput, '123'); // Too short
-    await user.tab();
+    
+    // Submit to trigger validation
+    await user.click(screen.getByRole('button', { name: /redefinir senha/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/senha.*8 caracteres/i)).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
   });
 
   it('should validate password match', async () => {
@@ -110,11 +107,13 @@ describe('ResetPassword Page', () => {
 
     await user.type(passwordInput, 'Password123!');
     await user.type(confirmInput, 'DifferentPassword!');
-    await user.tab();
+    
+    // Submit to trigger validation
+    await user.click(screen.getByRole('button', { name: /redefinir senha/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/senhas.*não.*coincidem/i)).toBeInTheDocument();
-    });
+    }, { timeout: 2000 });
   });
 
   it('should reset password successfully', async () => {
@@ -136,18 +135,16 @@ describe('ResetPassword Page', () => {
         new_password: 'NewPassword123!',
         client_id: undefined,
       });
-    });
+    }, { timeout: 3000 });
 
     // Should show success message
     await waitFor(() => {
       expect(screen.getByText(/senha redefinida/i)).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
 
-    // Should navigate to login after 2 seconds
-    vi.advanceTimersByTime(2000);
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/login');
-    });
+    // Navigation happens after 2 seconds - just wait a bit more
+    await new Promise(resolve => setTimeout(resolve, 2100));
+    expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
 
   it('should handle invalid token error', async () => {

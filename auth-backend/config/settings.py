@@ -61,13 +61,20 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 60
     login_rate_limit_per_minute: int = 5
     
-    # External Services (Optional)
+    # Email Service
+    email_backend: str = "console"  # smtp, console, sendgrid, ses, mailgun
+    email_templates_dir: str = "templates/emails"
+    email_tracking_enabled: bool = True
+    
+    # SMTP Configuration
     smtp_host: Optional[str] = None
     smtp_port: Optional[int] = 587
     smtp_user: Optional[str] = None
     smtp_password: Optional[str] = None
     smtp_from_email: str = "noreply@authsystem.com"
     smtp_from_name: str = "Auth System"
+    smtp_use_tls: bool = True
+    smtp_timeout: int = 30
     
     # OAuth2 Providers (Optional)
     google_client_id: Optional[str] = None
@@ -134,6 +141,14 @@ class Settings(BaseSettings):
     
     # Login Notifications
     send_login_notifications: bool = False  # Send email on new device login
+    
+    # Email Providers (Optional)
+    sendgrid_api_key: Optional[str] = None
+    mailgun_api_key: Optional[str] = None
+    mailgun_domain: Optional[str] = None
+    aws_region: Optional[str] = None
+    aws_access_key_id: Optional[str] = None
+    aws_secret_access_key: Optional[str] = None
     
     # Monitoring (Optional)
     sentry_dsn: Optional[str] = None

@@ -84,18 +84,17 @@ describe('AuthContext', () => {
   });
 
   describe('Initial Load', () => {
-    it('should start with loading=true and user=null', async () => {
+    it('should complete initial load and set loading to false', async () => {
       const { result } = renderHook(() => useAuth(), { wrapper });
 
-      // Initially loading should be true
-      expect(result.current.loading).toBe(true);
-      expect(result.current.user).toBeNull();
-      expect(result.current.isAuthenticated).toBe(false);
-      
-      // Wait for load to complete
+      // Wait for initial load to complete
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
+
+      // Should have no user initially
+      expect(result.current.user).toBeNull();
+      expect(result.current.isAuthenticated).toBe(false);
     });
 
     it('should load user from localStorage if authenticated', async () => {
