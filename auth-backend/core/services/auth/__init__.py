@@ -7,6 +7,10 @@ from .session_service import SessionService
 from .email_verification_service import EmailVerificationService
 from .passwordless_service import PasswordlessService
 from .api_key_service import ApiKeyService
+from .webauthn_service import WebAuthnService
+from .saml_service import SAMLService
+from .oidc_service import OIDCService
+from .ldap_service import LDAPService
 
 __all__ = [
     "AuthService",
@@ -17,5 +21,9 @@ __all__ = [
     "EmailVerificationService",
     "PasswordlessService",
     "ApiKeyService",
+    "WebAuthnService",
+    "SAMLService",
+    "OIDCService",
+    "LDAPService",
 ]
 

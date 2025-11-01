@@ -8,6 +8,8 @@ from . import email_verification_routes
 from . import api_key_routes
 from . import passwordless_routes
 from . import audit_routes
+from . import webauthn_routes
+from . import sso_routes
 
 __all__ = [
     "auth_routes",
@@ -19,5 +21,7 @@ __all__ = [
     "api_key_routes",
     "passwordless_routes",
     "audit_routes",
+    "webauthn_routes",
+    "sso_routes",
 ]
 

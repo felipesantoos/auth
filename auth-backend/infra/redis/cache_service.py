@@ -94,6 +94,104 @@ class CacheService(CacheServiceInterface):
         except Exception as e:
             logger.error(f"Cache clear error: {str(e)}")
             return False
+    
+    async def store_challenge(self, key: str, challenge: str, ttl: int = 300) -> bool:
+        """
+        Store a challenge (for WebAuthn, OIDC, etc.) with TTL.
+        
+        Args:
+            key: Challenge key (e.g., "webauthn:reg:{user_id}")
+            challenge: Challenge value (base64 string)
+            ttl: Time to live in seconds (default: 300 = 5 minutes)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            redis_client = await self._get_redis()
+            await redis_client.setex(key, ttl, challenge)
+            logger.debug(f"Challenge stored", extra={"key": key, "ttl": ttl})
+            return True
+        except Exception as e:
+            logger.warning(f"Challenge store error: {str(e)}", extra={"key": key})
+            return False
+    
+    async def get_challenge(self, key: str) -> Optional[str]:
+        """
+        Get a challenge from cache.
+        
+        Args:
+            key: Challenge key
+            
+        Returns:
+            Challenge value if found, None otherwise
+        """
+        try:
+            redis_client = await self._get_redis()
+            value = await redis_client.get(key)
+            if value:
+                logger.debug(f"Challenge retrieved", extra={"key": key})
+                return value
+            logger.debug(f"Challenge not found", extra={"key": key})
+            return None
+        except Exception as e:
+            logger.warning(f"Challenge get error: {str(e)}", extra={"key": key})
+            return None
+    
+    async def verify_and_delete_challenge(self, key: str, expected_challenge: str) -> bool:
+        """
+        Verify a challenge matches and delete it (single-use).
+        
+        Args:
+            key: Challenge key
+            expected_challenge: Expected challenge value
+            
+        Returns:
+            True if challenge matches and was deleted, False otherwise
+        """
+        try:
+            redis_client = await self._get_redis()
+            stored_challenge = await redis_client.get(key)
+            
+            if not stored_challenge:
+                logger.warning(f"Challenge not found for verification", extra={"key": key})
+                return False
+            
+            # Verify challenge matches
+            if stored_challenge != expected_challenge:
+                logger.warning(f"Challenge mismatch", extra={"key": key})
+                return False
+            
+            # Delete challenge (single-use)
+            await redis_client.delete(key)
+            logger.debug(f"Challenge verified and deleted", extra={"key": key})
+            return True
+            
+        except Exception as e:
+            logger.warning(f"Challenge verify error: {str(e)}", extra={"key": key})
+            return False
+    
+    async def store_state(self, key: str, state: dict, ttl: int = 600) -> bool:
+        """
+        Store state data (for OIDC, SAML, etc.) with TTL.
+        
+        Args:
+            key: State key (e.g., "oidc:state:{state_id}")
+            state: State data (will be JSON serialized)
+            ttl: Time to live in seconds (default: 600 = 10 minutes)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            redis_client = await self._get_redis()
+            serialized = json.dumps(state)
+            await redis_client.setex(key, ttl, serialized)
+            logger.debug(f"State stored", extra={"key": key, "ttl": ttl})
+            return True
+        except Exception as e:
+            logger.warning(f"State store error: {str(e)}", extra={"key": key})
+            return False
 
 
 def cached(key_prefix: str, ttl: int = 3600):

@@ -48,6 +48,13 @@ from core.services.auth.session_service import SessionService
 from core.services.auth.email_verification_service import EmailVerificationService
 from core.services.auth.passwordless_service import PasswordlessService
 from core.services.auth.api_key_service import ApiKeyService
+from core.services.auth.webauthn_service import WebAuthnService
+from core.services.auth.saml_service import SAMLService
+from core.services.auth.oidc_service import OIDCService
+from core.services.auth.ldap_service import LDAPService
+
+# New Repositories (WebAuthn)
+from infra.database.repositories.webauthn_credential_repository import WebAuthnCredentialRepository
 
 logger = logging.getLogger(__name__)
 
@@ -214,6 +221,56 @@ async def get_api_key_service(
     )
 
 
+async def get_webauthn_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> WebAuthnService:
+    """Factory for WebAuthnService"""
+    user_repository = await get_app_user_repository(session)
+    credential_repository = WebAuthnCredentialRepository(session)
+    settings_provider = SettingsProvider()
+    return WebAuthnService(
+        user_repository=user_repository,
+        credential_repository=credential_repository,
+        settings_provider=settings_provider,
+    )
+
+
+async def get_saml_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> SAMLService:
+    """Factory for SAMLService"""
+    user_repository = await get_app_user_repository(session)
+    settings_provider = SettingsProvider()
+    return SAMLService(
+        user_repository=user_repository,
+        settings_provider=settings_provider,
+    )
+
+
+async def get_oidc_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> OIDCService:
+    """Factory for OIDCService"""
+    user_repository = await get_app_user_repository(session)
+    settings_provider = SettingsProvider()
+    return OIDCService(
+        user_repository=user_repository,
+        settings_provider=settings_provider,
+    )
+
+
+async def get_ldap_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> LDAPService:
+    """Factory for LDAPService"""
+    user_repository = await get_app_user_repository(session)
+    settings_provider = SettingsProvider()
+    return LDAPService(
+        user_repository=user_repository,
+        settings_provider=settings_provider,
+    )
+
+
 # Export all factories
 __all__ = [
     "get_client_repository",
@@ -228,5 +285,9 @@ __all__ = [
     "get_email_verification_service",
     "get_passwordless_service",
     "get_api_key_service",
+    "get_webauthn_service",
+    "get_saml_service",
+    "get_oidc_service",
+    "get_ldap_service",
 ]
 

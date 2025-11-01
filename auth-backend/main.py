@@ -132,6 +132,8 @@ from app.api.routes import email_verification_routes
 from app.api.routes import api_key_routes
 from app.api.routes import passwordless_routes
 from app.api.routes import audit_routes
+from app.api.routes import webauthn_routes
+from app.api.routes import sso_routes
 
 # Register routers
 logger.info("Registering API routes...")
@@ -152,6 +154,10 @@ app.include_router(email_verification_routes.router)
 app.include_router(api_key_routes.router)
 app.include_router(passwordless_routes.router)
 app.include_router(audit_routes.router)
+
+# Enterprise SSO Features
+app.include_router(webauthn_routes.router)
+app.include_router(sso_routes.router)
 
 logger.info("All routes registered successfully")
 

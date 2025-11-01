@@ -78,4 +78,61 @@ class CacheServiceInterface(ABC):
             True if successful, False otherwise
         """
         pass
+    
+    @abstractmethod
+    async def store_challenge(self, key: str, challenge: str, ttl: int = 300) -> bool:
+        """
+        Store a challenge (for WebAuthn, OIDC, etc.) with TTL.
+        
+        Args:
+            key: Challenge key (e.g., "webauthn:reg:{user_id}")
+            challenge: Challenge value (base64 string)
+            ttl: Time to live in seconds (default: 300 = 5 minutes)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    async def get_challenge(self, key: str) -> Optional[str]:
+        """
+        Get a challenge from cache.
+        
+        Args:
+            key: Challenge key
+            
+        Returns:
+            Challenge value if found, None otherwise
+        """
+        pass
+    
+    @abstractmethod
+    async def verify_and_delete_challenge(self, key: str, expected_challenge: str) -> bool:
+        """
+        Verify a challenge matches and delete it (single-use).
+        
+        Args:
+            key: Challenge key
+            expected_challenge: Expected challenge value
+            
+        Returns:
+            True if challenge matches and was deleted, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    async def store_state(self, key: str, state: dict, ttl: int = 600) -> bool:
+        """
+        Store state data (for OIDC, SAML, etc.) with TTL.
+        
+        Args:
+            key: State key (e.g., "oidc:state:{state_id}")
+            state: State data (will be JSON serialized)
+            ttl: Time to live in seconds (default: 600 = 10 minutes)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
 
