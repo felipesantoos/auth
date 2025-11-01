@@ -8,11 +8,12 @@ from typing import Optional
 from datetime import datetime
 
 from config.settings import settings
+from core.interfaces.primary.unsubscribe_service_interface import IUnsubscribeService
 
 logger = logging.getLogger(__name__)
 
 
-class UnsubscribeService:
+class UnsubscribeService(IUnsubscribeService):
     """
     Service for managing email subscriptions and unsubscribe functionality.
     

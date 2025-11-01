@@ -65,7 +65,11 @@ from infra.database.repositories.email_tracking_repository import EmailTrackingR
 from infra.database.repositories.email_click_repository import EmailClickRepository
 from infra.database.repositories.email_subscription_repository import EmailSubscriptionRepository
 from core.services.email.email_tracking_service import EmailTrackingService
+from core.services.email.email_webhook_service import EmailWebhookService
+from core.services.email.unsubscribe_service import UnsubscribeService
 from core.interfaces.primary.email_tracking_service_interface import IEmailTrackingService
+from core.interfaces.primary.email_webhook_service_interface import IEmailWebhookService
+from core.interfaces.primary.unsubscribe_service_interface import IUnsubscribeService
 
 logger = logging.getLogger(__name__)
 
@@ -335,6 +339,38 @@ async def get_email_tracking_service(
     )
 
 
+async def get_email_webhook_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> IEmailWebhookService:
+    """
+    Factory for IEmailWebhookService interface.
+    
+    Returns EmailWebhookService instance following hexagonal architecture.
+    """
+    tracking_repository = EmailTrackingRepository(session)
+    subscription_repository = EmailSubscriptionRepository(session)
+    
+    return EmailWebhookService(
+        tracking_repository=tracking_repository,
+        subscription_repository=subscription_repository
+    )
+
+
+async def get_unsubscribe_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> IUnsubscribeService:
+    """
+    Factory for IUnsubscribeService interface.
+    
+    Returns UnsubscribeService instance following hexagonal architecture.
+    """
+    subscription_repository = EmailSubscriptionRepository(session)
+    
+    return UnsubscribeService(
+        email_subscription_repository=subscription_repository
+    )
+
+
 # Export all factories
 __all__ = [
     "get_client_repository",
@@ -357,5 +393,7 @@ __all__ = [
     "get_permission_service",
     "get_user_profile_service",
     "get_email_tracking_service",
+    "get_email_webhook_service",
+    "get_unsubscribe_service",
 ]
 
