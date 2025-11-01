@@ -1,11 +1,11 @@
 /**
  * Auth Context
  * React Context for authentication state management
+ * Uses DI Container to get services
  */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../../core/domain/auth';
-import { AuthService } from '../../core/services/auth/authService';
-import { AuthRepository } from '../../core/repositories/auth_repository';
+import { User } from '../../core/domain/user';
+import DIContainer from '../dicontainer/container';
 
 interface AuthContextType {
   user: User | null;
@@ -35,17 +35,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const authRepository = new AuthRepository();
-  const authService = new AuthService(authRepository);
+  // Get service from DI Container
+  const authService = DIContainer.getAuthService();
+  const logger = DIContainer.getLogger();
 
   // Load user from localStorage on mount
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser && authService.isAuthenticated()) {
-          setUser(JSON.parse(storedUser));
-          
+        if (authService.isAuthenticated()) {
           // Verify token is still valid by fetching current user
           const currentUser = await authService.getCurrentUser();
           if (currentUser) {
@@ -57,7 +55,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
       } catch (error) {
-        console.error('Error loading user:', error);
+        logger.error('Error loading user', error as Error);
         await authService.logout();
         setUser(null);
       } finally {
@@ -71,7 +69,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string, clientId?: string) => {
     setIsLoading(true);
     try {
-      const loggedInUser = await authService.login({ email, password, client_id: clientId });
+      const loggedInUser = await authService.login({ 
+        email, 
+        password, 
+        client_id: clientId 
+      });
       setUser(loggedInUser);
     } finally {
       setIsLoading(false);
@@ -81,7 +83,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (username: string, email: string, password: string, name: string, clientId?: string) => {
     setIsLoading(true);
     try {
-      const registeredUser = await authService.register({ username, email, password, name, client_id: clientId });
+      const registeredUser = await authService.register({ 
+        username, 
+        email, 
+        password, 
+        name, 
+        client_id: clientId 
+      });
       setUser(registeredUser);
     } finally {
       setIsLoading(false);
@@ -105,7 +113,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(currentUser);
       }
     } catch (error) {
-      console.error('Error refreshing user:', error);
+      logger.error('Error refreshing user', error as Error);
     }
   };
 
@@ -125,4 +133,3 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-

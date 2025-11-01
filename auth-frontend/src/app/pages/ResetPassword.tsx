@@ -1,171 +1,119 @@
 /**
  * Reset Password Page
- * Reset password with token from email
+ * Password reset form with token validation
  */
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { AuthService } from '../../core/services/auth/authService';
-import { AuthRepository } from '../../core/repositories/auth_repository';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { resetPasswordSchema, ResetPasswordFormData } from '../schemas/auth.schema';
+import { useResetPassword } from '../hooks/useAuthMutations';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  
-  const [resetToken, setResetToken] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [clientId, setClientId] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const resetPasswordMutation = useResetPassword();
+  
+  const resetToken = searchParams.get('token') || '';
 
-  const authRepository = new AuthRepository();
-  const authService = new AuthService(authRepository);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      reset_token: resetToken,
+      new_password: '',
+      confirm_password: '',
+    },
+  });
 
-  useEffect(() => {
-    // Get token from URL query params
-    const token = searchParams.get('token');
-    const client_id = searchParams.get('client_id');
-    if (token) {
-      setResetToken(token);
-    }
-    if (client_id) {
-      setClientId(client_id);
-    }
-  }, [searchParams]);
-
-  const validatePassword = (password: string): boolean => {
-    if (password.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
-      return false;
-    }
-    if (!/[A-Z]/.test(password)) {
-      setPasswordError('Password must contain at least one uppercase letter');
-      return false;
-    }
-    if (!/[a-z]/.test(password)) {
-      setPasswordError('Password must contain at least one lowercase letter');
-      return false;
-    }
-    if (!/[0-9]/.test(password)) {
-      setPasswordError('Password must contain at least one number');
-      return false;
-    }
-    setPasswordError('');
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setMessage('');
-    
-    if (!resetToken) {
-      setError('Reset token is required');
-      return;
-    }
-
-    if (!validatePassword(newPassword)) {
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    setIsLoading(true);
-
+  const onSubmit = async (data: ResetPasswordFormData) => {
     try {
-      const result = await authService.resetPassword({
-        reset_token: resetToken,
-        new_password: newPassword,
+      await resetPasswordMutation.mutateAsync({
+        reset_token: data.reset_token,
+        new_password: data.new_password,
         client_id: clientId || undefined,
       });
-      setMessage(result.message);
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to reset password');
-    } finally {
-      setIsLoading(false);
+      // Success - redirect to login after 2 seconds
+      setTimeout(() => navigate('/login'), 2000);
+    } catch (error) {
+      // Error is handled by React Query and shown below
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px' }}>
-      <h1>Reset Password</h1>
-      {error && <div style={{ color: 'red', marginBottom: '10px', padding: '10px', background: '#fee', borderRadius: '4px' }}>{error}</div>}
-      {message && <div style={{ color: 'green', marginBottom: '10px', padding: '10px', background: '#efe', borderRadius: '4px' }}>{message}</div>}
-      <form onSubmit={handleSubmit}>
-        {!resetToken && (
-          <div style={{ marginBottom: '15px' }}>
-            <label>
-              Reset Token (from email):
-              <input
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Redefinir Senha</CardTitle>
+          <CardDescription>Digite sua nova senha</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {resetPasswordMutation.isSuccess ? (
+            <Alert variant="success">
+              <AlertTitle>Senha Redefinida!</AlertTitle>
+              <AlertDescription>
+                Sua senha foi alterada com sucesso. Redirecionando para o login...
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {resetPasswordMutation.isError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {(resetPasswordMutation.error as any)?.response?.data?.detail || 'Erro ao redefinir senha. Token pode estar expirado.'}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Input
+                label="Client ID (opcional)"
                 type="text"
-                value={resetToken}
-                onChange={(e) => setResetToken(e.target.value)}
-                required
-                placeholder="Paste reset token from email"
-                style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                placeholder="client_id ou deixe em branco"
               />
-            </label>
-          </div>
-        )}
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Client ID (optional):
-            <input
-              type="text"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              placeholder="client_id or leave empty"
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
-            />
-          </label>
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            New Password:
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => {
-                setNewPassword(e.target.value);
-                if (e.target.value) validatePassword(e.target.value);
-              }}
-              required
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
-            />
-          </label>
-          {passwordError && <div style={{ color: 'red', fontSize: '12px', marginTop: '5px' }}>{passwordError}</div>}
-          <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-            Min 8 characters with uppercase, lowercase, and number
-          </p>
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Confirm Password:
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
-            />
-          </label>
-        </div>
-        <button type="submit" disabled={isLoading || !resetToken} style={{ width: '100%', padding: '10px', marginBottom: '15px' }}>
-          {isLoading ? 'Resetting...' : 'Reset Password'}
-        </button>
-      </form>
-      <p style={{ marginTop: '15px', textAlign: 'center' }}>
-        <Link to="/login">Back to Login</Link>
-      </p>
+
+              <Input
+                label="Nova Senha"
+                type="password"
+                {...register('new_password')}
+                error={errors.new_password?.message}
+                placeholder="••••••••"
+              />
+
+              <Input
+                label="Confirmar Senha"
+                type="password"
+                {...register('confirm_password')}
+                error={errors.confirm_password?.message}
+                placeholder="••••••••"
+              />
+
+              <input type="hidden" {...register('reset_token')} />
+
+              <Button type="submit" className="w-full" loading={resetPasswordMutation.isPending}>
+                Redefinir Senha
+              </Button>
+            </form>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <Link to="/login" className="text-sm text-slate-600 hover:text-slate-900 underline">
+            Voltar para o login
+          </Link>
+        </CardFooter>
+      </Card>
     </div>
   );
 };
-

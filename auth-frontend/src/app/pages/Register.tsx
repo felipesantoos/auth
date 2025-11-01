@@ -1,169 +1,123 @@
 /**
  * Register Page
- * User registration form
+ * User registration form with React Hook Form + Zod + React Query
  */
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { registerSchema, RegisterFormData } from '../schemas/auth.schema';
+import { useRegister } from '../hooks/useAuthMutations';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export const Register: React.FC = () => {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
   const [clientId, setClientId] = useState('');
-  const [error, setError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const { register, login } = useAuth();
   const navigate = useNavigate();
+  const registerMutation = useRegister();
 
-  const validatePassword = (password: string): boolean => {
-    if (password.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
-      return false;
-    }
-    if (!/[A-Z]/.test(password)) {
-      setPasswordError('Password must contain at least one uppercase letter');
-      return false;
-    }
-    if (!/[a-z]/.test(password)) {
-      setPasswordError('Password must contain at least one lowercase letter');
-      return false;
-    }
-    if (!/[0-9]/.test(password)) {
-      setPasswordError('Password must contain at least one number');
-      return false;
-    }
-    setPasswordError('');
-    return true;
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      username: '',
+      email: '',
+      password: '',
+      name: '',
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setPasswordError('');
-
-    if (!validatePassword(password)) {
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    setIsLoading(true);
-
+  const onSubmit = async (data: RegisterFormData) => {
     try {
-      await register(username, email, password, name, clientId || undefined);
-      // After registration, auto-login
-      await login(email, password, clientId || undefined);
+      await registerMutation.mutateAsync({
+        ...data,
+        client_id: clientId || undefined,
+      });
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed');
-    } finally {
-      setIsLoading(false);
+    } catch (error) {
+      // Error is handled by React Query and shown below
     }
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px' }}>
-      <h1>Register</h1>
-      {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Client ID (required):
-            <input
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Criar Conta</CardTitle>
+          <CardDescription>Preencha os dados abaixo para criar sua conta</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {registerMutation.isError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {(registerMutation.error as any)?.response?.data?.detail || 'Falha no registro. Tente novamente.'}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <Input
+              label="Client ID (opcional)"
               type="text"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              required
-              placeholder="client_id"
-              style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+              placeholder="client_id ou deixe em branco"
             />
-          </label>
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Username:
-            <input
+
+            <Input
+              label="Nome"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+              {...register('name')}
+              error={errors.name?.message}
+              placeholder="João Silva"
             />
-          </label>
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Email:
-            <input
+
+            <Input
+              label="Username"
+              type="text"
+              {...register('username')}
+              error={errors.username?.message}
+              placeholder="joaosilva"
+            />
+
+            <Input
+              label="Email"
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+              {...register('email')}
+              error={errors.email?.message}
+              placeholder="seu@email.com"
             />
-          </label>
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Full Name:
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-            />
-          </label>
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Password:
-            <input
+
+            <Input
+              label="Senha"
               type="password"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (e.target.value) validatePassword(e.target.value);
-              }}
-              required
-              minLength={8}
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
+              {...register('password')}
+              error={errors.password?.message}
+              placeholder="••••••••"
             />
-          </label>
-          {passwordError && <div style={{ color: 'red', fontSize: '12px', marginTop: '5px' }}>{passwordError}</div>}
-          <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-            Min 8 characters with uppercase, lowercase, and number
+
+            <Button type="submit" className="w-full" loading={registerMutation.isPending}>
+              Criar Conta
+            </Button>
+          </form>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <p className="text-sm text-slate-600">
+            Já tem uma conta?{' '}
+            <Link to="/login" className="font-medium text-slate-900 hover:underline">
+              Faça login
+            </Link>
           </p>
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Confirm Password:
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={8}
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
-            />
-          </label>
-        </div>
-        <button type="submit" disabled={isLoading} style={{ width: '100%', padding: '10px' }}>
-          {isLoading ? 'Registering...' : 'Register'}
-        </button>
-      </form>
-      <p style={{ marginTop: '15px' }}>
-        Already have an account? <Link to="/login">Login</Link>
-      </p>
+        </CardFooter>
+      </Card>
     </div>
   );
 };
-

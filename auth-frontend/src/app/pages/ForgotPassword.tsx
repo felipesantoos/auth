@@ -1,79 +1,98 @@
 /**
  * Forgot Password Page
- * Request password reset
+ * Password reset request form with React Hook Form + Zod + React Query
  */
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AuthService } from '../../core/services/auth/authService';
-import { AuthRepository } from '../../core/repositories/auth_repository';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { forgotPasswordSchema, ForgotPasswordFormData } from '../schemas/auth.schema';
+import { useForgotPassword } from '../hooks/useAuthMutations';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export const ForgotPassword: React.FC = () => {
-  const [email, setEmail] = useState('');
   const [clientId, setClientId] = useState('');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const forgotPasswordMutation = useForgotPassword();
 
-  const authRepository = new AuthRepository();
-  const authService = new AuthService(authRepository);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: '',
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setMessage('');
-    setIsLoading(true);
-
-    try {
-      const result = await authService.forgotPassword({
-        email,
-        client_id: clientId || undefined,
-      });
-      setMessage(result.message);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to send password reset email');
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = async (data: ForgotPasswordFormData) => {
+    await forgotPasswordMutation.mutateAsync({
+      ...data,
+      client_id: clientId || undefined,
+    });
   };
 
   return (
-    <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px' }}>
-      <h1>Forgot Password</h1>
-      {error && <div style={{ color: 'red', marginBottom: '10px', padding: '10px', background: '#fee', borderRadius: '4px' }}>{error}</div>}
-      {message && <div style={{ color: 'green', marginBottom: '10px', padding: '10px', background: '#efe', borderRadius: '4px' }}>{message}</div>}
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Client ID (optional):
-            <input
-              type="text"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-              placeholder="client_id or leave empty"
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
-            />
-          </label>
-        </div>
-        <div style={{ marginBottom: '15px' }}>
-          <label>
-            Email:
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ width: '100%', padding: '8px', marginTop: '5px', boxSizing: 'border-box' }}
-            />
-          </label>
-        </div>
-        <button type="submit" disabled={isLoading} style={{ width: '100%', padding: '10px', marginBottom: '15px' }}>
-          {isLoading ? 'Sending...' : 'Send Reset Link'}
-        </button>
-      </form>
-      <p style={{ marginTop: '15px', textAlign: 'center' }}>
-        <Link to="/login">Back to Login</Link>
-      </p>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Esqueceu a Senha?</CardTitle>
+          <CardDescription>
+            Digite seu email e enviaremos um link para redefinir sua senha
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {forgotPasswordMutation.isSuccess ? (
+            <Alert variant="success">
+              <AlertTitle>Email Enviado!</AlertTitle>
+              <AlertDescription>
+                Verifique sua caixa de entrada. Se o email existir, você receberá um link para redefinir sua senha.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {forgotPasswordMutation.isError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    {(forgotPasswordMutation.error as any)?.response?.data?.detail || 'Erro ao enviar email. Tente novamente.'}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Input
+                label="Client ID (opcional)"
+                type="text"
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                placeholder="client_id ou deixe em branco"
+              />
+
+              <Input
+                label="Email"
+                type="email"
+                {...register('email')}
+                error={errors.email?.message}
+                placeholder="seu@email.com"
+              />
+
+              <Button type="submit" className="w-full" loading={forgotPasswordMutation.isPending}>
+                Enviar Link de Redefinição
+              </Button>
+            </form>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          <Link to="/login" className="text-sm text-slate-600 hover:text-slate-900 underline">
+            Voltar para o login
+          </Link>
+        </CardFooter>
+      </Card>
     </div>
   );
 };
-
