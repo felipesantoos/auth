@@ -27,6 +27,8 @@ wheels/
 .env
 .env.local
 .env.*.local
+# Environment files per environment
+.env.development
 .env.staging
 .env.production
 # Keep example files

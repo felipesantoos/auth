@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      target: development
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - /app/.pytest_cache
+      - /app/venv
+    command: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=debug
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+
+  postgres:
+    ports:
+      - "5432:5432"  # Expose for local access (pgAdmin, DBeaver, etc.)
+
+  redis:
+    ports:
+      - "6379:6379"  # Expose for local access (RedisInsight, etc.)
+

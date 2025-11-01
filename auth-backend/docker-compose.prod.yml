@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=warning
+      - DEBUG=false
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://authsystem.com,https://www.authsystem.com}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=15
+      - REFRESH_TOKEN_EXPIRE_DAYS=30
+      - REQUIRE_EMAIL_VERIFICATION=true
+    deploy:
+      replicas: 4
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    # Expose only to internal network (use external nginx/load balancer)
+    ports:
+      - "127.0.0.1:8080:8080"  # Only accessible from localhost
+
+  postgres:
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_PROD}
+      - POSTGRES_MAX_CONNECTIONS=200
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    # Don't expose ports - only internal access
+    ports: []
+
+  redis:
+    command: redis-server --requirepass ${REDIS_PASSWORD_PROD} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD_PROD}
+    volumes:
+      - redis_prod_data:/data
+    # Don't expose ports - only internal access
+    ports: []
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+

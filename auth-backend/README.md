@@ -593,6 +593,248 @@ Complete API reference and guides:
 
 ---
 
+## 🐳 Docker Multi-Environment Deployment
+
+This project supports multi-environment deployments (Development, Staging, Production) using Docker Compose with environment-specific configurations.
+
+### Quick Start
+
+```bash
+# Make scripts executable (first time only)
+chmod +x scripts/*.sh
+
+# Development (with hot reload)
+./scripts/dev.sh
+
+# Staging
+./scripts/staging.sh
+
+# Production
+./scripts/prod.sh
+
+# Stop all environments
+./scripts/down.sh
+
+# View logs
+./scripts/logs.sh dev        # Development logs
+./scripts/logs.sh staging    # Staging logs
+./scripts/logs.sh prod       # Production logs
+```
+
+### Available Environments
+
+#### 1. Development (`docker-compose.dev.yml`)
+- **Purpose**: Local development with hot reload
+- **Target**: `development` stage in Dockerfile
+- **Features**:
+  - Code mounted as volume (hot reload enabled)
+  - PostgreSQL and Redis exposed for local access
+  - Debug mode enabled
+  - Detailed logging
+- **Ports**:
+  - API: `8080`
+  - PostgreSQL: `5432`
+  - Redis: `6379`
+
+**Start Development:**
+```bash
+./scripts/dev.sh
+# Or manually:
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env.development up -d
+```
+
+**Access Services:**
+- API: http://localhost:8080
+- API Docs: http://localhost:8080/docs
+- Database: `psql -h localhost -U postgres -d auth_system_dev`
+- Redis: `redis-cli`
+
+#### 2. Staging (`docker-compose.staging.yml`)
+- **Purpose**: Pre-production testing
+- **Target**: `production` stage in Dockerfile
+- **Features**:
+  - 2 API replicas
+  - Resource limits (CPU: 1, Memory: 1G)
+  - Redis with password
+  - No external port exposure (PostgreSQL, Redis)
+  - Info-level logging
+- **Environment**: `.env.staging`
+
+**Start Staging:**
+```bash
+./scripts/staging.sh
+# Or manually:
+docker-compose -f docker-compose.yml -f docker-compose.staging.yml --env-file .env.staging up -d
+```
+
+#### 3. Production (`docker-compose.prod.yml`)
+- **Purpose**: Production deployment
+- **Target**: `production` stage in Dockerfile
+- **Features**:
+  - 4 API workers for better performance
+  - 4 API replicas for high availability
+  - Higher resource limits (CPU: 2, Memory: 2G)
+  - Redis with password + maxmemory policy
+  - PostgreSQL optimized (max_connections: 200)
+  - API exposed only to localhost (use reverse proxy)
+  - Warning-level logging
+  - Restart policy on failure
+- **Environment**: `.env.production`
+
+**Start Production:**
+```bash
+./scripts/prod.sh
+# Or manually:
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+```
+
+### Environment Files
+
+Each environment has its own `.env` file:
+
+- **`.env.development`**: Development settings (included in repo)
+- **`.env.staging`**: Staging settings (NOT in repo - create from template)
+- **`.env.production`**: Production settings (NOT in repo - create from template)
+- **`env.example.txt`**: Template with all available variables
+
+**Setup Environment Files:**
+
+```bash
+# Development (already created)
+# Edit .env.development if needed
+
+# Staging
+cp env.example.txt .env.staging
+# Edit .env.staging with staging credentials
+
+# Production
+cp env.example.txt .env.production
+# Edit .env.production with production credentials
+```
+
+**Important Environment Variables per Environment:**
+
+| Variable | Development | Staging | Production |
+|----------|-------------|---------|------------|
+| `ENVIRONMENT` | development | staging | production |
+| `BUILD_TARGET` | development | production | production |
+| `DEBUG` | true | false | false |
+| `LOG_LEVEL` | debug | info | warning |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | 30 | 30 | 15 |
+| `REQUIRE_EMAIL_VERIFICATION` | false | true | true |
+| `CORS_ORIGINS` | localhost:5173 | staging domain | production domain |
+
+### Docker Architecture
+
+**Multi-Stage Dockerfile:**
+
+1. **Builder**: Installs Python dependencies
+2. **Base**: Common configuration for all environments
+3. **Development**: Hot reload, debug enabled
+4. **Production**: Multiple workers, non-root user, optimized
+
+**Compose Files:**
+
+- `docker-compose.yml`: Base configuration (shared by all environments)
+- `docker-compose.dev.yml`: Development overrides
+- `docker-compose.staging.yml`: Staging overrides
+- `docker-compose.prod.yml`: Production overrides
+
+### Useful Docker Commands
+
+```bash
+# View running containers
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml ps
+
+# Access API container
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec api bash
+
+# Run migrations manually
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec api alembic upgrade head
+
+# Access PostgreSQL
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec postgres psql -U postgres -d auth_system_dev
+
+# View logs (follow mode)
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs -f api
+
+# Rebuild containers
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml build --no-cache
+
+# Remove volumes (WARNING: deletes data)
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+```
+
+### Production Deployment Checklist
+
+Before deploying to production:
+
+1. **Environment Variables**
+   - [ ] Set strong `JWT_SECRET` (32+ chars): `openssl rand -hex 32`
+   - [ ] Set strong `POSTGRES_PASSWORD_PROD`
+   - [ ] Set strong `REDIS_PASSWORD_PROD`
+   - [ ] Set strong `ADMIN_PASSWORD_PROD`
+   - [ ] Configure SMTP credentials for emails
+   - [ ] Update `CORS_ORIGINS` to production domains
+   - [ ] Set `REQUIRE_EMAIL_VERIFICATION=true`
+
+2. **Infrastructure**
+   - [ ] Configure external Nginx reverse proxy
+   - [ ] Set up SSL certificates (Let's Encrypt)
+   - [ ] Configure database backups
+   - [ ] Set up monitoring (Sentry, CloudWatch, etc.)
+   - [ ] Configure log aggregation
+
+3. **Security**
+   - [ ] Review rate limiting settings
+   - [ ] Enable HTTPS redirect
+   - [ ] Configure firewall rules
+   - [ ] Review exposed ports
+   - [ ] Enable audit logging
+
+4. **Testing**
+   - [ ] Test migrations on staging first
+   - [ ] Run security tests
+   - [ ] Load test API endpoints
+   - [ ] Test backup/restore procedures
+
+### External Nginx Reverse Proxy (Production)
+
+For production, use an external Nginx to route traffic:
+
+```nginx
+upstream api_backend {
+    least_conn;
+    server 127.0.0.1:8080 max_fails=3 fail_timeout=30s;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.authsystem.com;
+
+    ssl_certificate /etc/letsencrypt/live/authsystem.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/authsystem.com/privkey.pem;
+
+    location / {
+        proxy_pass http://api_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### Deployment Platforms
+
+See the full [Docker Deployment Guide](../colabora/guides%20&%20docs/09-docker-deployment.md) for:
+- Platform comparison (Railway, Render, Fly.io, DigitalOcean, AWS)
+- Cost estimates
+- Platform-specific setup instructions
+- Production best practices
+
+---
+
 ## 🔒 Security
 
 ### Production Deployment Checklist
