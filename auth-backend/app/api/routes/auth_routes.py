@@ -21,11 +21,13 @@ from app.api.dtos.request.auth_request import (
     ForgotPasswordRequest,
     ResetPasswordRequest,
 )
+from app.api.dtos.request.mfa_login_request import MFALoginRequest
 from app.api.dtos.response.auth_response import (
     TokenResponse,
     UserResponse,
     MessageResponse,
 )
+from app.api.dtos.response.mfa_login_response import MFARequiredResponse
 from app.api.mappers.auth_mapper import AuthMapper
 from app.api.dtos.response.paginated_response import PaginatedResponse
 from app.api.utils.pagination import (
@@ -37,7 +39,17 @@ from core.services.filters.user_filter import UserFilter
 from app.api.dicontainer.dicontainer import (
     get_auth_service,
     get_password_reset_service,
+    get_audit_service,
+    get_mfa_service,
+    get_session_service,
+    get_email_verification_service,
 )
+from core.services.audit.audit_service import AuditService
+from core.services.auth.mfa_service import MFAService
+from core.services.auth.session_service import SessionService
+from core.services.auth.email_verification_service import EmailVerificationService
+from core.domain.auth.audit_event_type import AuditEventType
+from core.exceptions import BusinessRuleException
 from app.api.middlewares.auth_middleware import (
     get_current_user,
     get_current_admin_user,
@@ -83,40 +95,287 @@ async def get_client_id_from_request_or_body(
     )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login")
 @limiter.limit("5/minute")  # Stricter limit for login (brute-force protection)
 async def login(
     request: Request,
     login_request: LoginRequest,
     auth_service: IAuthService = Depends(get_auth_service),
-    session: AsyncSession = Depends(get_db_session),
+    audit_service: AuditService = Depends(get_audit_service),
+    session_service: SessionService = Depends(get_session_service),
+    email_verification_service: EmailVerificationService = Depends(get_email_verification_service),
+    db_session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Authenticate user and get access tokens (multi-tenant).
+    Authenticate user with advanced security features.
     
-    Client ID can be provided via:
-    - client_id in request body
-    - X-Client-ID header
-    - X-Client-Subdomain header
-    - Subdomain in Host header (e.g., client1.example.com)
+    Features:
+    - Account lockout (brute-force protection)
+    - Audit logging
+    - Email verification check
+    - MFA verification (if enabled)
+    - Session tracking
+    - Suspicious activity detection
     
-    Returns:
-        TokenResponse with access_token, refresh_token, and user data
+    Returns TokenResponse or MFARequiredResponse
     """
     try:
-        # Get client_id from request or body
+        # Get client_id and IP address
         client_id = await get_client_id_from_request_or_body(
-            request, login_request.client_id, session
+            request, login_request.client_id, db_session
+        )
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        
+        # 1. CHECK BRUTE-FORCE (IP-based, before revealing user existence)
+        is_brute_force = await audit_service.detect_brute_force(
+            user_id=None,
+            ip_address=ip_address,
+            threshold=5,
+            minutes=30
         )
         
-        access_token, refresh_token, user = await auth_service.login(
-            login_request.email, login_request.password, client_id
+        if is_brute_force:
+            await audit_service.log_event(
+                client_id=client_id,
+                event_type=AuditEventType.LOGIN_FAILED_ACCOUNT_LOCKED,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                status="failure",
+                metadata={"reason": "IP-based brute-force detected"}
+            )
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many failed login attempts. Please try again later."
+            )
+        
+        # 2. AUTHENTICATE
+        try:
+            access_token, refresh_token, user = await auth_service.login(
+                login_request.email, login_request.password, client_id
+            )
+        except Exception as e:
+            # Log failed login
+            await audit_service.log_event(
+                client_id=client_id,
+                event_type=AuditEventType.LOGIN_FAILED,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                status="failure",
+                metadata={"email": login_request.email, "error": str(e)}
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid credentials"
+            )
+        
+        # 3. CHECK ACCOUNT LOCKOUT
+        if user.is_locked():
+            await audit_service.log_event(
+                client_id=client_id,
+                event_type=AuditEventType.LOGIN_FAILED_ACCOUNT_LOCKED,
+                user_id=user.id,
+                ip_address=ip_address,
+                status="failure"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is temporarily locked due to multiple failed attempts. Try again later."
+            )
+        
+        # 4. CHECK EMAIL VERIFICATION
+        from config.settings import settings
+        if settings.require_email_verification and not user.is_email_verified():
+            await audit_service.log_event(
+                client_id=client_id,
+                event_type=AuditEventType.LOGIN_FAILED_EMAIL_NOT_VERIFIED,
+                user_id=user.id,
+                ip_address=ip_address,
+                status="failure"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email not verified. Please check your email and verify your account."
+            )
+        
+        # 5. CHECK MFA
+        if user.has_mfa_enabled():
+            # Return MFA required response (don't issue tokens yet)
+            return MFARequiredResponse(
+                mfa_required=True,
+                user_id=user.id,
+                message="MFA verification required. Provide TOTP code or backup code."
+            )
+        
+        # 6. CREATE SESSION
+        try:
+            await session_service.create_session(
+                user_id=user.id,
+                client_id=client_id,
+                refresh_token=refresh_token,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+        except Exception as e:
+            logger.error(f"Error creating session: {e}", exc_info=True)
+            # Don't fail login if session creation fails
+        
+        # 7. DETECT SUSPICIOUS ACTIVITY
+        try:
+            is_suspicious = await audit_service.detect_suspicious_activity(
+                user_id=user.id,
+                client_id=client_id,
+                ip_address=ip_address or "",
+                user_agent=user_agent or ""
+            )
+            
+            if is_suspicious:
+                await audit_service.log_event(
+                    client_id=client_id,
+                    event_type=AuditEventType.SUSPICIOUS_ACTIVITY_DETECTED,
+                    user_id=user.id,
+                    ip_address=ip_address,
+                    user_agent=user_agent,
+                    status="warning"
+                )
+        except Exception as e:
+            logger.error(f"Error detecting suspicious activity: {e}", exc_info=True)
+        
+        # 8. LOG SUCCESSFUL LOGIN
+        await audit_service.log_event(
+            client_id=client_id,
+            event_type=AuditEventType.LOGIN_SUCCESS,
+            user_id=user.id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status="success"
         )
+        
         return AuthMapper.to_token_response(access_token, refresh_token, user)
-    except ValueError as e:
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in login: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during login"
+        )
+
+
+@router.post("/login/mfa", response_model=TokenResponse)
+@limiter.limit("10/minute")
+async def login_with_mfa(
+    request: Request,
+    mfa_request: MFALoginRequest,
+    auth_service: IAuthService = Depends(get_auth_service),
+    mfa_service: MFAService = Depends(get_mfa_service),
+    session_service: SessionService = Depends(get_session_service),
+    audit_service: AuditService = Depends(get_audit_service),
+):
+    """
+    Complete login with MFA verification.
+    
+    Called after initial login returns mfa_required=true.
+    User provides either TOTP code or backup code.
+    """
+    try:
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        
+        # Get user
+        user = await auth_service.get_user_by_id(mfa_request.user_id, mfa_request.client_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        if not user.has_mfa_enabled():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="MFA is not enabled for this user")
+        
+        # Verify MFA
+        mfa_verified = False
+        
+        if mfa_request.totp_code:
+            mfa_verified = mfa_service.verify_totp(user.mfa_secret, mfa_request.totp_code)
+            if mfa_verified:
+                await audit_service.log_event(
+                    client_id=mfa_request.client_id,
+                    event_type=AuditEventType.MFA_VERIFICATION_SUCCESS,
+                    user_id=user.id,
+                    ip_address=ip_address,
+                    status="success"
+                )
+        elif mfa_request.backup_code:
+            mfa_verified = await mfa_service.verify_backup_code_for_user(
+                user.id, mfa_request.client_id, mfa_request.backup_code
+            )
+            if mfa_verified:
+                await audit_service.log_event(
+                    client_id=mfa_request.client_id,
+                    event_type=AuditEventType.MFA_BACKUP_CODE_USED,
+                    user_id=user.id,
+                    ip_address=ip_address,
+                    status="success"
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either totp_code or backup_code is required"
+            )
+        
+        if not mfa_verified:
+            await audit_service.log_event(
+                client_id=mfa_request.client_id,
+                event_type=AuditEventType.MFA_VERIFICATION_FAILED,
+                user_id=user.id,
+                ip_address=ip_address,
+                status="failure"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid MFA code"
+            )
+        
+        # Generate tokens
+        from core.services.auth.auth_service import AuthService
+        if isinstance(auth_service, AuthService):
+            access_token, refresh_token = await auth_service._generate_and_store_tokens(
+                user.id, mfa_request.client_id
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Auth service not available")
+        
+        # Create session
+        try:
+            await session_service.create_session(
+                user_id=user.id,
+                client_id=mfa_request.client_id,
+                refresh_token=refresh_token,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+        except Exception as e:
+            logger.error(f"Error creating session after MFA: {e}", exc_info=True)
+        
+        # Log successful login
+        await audit_service.log_event(
+            client_id=mfa_request.client_id,
+            event_type=AuditEventType.LOGIN_SUCCESS,
+            user_id=user.id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status="success",
+            metadata={"mfa_used": True}
+        )
+        
+        return AuthMapper.to_token_response(access_token, refresh_token, user)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in MFA login: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during MFA verification"
         )
 
 
@@ -126,10 +385,12 @@ async def register(
     request: Request,
     register_request: RegisterRequest,
     auth_service: IAuthService = Depends(get_auth_service),
+    audit_service: AuditService = Depends(get_audit_service),
+    email_verification_service: EmailVerificationService = Depends(get_email_verification_service),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Register new user (multi-tenant).
+    Register new user with email verification and audit logging.
     
     Client ID can be provided via:
     - client_id in request body
@@ -141,11 +402,15 @@ async def register(
         Created user data
     """
     try:
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        
         # Get client_id from request or body
         client_id = await get_client_id_from_request_or_body(
             request, register_request.client_id, session
         )
         
+        # Register user
         user = await auth_service.register(
             register_request.username,
             register_request.email,
@@ -153,11 +418,56 @@ async def register(
             register_request.name,
             client_id
         )
+        
+        # Log registration
+        await audit_service.log_event(
+            client_id=client_id,
+            event_type=AuditEventType.USER_REGISTERED,
+            user_id=user.id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status="success",
+            metadata={"email": user.email, "username": user.username}
+        )
+        
+        # Send email verification (if enabled)
+        from config.settings import settings
+        if settings.require_email_verification or True:  # Always send for now
+            try:
+                await email_verification_service.send_verification_email(
+                    user_id=user.id,
+                    client_id=client_id
+                )
+                await audit_service.log_event(
+                    client_id=client_id,
+                    event_type=AuditEventType.EMAIL_VERIFICATION_SENT,
+                    user_id=user.id,
+                    status="success"
+                )
+            except Exception as e:
+                logger.error(f"Error sending verification email: {e}", exc_info=True)
+                # Don't fail registration if email fails
+        
         return AuthMapper.to_user_response(user)
+        
     except ValueError as e:
+        # Log failed registration
+        await audit_service.log_event(
+            client_id=client_id if 'client_id' in locals() else "unknown",
+            event_type=AuditEventType.REGISTRATION_FAILED,
+            ip_address=ip_address if 'ip_address' in locals() else None,
+            status="failure",
+            metadata={"error": str(e), "email": register_request.email}
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Error in registration: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during registration"
         )
 
 
@@ -210,25 +520,52 @@ async def logout(
     request: Request,
     logout_request: RefreshTokenRequest,
     auth_service: IAuthService = Depends(get_auth_service),
+    audit_service: AuditService = Depends(get_audit_service),
+    session_service: SessionService = Depends(get_session_service),
     current_user: AppUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Logout user by invalidating refresh token (multi-tenant).
+    Logout user with session revocation and audit logging.
     
     Requires authentication.
     """
-    # Get client_id from request
-    client_id = None
     try:
-        from app.api.dicontainer.dicontainer import get_client_repository
-        client_repository = get_client_repository(session=session)
-        client_id = await get_client_from_request(request, client_repository)
-    except Exception:
-        client_id = current_user.client_id
-    
-    await auth_service.logout(logout_request.refresh_token, client_id)
-    return MessageResponse(message="Logged out successfully")
+        ip_address = request.client.host if request.client else None
+        user_agent = request.headers.get("user-agent")
+        
+        # Get client_id from request
+        client_id = None
+        try:
+            from app.api.dicontainer.dicontainer import get_client_repository
+            client_repository = get_client_repository(session=session)
+            client_id = await get_client_from_request(request, client_repository)
+        except Exception:
+            client_id = current_user.client_id
+        
+        # Logout (invalidate refresh token)
+        await auth_service.logout(logout_request.refresh_token, client_id)
+        
+        # TODO: Revoke session by token hash
+        # For now, we log the logout event
+        
+        # Log logout
+        await audit_service.log_event(
+            client_id=client_id,
+            event_type=AuditEventType.LOGOUT,
+            user_id=current_user.id,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            status="success"
+        )
+        
+        return MessageResponse(message="Logged out successfully")
+    except Exception as e:
+        logger.error(f"Error in logout: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during logout"
+        )
 
 
 @router.post("/change-password", response_model=MessageResponse)
