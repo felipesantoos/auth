@@ -6,13 +6,23 @@
  * - Error state management with clearError
  * - Per-operation loading states (loggingIn, registering, loggingOut, refreshing)
  * - Performance optimizations with useCallback
+ * - Type-safe error handling with custom error classes
  * - Consistent error handling pattern
  * - Uses DI Container to get services
  * 
- * Compliance: 08b-state-management.md Section 2, 6
+ * Compliance: 
+ * - 08b-state-management.md Section 2, 6
+ * - 08c-react-best-practices.md Section 5.1
  */
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { User } from '../../core/domain/user';
+import { 
+  DomainError, 
+  AuthenticationError, 
+  BusinessValidationError,
+  DuplicateEntityError,
+  NetworkError 
+} from '../../core/domain/errors';
 import DIContainer from '../dicontainer/container';
 
 /**
@@ -107,6 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /**
    * Login user
    * Delegates to AuthService and manages UI state
+   * Type-safe error handling with custom error classes
    */
   const login = useCallback(async (email: string, password: string, clientId?: string) => {
     setError(null); // Clear previous errors
@@ -119,8 +130,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       setUser(loggedInUser);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
-      setError(errorMessage);
+      // Type-safe error handling
+      if (err instanceof AuthenticationError) {
+        setError('Email ou senha incorretos. Verifique suas credenciais.');
+      } else if (err instanceof BusinessValidationError) {
+        setError(err.message);
+      } else if (err instanceof NetworkError) {
+        setError('Não foi possível conectar ao servidor. Verifique sua conexão.');
+      } else if (err instanceof DomainError) {
+        setError(err.message);
+      } else {
+        setError('Ocorreu um erro inesperado. Tente novamente.');
+      }
       logger.error('Login error', err as Error);
       throw err; // Re-throw for UI to handle
     } finally {
@@ -131,6 +152,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /**
    * Register new user
    * Delegates to AuthService and manages UI state
+   * Type-safe error handling with custom error classes
    */
   const register = useCallback(async (
     username: string, 
@@ -151,8 +173,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
       setUser(registeredUser);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Registration failed';
-      setError(errorMessage);
+      // Type-safe error handling
+      if (err instanceof DuplicateEntityError) {
+        setError('Email ou nome de usuário já cadastrado. Use credenciais diferentes.');
+      } else if (err instanceof BusinessValidationError) {
+        setError(err.message);
+      } else if (err instanceof NetworkError) {
+        setError('Não foi possível conectar ao servidor. Verifique sua conexão.');
+      } else if (err instanceof DomainError) {
+        setError(err.message);
+      } else {
+        setError('Ocorreu um erro no registro. Tente novamente.');
+      }
       logger.error('Registration error', err as Error);
       throw err;
     } finally {
@@ -163,6 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /**
    * Logout user
    * Delegates to AuthService and clears UI state
+   * Type-safe error handling with custom error classes
    */
   const logout = useCallback(async () => {
     setError(null);
@@ -171,8 +204,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await authService.logout();
       setUser(null);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Logout failed';
-      setError(errorMessage);
+      // Type-safe error handling
+      if (err instanceof NetworkError) {
+        setError('Não foi possível conectar ao servidor. Tentando novamente...');
+      } else if (err instanceof DomainError) {
+        setError(err.message);
+      } else {
+        setError('Erro ao fazer logout. Tente novamente.');
+      }
       logger.error('Logout error', err as Error);
       throw err;
     } finally {
@@ -183,6 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /**
    * Refresh current user data
    * Fetches latest user data from server
+   * Type-safe error handling with custom error classes
    */
   const refreshUser = useCallback(async () => {
     setError(null);
@@ -193,8 +233,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(currentUser);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh user';
-      setError(errorMessage);
+      // Type-safe error handling
+      if (err instanceof AuthenticationError) {
+        setError('Sessão expirada. Faça login novamente.');
+      } else if (err instanceof NetworkError) {
+        setError('Não foi possível atualizar os dados. Verifique sua conexão.');
+      } else if (err instanceof DomainError) {
+        setError(err.message);
+      } else {
+        setError('Erro ao atualizar usuário. Tente novamente.');
+      }
       logger.error('Refresh user error', err as Error);
     } finally {
       setRefreshing(false);

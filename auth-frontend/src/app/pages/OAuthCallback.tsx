@@ -89,3 +89,5 @@ export const OAuthCallback: React.FC = () => {
   return null;
 };
 
+export default OAuthCallback;
+

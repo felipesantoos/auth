@@ -1,19 +1,32 @@
 /**
- * Dashboard Page
- * Main dashboard after login with modern UI
+ * Dashboard Page (Smart Component)
+ * Manages state and connects with Context
+ * Delegates rendering to dumb components
+ * 
+ * Compliance: 08c-react-best-practices.md Section 2.1
  */
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { LogOut, User, Mail, Shield, Building } from 'lucide-react';
+import { DashboardHeader } from '../components/dashboard/DashboardHeader';
+import { UserProfileCard } from '../components/dashboard/UserProfileCard';
+import { UserContactCard } from '../components/dashboard/UserContactCard';
+import { UserPermissionsCard } from '../components/dashboard/UserPermissionsCard';
+import { WelcomeCard } from '../components/dashboard/WelcomeCard';
 
+/**
+ * Dashboard - Smart Component
+ * - Connects with Context (useAuth)
+ * - Manages business logic (handleLogout)
+ * - Delegates UI to Dumb Components
+ */
 export const Dashboard: React.FC = () => {
+  // Smart: Connects with Context
   const { user, logout, loggingOut } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
+  // Smart: Business logic
+  const handleLogout = useCallback(async () => {
     try {
       await logout();
       navigate('/login');
@@ -21,135 +34,28 @@ export const Dashboard: React.FC = () => {
       // Even if logout fails, navigate to login
       navigate('/login');
     }
-  };
+  }, [logout, navigate]);
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-            <Button variant="outline" onClick={handleLogout} loading={loggingOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
-          </div>
-        </div>
-      </header>
+      {/* Dumb: receives props, no business logic */}
+      <DashboardHeader onLogout={handleLogout} loggingOut={loggingOut} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-slate-500" />
-                <CardTitle>Perfil do Usuário</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Nome</p>
-                <p className="text-lg font-semibold">{user?.name}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-500">Username</p>
-                <p className="text-lg">{user?.username}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Mail className="h-5 w-5 text-slate-500" />
-                <CardTitle>Contato</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Email</p>
-                <p className="text-lg">{user?.email}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-500">Status</p>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  user?.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {user?.active ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Shield className="h-5 w-5 text-slate-500" />
-                <CardTitle>Permissões</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div>
-                <p className="text-sm font-medium text-slate-500">Role</p>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  user?.role === 'admin'
-                    ? 'bg-purple-100 text-purple-800'
-                    : user?.role === 'manager'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-slate-100 text-slate-800'
-                }`}>
-                  {user?.role?.toUpperCase()}
-                </span>
-              </div>
-              {user?.clientId && (
-                <div>
-                  <p className="text-sm font-medium text-slate-500 flex items-center">
-                    <Building className="h-4 w-4 mr-1" />
-                    Client ID
-                  </p>
-                  <p className="text-sm font-mono">{user.clientId}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Dumb: only renders UI with data */}
+          <UserProfileCard user={user} />
+          <UserContactCard user={user} />
+          <UserPermissionsCard user={user} />
         </div>
 
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Bem-vindo ao Auth System!</CardTitle>
-            <CardDescription>
-              Sistema de autenticação multi-tenant com arquitetura hexagonal
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-slate-600">
-              Você está autenticado com sucesso. Este é um sistema completo de autenticação com:
-            </p>
-            <ul className="mt-4 space-y-2 text-sm text-slate-600">
-              <li className="flex items-center">
-                <span className="mr-2">✅</span>
-                Multi-tenant architecture
-              </li>
-              <li className="flex items-center">
-                <span className="mr-2">✅</span>
-                JWT com refresh tokens
-              </li>
-              <li className="flex items-center">
-                <span className="mr-2">✅</span>
-                Controle de acesso baseado em roles (RBAC)
-              </li>
-              <li className="flex items-center">
-                <span className="mr-2">✅</span>
-                Arquitetura hexagonal (frontend + backend)
-              </li>
-              <li className="flex items-center">
-                <span className="mr-2">✅</span>
-                React Query + React Hook Form + Zod
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
+        {/* Dumb: static content */}
+        <WelcomeCard />
       </main>
     </div>
   );
 };
+
+export default Dashboard;
