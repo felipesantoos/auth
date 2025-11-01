@@ -118,7 +118,3 @@ export class HttpClient implements IHttpClient {
   }
 }
 
-// Export singleton instance
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-export const httpClient = new HttpClient(API_BASE_URL);
-
