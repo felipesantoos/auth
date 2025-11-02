@@ -5,7 +5,7 @@ Adapted for multi-tenant architecture with dual-mode authentication (web/mobile)
 """
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, BackgroundTasks, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, BackgroundTasks, Response, Body
 from core.interfaces.primary.auth_service_interface import IAuthService
 from core.interfaces.primary.password_reset_service_interface import IPasswordResetService
 from app.api.utils.client_detection import detect_client_type, ClientType, get_cookie_settings
@@ -1207,7 +1207,7 @@ async def reset_password(
 async def bulk_create_users(
     request: Request,
     response: Response,
-    bulk_request: "BulkCreateUsersRequest",
+    bulk_request: "BulkCreateUsersRequest" = Body(...),
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
     current_user: AppUser = Depends(get_current_admin_user),
@@ -1351,7 +1351,7 @@ async def bulk_create_users(
 async def bulk_update_users(
     request: Request,
     response: Response,
-    bulk_request: "BulkUpdateUsersRequest",
+    bulk_request: "BulkUpdateUsersRequest" = Body(...),
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
     current_user: AppUser = Depends(get_current_admin_user),
@@ -1456,7 +1456,7 @@ async def bulk_update_users(
 async def bulk_delete_users(
     request: Request,
     response: Response,
-    bulk_request: "BulkDeleteUsersRequest",
+    bulk_request: "BulkDeleteUsersRequest" = Body(...),
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
     current_user: AppUser = Depends(get_current_admin_user),

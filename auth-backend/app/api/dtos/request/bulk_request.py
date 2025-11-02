@@ -34,7 +34,7 @@ class BulkCreateUsersRequest(BaseModel):
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "users": [
                     {
@@ -67,7 +67,7 @@ class BulkUpdateUsersRequest(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "updates": [
                     {
@@ -103,7 +103,7 @@ class BulkDeleteUsersRequest(BaseModel):
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "user_ids": [
                     "user_abc123",

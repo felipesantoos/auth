@@ -37,7 +37,7 @@ class AsyncOperationResponse(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "task_id": "task_abc123",
                 "status": "processing",
@@ -87,7 +87,7 @@ class TaskStatusResponse(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "task_id": "task_abc123",
                 "task_type": "bulk_create_users",
@@ -115,7 +115,7 @@ class TaskListResponse(BaseModel):
     total: int = Field(..., description="Total number of tasks")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "tasks": [],
                 "total": 10

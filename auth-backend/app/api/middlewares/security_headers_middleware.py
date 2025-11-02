@@ -44,17 +44,36 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Content-Security-Policy: Restricts resource loading
         # default-src 'self': Only load resources from same origin
         # upgrade-insecure-requests: Upgrade HTTP to HTTPS
-        csp_directives = [
-            "default-src 'self'",
-            "script-src 'self'",
-            "style-src 'self' 'unsafe-inline'",  # unsafe-inline needed for some CSS
-            "img-src 'self' data: https:",
-            "font-src 'self' data:",
-            "connect-src 'self'",
-            "frame-ancestors 'none'",  # Same as X-Frame-Options
-            "base-uri 'self'",
-            "form-action 'self'",
-        ]
+        
+        # Check if this is a docs route (/docs or /redoc or /openapi.json)
+        is_docs_route = request.url.path in ["/docs", "/redoc", "/openapi.json"]
+        
+        if is_docs_route:
+            # Relaxed CSP for API documentation (Swagger UI needs CDN resources)
+            csp_directives = [
+                "default-src 'self'",
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+                "img-src 'self' data: https:",
+                "font-src 'self' data: https://cdn.jsdelivr.net",
+                "connect-src 'self' https://cdn.jsdelivr.net",  # Allow CDN for source maps
+                "frame-ancestors 'none'",
+                "base-uri 'self'",
+                "form-action 'self'",
+            ]
+        else:
+            # Strict CSP for regular routes
+            csp_directives = [
+                "default-src 'self'",
+                "script-src 'self'",
+                "style-src 'self' 'unsafe-inline'",  # unsafe-inline needed for some CSS
+                "img-src 'self' data: https:",
+                "font-src 'self' data:",
+                "connect-src 'self'",
+                "frame-ancestors 'none'",  # Same as X-Frame-Options
+                "base-uri 'self'",
+                "form-action 'self'",
+            ]
         
         # Add upgrade-insecure-requests in production
         if settings.environment == "production":

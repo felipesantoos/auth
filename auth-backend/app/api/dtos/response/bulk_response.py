@@ -17,7 +17,7 @@ class BulkOperationError(BaseModel):
     details: Optional[dict] = Field(None, description="Additional error details")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "index": 5,
                 "identifier": "user@example.com",
@@ -61,7 +61,7 @@ class BulkOperationResponse(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success_count": 95,
                 "error_count": 5,
