@@ -30,7 +30,25 @@ class ImageProcessor:
         max_width: int = 2048,
         max_height: int = 2048
     ) -> bytes:
-        """Optimize image for web (resize, compress, convert to WebP)."""
+        """
+        Optimize image for web (resize, compress, convert to modern formats).
+        
+        Supported formats:
+        - AVIF: Best compression (50% smaller than JPEG, 20% smaller than WebP)
+        - WEBP: Great compression (30% smaller than JPEG)
+        - JPEG: Universal compatibility
+        - PNG: Lossless compression
+        
+        Args:
+            image_bytes: Original image bytes
+            format: Output format (AVIF, WEBP, JPEG, PNG)
+            quality: Compression quality 1-100 (higher = better quality)
+            max_width: Maximum width in pixels
+            max_height: Maximum height in pixels
+            
+        Returns:
+            Optimized image bytes
+        """
         image = Image.open(BytesIO(image_bytes))
         
         # Strip EXIF data (privacy + smaller file), preserve rotation
@@ -53,17 +71,45 @@ class ImageProcessor:
         output = BytesIO()
         save_kwargs = {'format': format, 'quality': quality, 'optimize': True}
         
-        if format.upper() == 'WEBP':
-            save_kwargs['method'] = 6  # Best compression
+        if format.upper() == 'AVIF':
+            # AVIF: Best compression (50% smaller than JPEG)
+            # Requires Pillow >= 10.0.0 with pillow-avif-plugin
+            try:
+                save_kwargs['method'] = 'best'  # or 'fast' for faster encoding
+                save_kwargs['speed'] = 4  # 0-10, lower = better compression but slower
+                image.save(output, **save_kwargs)
+            except Exception as e:
+                logger.warning(f"AVIF encoding failed, falling back to WebP: {e}")
+                # Fallback to WebP if AVIF encoding fails
+                format = 'WEBP'
+                save_kwargs = {'format': 'WEBP', 'quality': quality, 'optimize': True, 'method': 6}
+                image.save(output, **save_kwargs)
+        elif format.upper() == 'WEBP':
+            # WebP: Great compression (30% smaller than JPEG)
+            save_kwargs['method'] = 6  # 0-6, higher = better compression
+            image.save(output, **save_kwargs)
         elif format.upper() == 'JPEG':
-            save_kwargs['progressive'] = True
+            # JPEG: Universal compatibility
+            save_kwargs['progressive'] = True  # Progressive JPEG (better for web)
+            save_kwargs['subsampling'] = 0  # Best quality chroma subsampling
+            image.save(output, **save_kwargs)
         elif format.upper() == 'PNG':
-            save_kwargs['compress_level'] = 9
+            # PNG: Lossless compression
+            save_kwargs['compress_level'] = 9  # 0-9, higher = better compression
+            image.save(output, **save_kwargs)
+        else:
+            # Default to WebP
+            save_kwargs['format'] = 'WEBP'
+            save_kwargs['method'] = 6
+            image.save(output, **save_kwargs)
         
-        image.save(output, **save_kwargs)
         optimized_bytes = output.getvalue()
         
-        logger.info(f"Image optimized: {len(image_bytes)} -> {len(optimized_bytes)} bytes")
+        compression_ratio = (1 - len(optimized_bytes) / len(image_bytes)) * 100
+        logger.info(
+            f"Image optimized: {len(image_bytes)} -> {len(optimized_bytes)} bytes "
+            f"({compression_ratio:.1f}% reduction) - Format: {format}"
+        )
         return optimized_bytes
     
     async def create_thumbnails(
@@ -132,6 +178,69 @@ class ImageProcessor:
         dominant = color_counts.most_common(num_colors)
         
         return ['#{:02x}{:02x}{:02x}'.format(r, g, b) for (r, g, b), count in dominant]
+    
+    async def create_multiple_formats(
+        self,
+        image_bytes: bytes,
+        formats: List[str] = None,
+        quality: int = 85,
+        max_width: int = 2048,
+        max_height: int = 2048
+    ) -> Dict[str, bytes]:
+        """
+        Create multiple format versions of an image for <picture> element.
+        
+        This allows serving AVIF to modern browsers, WebP to most browsers,
+        and JPEG as universal fallback.
+        
+        Usage in HTML:
+        <picture>
+          <source srcset="image.avif" type="image/avif">
+          <source srcset="image.webp" type="image/webp">
+          <img src="image.jpg" alt="Description">
+        </picture>
+        
+        Args:
+            image_bytes: Original image
+            formats: List of formats to generate (default: ['AVIF', 'WEBP', 'JPEG'])
+            quality: Compression quality
+            max_width: Maximum width
+            max_height: Maximum height
+            
+        Returns:
+            Dict mapping format name to image bytes
+            
+        Example:
+            >>> formats = await processor.create_multiple_formats(image_bytes)
+            >>> avif_bytes = formats['AVIF']
+            >>> webp_bytes = formats['WEBP']
+            >>> jpeg_bytes = formats['JPEG']
+        """
+        if formats is None:
+            formats = ['AVIF', 'WEBP', 'JPEG']
+        
+        results = {}
+        
+        for fmt in formats:
+            try:
+                optimized = await self.optimize_image(
+                    image_bytes,
+                    format=fmt,
+                    quality=quality,
+                    max_width=max_width,
+                    max_height=max_height
+                )
+                results[fmt] = optimized
+            except Exception as e:
+                logger.error(f"Failed to create {fmt} format: {e}")
+                continue
+        
+        # Log compression comparison
+        if results:
+            sizes = {fmt: len(data) for fmt, data in results.items()}
+            logger.info(f"Format sizes: {sizes}")
+        
+        return results
     
     async def add_watermark(
         self,

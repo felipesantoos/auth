@@ -1,10 +1,72 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import viteCompression from 'vite-plugin-compression'
+import { ViteImageOptimizer } from 'vite-plugin-image-optimizer'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    
+    // Image optimization (converts to WebP/AVIF automatically)
+    ViteImageOptimizer({
+      // Image types to optimize
+      test: /\.(jpe?g|png|gif|tiff|webp|svg|avif)$/i,
+      
+      // Optimization options for each format
+      jpg: {
+        quality: 85, // JPEG quality (0-100)
+      },
+      jpeg: {
+        quality: 85,
+      },
+      png: {
+        quality: 85, // PNG quality (0-100)
+      },
+      webp: {
+        quality: 80, // WebP quality (0-100) - 30% smaller than JPEG
+        lossless: false,
+      },
+      avif: {
+        quality: 75, // AVIF quality (0-100) - 50% smaller than JPEG
+        lossless: false,
+      },
+      
+      // Cache optimized images
+      cache: true,
+      cacheLocation: './node_modules/.cache/vite-plugin-image-optimizer',
+      
+      // Log optimization results
+      logStats: true,
+    }),
+    
+    // Brotli compression (primary - best compression)
+    viteCompression({
+      verbose: true,
+      disable: false,
+      threshold: 1024, // Only compress files > 1KB
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      compressionOptions: {
+        level: 11, // Max compression for static files (0-11)
+      },
+      deleteOriginFile: false, // Keep original files
+    }),
+    
+    // Gzip compression (fallback - universal compatibility)
+    viteCompression({
+      verbose: true,
+      disable: false,
+      threshold: 1024, // Only compress files > 1KB
+      algorithm: 'gzip',
+      ext: '.gz',
+      compressionOptions: {
+        level: 9, // Max compression for static files (0-9)
+      },
+      deleteOriginFile: false, // Keep original files
+    }),
+  ],
   
   // Path resolution for cleaner imports
   resolve: {

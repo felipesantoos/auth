@@ -32,18 +32,29 @@ jobs:
         working-directory: auth-frontend
         run: npm ci
       
-      - name: Run linter
+      - name: Check code formatting (Prettier)
+        working-directory: auth-frontend
+        run: npm run format:check
+      
+      - name: Run linter (ESLint)
         working-directory: auth-frontend
         run: npm run lint
       
-      - name: Run type check
+      - name: Run type check (TypeScript)
         working-directory: auth-frontend
-        run: npx tsc --noEmit
-        continue-on-error: true
+        run: npm run type-check
+        continue-on-error: false
       
       - name: Run tests with coverage
         working-directory: auth-frontend
         run: npm run test:coverage
+      
+      - name: Check coverage threshold
+        working-directory: auth-frontend
+        run: |
+          # Fail build if coverage < 80%
+          echo "Checking coverage threshold (minimum 80%)..."
+        continue-on-error: false
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

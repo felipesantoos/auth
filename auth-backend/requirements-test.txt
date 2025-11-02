@@ -7,8 +7,8 @@ pytest-watch>=4.2.0  # Watch mode for tests
 httpx>=0.27.0
 faker>=20.0.0  # Generate realistic test data
 
-# Code quality
-black>=23.0.0
-flake8>=6.1.0
-mypy>=1.0.0
+# Code quality & Git hooks
+pre-commit>=3.6.0
+types-redis>=4.6.0  # Type stubs for mypy
+types-PyYAML>=6.0.0
 

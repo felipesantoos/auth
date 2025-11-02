@@ -61,19 +61,27 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-test.txt
       
-      - name: Run linting
+      - name: Check code formatting (Black)
         working-directory: auth-backend
         run: |
-          # Run flake8 for code quality
-          flake8 core app --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Check for complexity and style (warnings only)
-          flake8 core app --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          black --check core/ app/ config/ infra/ tests/
       
-      - name: Run type checking
+      - name: Lint with Ruff
         working-directory: auth-backend
         run: |
-          mypy core --ignore-missing-imports --no-strict-optional
-        continue-on-error: true
+          # Run Ruff linter (replaces flake8, pyupgrade, etc.)
+          ruff check core/ app/ config/ infra/ tests/
+      
+      - name: Check import sorting (isort)
+        working-directory: auth-backend
+        run: |
+          isort --check-only --profile black core/ app/ config/ infra/ tests/
+      
+      - name: Run type checking (mypy)
+        working-directory: auth-backend
+        run: |
+          mypy core/ app/ config/ infra/ --config-file=pyproject.toml
+        continue-on-error: false
       
       - name: Run unit tests
         working-directory: auth-backend
