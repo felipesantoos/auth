@@ -19,7 +19,7 @@ class AuditLogMapper:
             resource_id=db_log.resource_id,
             ip_address=db_log.ip_address,
             user_agent=db_log.user_agent,
-            metadata=db_log.metadata,
+            metadata=db_log.event_metadata,
             status=db_log.status,
             created_at=db_log.created_at,
         )
@@ -38,7 +38,7 @@ class AuditLogMapper:
         db_log.resource_id = log.resource_id
         db_log.ip_address = log.ip_address
         db_log.user_agent = log.user_agent
-        db_log.metadata = log.metadata
+        db_log.event_metadata = log.metadata
         db_log.status = log.status
         db_log.created_at = log.created_at
         

@@ -59,7 +59,7 @@ class DBAuditLog(Base):
     new_values = Column(JSONB, nullable=True)  # Complete new state
     
     # ===== Additional Context =====
-    metadata = Column(JSONB, nullable=True)  # Event-specific data (flexible)
+    event_metadata = Column(JSONB, nullable=True)  # Event-specific data (flexible)
     tags = Column(ARRAY(String), nullable=True)  # ["sensitive", "compliance", "critical"]
     
     # ===== Status =====

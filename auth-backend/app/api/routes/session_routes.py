@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api/v1/auth/sessions", tags=["Sessions"])
 
 @router.get("", response_model=ActiveSessionsResponse)
 async def get_active_sessions(
-    request: Annotated[Request, Depends()],
+    request: Request,
     current_user: Annotated[AppUser, Depends(get_current_user)],
     session_service: Annotated[SessionService, Depends(get_session_service)]
 ):
