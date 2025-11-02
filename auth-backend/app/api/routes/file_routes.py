@@ -49,7 +49,7 @@ async def list_files(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     current_user: AppUser = Depends(get_current_user),
-    file_service: IFileService = Depends()
+    file_service: IFileService = Depends(get_file_service)
 ):
     """
     List user's files with pagination.
@@ -72,7 +72,7 @@ async def list_files(
 async def get_file_info(
     file_id: str,
     current_user: AppUser = Depends(get_current_user),
-    file_service: IFileService = Depends()
+    file_service: IFileService = Depends(get_file_service)
 ):
     """
     Get file information.
@@ -93,7 +93,7 @@ async def check_file_exists(
     file_id: str,
     response: Response,
     current_user: AppUser = Depends(get_current_user),
-    file_service: IFileService = Depends()
+    file_service: IFileService = Depends(get_file_service)
 ):
     """
     Check if file exists without returning body.
@@ -138,7 +138,7 @@ async def check_file_exists(
 async def download_file(
     file_id: str,
     current_user: AppUser = Depends(get_current_user),
-    file_service: IFileService = Depends()
+    file_service: IFileService = Depends(get_file_service)
 ):
     """
     Get download URL for file (with access control).
@@ -159,7 +159,7 @@ async def download_file(
 async def delete_file(
     file_id: str,
     current_user: AppUser = Depends(get_current_user),
-    file_service: IFileService = Depends()
+    file_service: IFileService = Depends(get_file_service)
 ):
     """
     Delete a file.
@@ -182,7 +182,7 @@ async def share_file(
     permission: str = "read",
     expires_hours: Optional[int] = None,
     current_user: AppUser = Depends(get_current_user),
-    file_service: IFileService = Depends()
+    file_service: IFileService = Depends(get_file_service)
 ):
     """
     Share file with another user.
@@ -209,7 +209,7 @@ async def get_presigned_upload_url(
     mime_type: str,
     file_size: int,
     current_user: AppUser = Depends(get_current_user),
-    file_service: IFileService = Depends()
+    file_service: IFileService = Depends(get_file_service)
 ):
     """
     Get presigned URL for direct upload to S3.
@@ -236,7 +236,7 @@ async def complete_direct_upload(
     file_size: int,
     checksum: Optional[str] = None,
     current_user: AppUser = Depends(get_current_user),
-    file_service: IFileService = Depends()
+    file_service: IFileService = Depends(get_file_service)
 ):
     """
     Complete direct upload (after uploading to presigned URL).

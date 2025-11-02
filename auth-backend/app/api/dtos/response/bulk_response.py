@@ -36,12 +36,12 @@ class BulkOperationResponse(BaseModel):
     total: int = Field(..., description="Total operations attempted")
     
     successful_ids: List[str] = Field(
-        default_factory=list,
+        default=[],
         description="IDs of successfully processed items"
     )
     
     errors: List[BulkOperationError] = Field(
-        default_factory=list,
+        default=[],
         description="Errors for failed items"
     )
     
@@ -55,8 +55,8 @@ class BulkOperationResponse(BaseModel):
         description="Total processing time in milliseconds"
     )
     
-    timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+    timestamp: Optional[datetime] = Field(
+        default=None,
         description="Response timestamp"
     )
     

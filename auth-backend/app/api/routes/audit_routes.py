@@ -13,7 +13,7 @@ from app.api.dtos.response.audit_response import (
     AuditLogsResponse,
     SecurityEventsResponse
 )
-from app.api.middlewares.auth_middleware import get_current_user
+from app.api.middlewares.auth_middleware import get_current_user, get_current_admin_user
 from app.api.middlewares.authorization import require_admin
 from app.api.dicontainer.dicontainer import get_audit_service
 from core.domain.auth.app_user import AppUser
@@ -74,7 +74,7 @@ async def get_user_audit_logs(
 
 @router.get("/admin/audit", response_model=AuditLogsResponse)
 async def get_all_audit_logs(
-    current_user: Annotated[AppUser, Depends(require_admin)],
+    current_user: Annotated[AppUser, Depends(get_current_admin_user)],
     audit_service: Annotated[AuditService, Depends(get_audit_service)],
     days: Annotated[int, Query(ge=1, le=90)] = 30,
     event_types: Optional[List[str]] = Query(None),
@@ -119,7 +119,7 @@ async def get_all_audit_logs(
 
 @router.get("/admin/audit/security", response_model=SecurityEventsResponse)
 async def get_security_events(
-    current_user: Annotated[AppUser, Depends(require_admin)],
+    current_user: Annotated[AppUser, Depends(get_current_admin_user)],
     audit_service: Annotated[AuditService, Depends(get_audit_service)],
     days: Annotated[int, Query(ge=1, le=30)] = 7,
     limit: Annotated[int, Query(ge=1, le=500)] = 500,
@@ -221,7 +221,7 @@ async def get_entity_history(
 
 @router.get("/admin/audit/statistics")
 async def get_audit_statistics(
-    current_user: Annotated[AppUser, Depends(require_admin)],
+    current_user: Annotated[AppUser, Depends(get_current_admin_user)],
     audit_service: Annotated[AuditService, Depends(get_audit_service)],
     days: int = Query(7, ge=1, le=90)
 ):
@@ -290,7 +290,7 @@ async def get_my_activity_timeline(
 @router.get("/admin/audit/timeline/{user_id}")
 async def get_user_activity_timeline(
     user_id: str,
-    current_user: Annotated[AppUser, Depends(require_admin)],
+    current_user: Annotated[AppUser, Depends(get_current_admin_user)],
     days: int = Query(30, ge=1, le=90)
 ):
     """
@@ -318,7 +318,7 @@ async def get_user_activity_timeline(
 @router.post("/admin/audit/search")
 async def search_audit_logs(
     request: SearchRequest,
-    current_user: Annotated[AppUser, Depends(require_admin)],
+    current_user: Annotated[AppUser, Depends(get_current_admin_user)],
     audit_service: Annotated[AuditService, Depends(get_audit_service)]
 ):
     """
@@ -371,7 +371,7 @@ async def search_audit_logs(
 
 @router.get("/admin/audit/retention-report")
 async def get_retention_report(
-    current_user: Annotated[AppUser, Depends(require_admin)]
+    current_user: Annotated[AppUser, Depends(get_current_admin_user)]
 ):
     """
     Get audit retention policy compliance report (admin only).
@@ -610,7 +610,7 @@ async def get_recent_events(
 
 @router.get("/audit/search")
 async def search_audit_logs_get(
-    current_user: Annotated[AppUser, Depends(require_admin)],
+    current_user: Annotated[AppUser, Depends(get_current_admin_user)],
     audit_service: Annotated[AuditService, Depends(get_audit_service)],
     query: str = Query(..., min_length=1),
     user_id: Optional[str] = Query(None),
@@ -675,7 +675,7 @@ async def search_audit_logs_get(
 
 @router.get("/audit/statistics")
 async def get_audit_statistics_v2(
-    current_user: Annotated[AppUser, Depends(require_admin)],
+    current_user: Annotated[AppUser, Depends(get_current_admin_user)],
     start_date: str = Query(...),
     end_date: str = Query(...)
 ):

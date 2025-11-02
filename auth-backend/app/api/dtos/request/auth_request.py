@@ -3,7 +3,7 @@ Authentication Request DTOs
 Pydantic models for API request validation
 Adapted for multi-tenant architecture
 """
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 import re
 
@@ -23,7 +23,8 @@ class RegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=255, description="User full name")
     client_id: Optional[str] = Field(None, description="Client (tenant) ID. Can also be provided via X-Client-ID header or subdomain")
     
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password_strength(cls, v):
         """Validate password meets strength requirements"""
         if len(v) < 8:
@@ -42,7 +43,8 @@ class ChangePasswordRequest(BaseModel):
     old_password: str = Field(..., min_length=6, description="Current password")
     new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
     
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def validate_password_strength(cls, v):
         """Validate password meets strength requirements"""
         if len(v) < 8:
@@ -82,7 +84,8 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
     client_id: Optional[str] = Field(None, description="Client (tenant) ID. Can also be provided via X-Client-ID header or subdomain")
     
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def validate_password_strength(cls, v):
         """Validate password meets strength requirements"""
         if len(v) < 8:

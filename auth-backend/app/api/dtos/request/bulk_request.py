@@ -2,7 +2,7 @@
 Bulk Operation Request DTOs
 Models for bulk create, update, and delete operations
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List
 from app.api.dtos.request.auth_request import RegisterRequest, UpdateUserRequest
 
@@ -12,12 +12,13 @@ class BulkCreateUsersRequest(BaseModel):
     
     users: List[RegisterRequest] = Field(
         ...,
-        min_items=1,
-        max_items=100,
+        min_length=1,
+        max_length=100,
         description="List of users to create (max 100 per request)"
     )
     
-    @validator("users")
+    @field_validator("users")
+    @classmethod
     def validate_unique_emails(cls, v):
         """Ensure all emails are unique within the request."""
         emails = [user.email for user in v]
@@ -25,7 +26,8 @@ class BulkCreateUsersRequest(BaseModel):
             raise ValueError("Duplicate emails found in bulk create request")
         return v
     
-    @validator("users")
+    @field_validator("users")
+    @classmethod
     def validate_unique_usernames(cls, v):
         """Ensure all usernames are unique within the request."""
         usernames = [user.username for user in v]
@@ -90,12 +92,13 @@ class BulkDeleteUsersRequest(BaseModel):
     
     user_ids: List[str] = Field(
         ...,
-        min_items=1,
-        max_items=100,
+        min_length=1,
+        max_length=100,
         description="List of user IDs to delete (max 100)"
     )
     
-    @validator("user_ids")
+    @field_validator("user_ids")
+    @classmethod
     def validate_unique_ids(cls, v):
         """Ensure all IDs are unique."""
         if len(v) != len(set(v)):

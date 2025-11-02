@@ -42,7 +42,7 @@ class ABTestResponse(BaseModel):
     end_date: Optional[str] = Field(None, description="End date (ISO)")
     winner_variant: Optional[str] = Field(None, description="Winning variant name")
     winner_selected_at: Optional[str] = Field(None, description="Winner selection date (ISO)")
-    variants: List[ABTestVariantResponse] = Field(default_factory=list, description="Test variants")
+    variants: List[ABTestVariantResponse] = Field(default=[], description="Test variants")
 
 
 class CreateABTestResponse(BaseModel):

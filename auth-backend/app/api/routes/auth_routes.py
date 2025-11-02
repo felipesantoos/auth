@@ -23,12 +23,23 @@ from app.api.dtos.request.auth_request import (
     ResetPasswordRequest,
 )
 from app.api.dtos.request.mfa_login_request import MFALoginRequest
+from app.api.dtos.request.bulk_request import (
+    BulkCreateUsersRequest,
+    BulkUpdateUsersRequest,
+    BulkDeleteUsersRequest,
+)
 from app.api.dtos.response.auth_response import (
     TokenResponse,
     UserResponse,
     MessageResponse,
 )
 from app.api.dtos.response.mfa_login_response import MFARequiredResponse
+from app.api.dtos.response.bulk_response import (
+    BulkCreateUsersResponse,
+    BulkUpdateUsersResponse,
+    BulkDeleteUsersResponse,
+)
+from app.api.dtos.response.async_response import AsyncOperationResponse
 from app.api.mappers.auth_mapper import AuthMapper
 from app.api.dtos.response.paginated_response import PaginatedResponse
 from app.api.utils.pagination import (
@@ -1207,7 +1218,7 @@ async def reset_password(
 async def bulk_create_users(
     request: Request,
     response: Response,
-    bulk_request: "BulkCreateUsersRequest" = Body(...),
+    bulk_request: BulkCreateUsersRequest = Body(...),
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
     current_user: AppUser = Depends(get_current_admin_user),
@@ -1250,10 +1261,6 @@ async def bulk_create_users(
     
     Requires admin authentication.
     """
-    from app.api.dtos.request.bulk_request import BulkCreateUsersRequest
-    from app.api.dtos.response.bulk_response import BulkCreateUsersResponse
-    from app.api.dtos.response.async_response import AsyncOperationResponse
-    
     try:
         ip_address = request.client.host if request.client else None
         num_users = len(bulk_request.users)
@@ -1351,7 +1358,7 @@ async def bulk_create_users(
 async def bulk_update_users(
     request: Request,
     response: Response,
-    bulk_request: "BulkUpdateUsersRequest" = Body(...),
+    bulk_request: BulkUpdateUsersRequest = Body(...),
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
     current_user: AppUser = Depends(get_current_admin_user),
@@ -1382,10 +1389,6 @@ async def bulk_update_users(
     
     Requires admin authentication.
     """
-    from app.api.dtos.request.bulk_request import BulkUpdateUsersRequest
-    from app.api.dtos.response.bulk_response import BulkUpdateUsersResponse
-    from app.api.dtos.response.async_response import AsyncOperationResponse
-    
     try:
         ip_address = request.client.host if request.client else None
         num_updates = len(bulk_request.updates)
@@ -1456,7 +1459,7 @@ async def bulk_update_users(
 async def bulk_delete_users(
     request: Request,
     response: Response,
-    bulk_request: "BulkDeleteUsersRequest" = Body(...),
+    bulk_request: BulkDeleteUsersRequest = Body(...),
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
     current_user: AppUser = Depends(get_current_admin_user),
@@ -1488,10 +1491,6 @@ async def bulk_delete_users(
     
     Requires admin authentication.
     """
-    from app.api.dtos.request.bulk_request import BulkDeleteUsersRequest
-    from app.api.dtos.response.bulk_response import BulkDeleteUsersResponse
-    from app.api.dtos.response.async_response import AsyncOperationResponse
-    
     try:
         ip_address = request.client.host if request.client else None
         num_deletes = len(bulk_request.user_ids)
@@ -1557,4 +1556,3 @@ async def bulk_delete_users(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred during bulk user deletion"
         )
-
