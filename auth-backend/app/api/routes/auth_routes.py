@@ -5,7 +5,7 @@ Adapted for multi-tenant architecture
 """
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, BackgroundTasks
 from core.interfaces.primary.auth_service_interface import IAuthService
 from core.interfaces.primary.password_reset_service_interface import IPasswordResetService
 
@@ -110,12 +110,13 @@ async def login(
     Authenticate user with advanced security features.
     
     Features:
-    - Account lockout (brute-force protection)
+    - Account lockout (brute-force protection - email and IP-based)
     - Audit logging
     - Email verification check
     - MFA verification (if enabled)
     - Session tracking
     - Suspicious activity detection
+    - Login notifications
     
     Returns TokenResponse or MFARequiredResponse
     """
@@ -127,26 +128,33 @@ async def login(
         ip_address = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
         
-        # 1. CHECK BRUTE-FORCE (IP-based, before revealing user existence)
-        is_brute_force = await audit_service.detect_brute_force(
-            user_id=None,
-            ip_address=ip_address,
-            threshold=5,
-            minutes=30
+        # Get services
+        from app.api.dicontainer.dicontainer import get_account_lockout_service, get_suspicious_activity_detector
+        lockout_service = await get_account_lockout_service(db_session)
+        suspicious_detector = await get_suspicious_activity_detector(db_session)
+        
+        # 1. CHECK ACCOUNT/IP LOCKOUT (before revealing user existence)
+        is_locked, unlock_time = await lockout_service.check_lockout(
+            email=login_request.email,
+            ip_address=ip_address or "",
+            client_id=client_id
         )
         
-        if is_brute_force:
+        if is_locked:
             await audit_service.log_event(
                 client_id=client_id,
                 event_type=AuditEventType.LOGIN_FAILED_ACCOUNT_LOCKED,
                 ip_address=ip_address,
                 user_agent=user_agent,
                 status="failure",
-                metadata={"reason": "IP-based brute-force detected"}
+                metadata={
+                    "reason": "Account or IP locked due to failed attempts",
+                    "unlock_time": unlock_time.isoformat() if unlock_time else None
+                }
             )
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Too many failed login attempts. Please try again later."
+                detail=f"Too many failed login attempts. Please try again after {unlock_time.strftime('%H:%M UTC') if unlock_time else '30 minutes'}."
             )
         
         # 2. AUTHENTICATE
@@ -164,12 +172,21 @@ async def login(
                 status="failure",
                 metadata={"email": login_request.email, "error": str(e)}
             )
+            
+            # Record failed attempt in lockout service
+            await lockout_service.record_failed_attempt(
+                email=login_request.email,
+                ip_address=ip_address or "",
+                user_agent=user_agent or "",
+                client_id=client_id
+            )
+            
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials"
             )
         
-        # 3. CHECK ACCOUNT LOCKOUT
+        # 3. CHECK ACCOUNT LOCKOUT (in case it was just locked)
         if user.is_locked():
             await audit_service.log_event(
                 client_id=client_id,
@@ -182,6 +199,13 @@ async def login(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is temporarily locked due to multiple failed attempts. Try again later."
             )
+        
+        # Reset failed login attempts on successful login
+        if not user.is_locked():
+            user.reset_failed_login_attempts()
+            from app.api.dicontainer.dicontainer import get_app_user_repository
+            user_repo = await get_app_user_repository(db_session)
+            await user_repo.save(user)
         
         # 4. CHECK EMAIL VERIFICATION
         from config.settings import settings
@@ -218,6 +242,15 @@ async def login(
                 user_agent=user_agent
             )
             
+            # Regenerate access token with session_id
+            if session:
+                access_token = auth_service.generate_access_token_with_session(
+                    user_id=user.id,
+                    client_id=client_id,
+                    session_id=session.id
+                )
+                logger.info(f"Access token regenerated with session_id: {session.id}")
+            
             # Send login notification if enabled and new device detected
             from config.settings import settings
             if settings.send_login_notifications and session:
@@ -225,16 +258,15 @@ async def login(
                     from app.api.dicontainer.dicontainer import get_login_notification_service
                     notification_service = get_login_notification_service()
                     
-                    # Check if should send (new device/IP)
-                    should_send = await notification_service.should_send_notification(
+                    # Check if this is a new device using the detector
+                    is_new_device = await suspicious_detector.check_new_device(
                         user_id=user.id,
                         client_id=client_id,
-                        current_ip=ip_address or "",
-                        current_user_agent=user_agent or "",
-                        audit_service=audit_service
+                        user_agent=user_agent or "",
+                        ip_address=ip_address or ""
                     )
                     
-                    if should_send:
+                    if is_new_device:
                         await notification_service.send_new_login_notification(user, session)
                         logger.info(f"Login notification sent for new device login: {user.id}")
                 except Exception as e:
@@ -247,20 +279,28 @@ async def login(
         
         # 7. DETECT SUSPICIOUS ACTIVITY
         try:
-            is_suspicious = await audit_service.detect_suspicious_activity(
+            is_suspicious = await suspicious_detector.detect_suspicious_activity(
                 user_id=user.id,
                 client_id=client_id,
                 ip_address=ip_address or "",
-                user_agent=user_agent or ""
+                user_agent=user_agent or "",
+                location=None  # TODO: Add geo-location service
             )
             
             if is_suspicious:
                 await audit_service.log_event(
                     client_id=client_id,
                     event_type=AuditEventType.SUSPICIOUS_ACTIVITY_DETECTED,
+                    action=f"Suspicious login activity detected for user {user.email}",
+                    description="Login from new device or impossible travel detected",
                     user_id=user.id,
                     ip_address=ip_address,
                     user_agent=user_agent,
+                    metadata={
+                        "detection_reason": "new_device_or_impossible_travel",
+                        "email": user.email
+                    },
+                    tags=["security", "suspicious"],
                     status="warning"
                 )
         except Exception as e:
@@ -409,6 +449,7 @@ async def login_with_mfa(
 async def register(
     request: Request,
     register_request: RegisterRequest,
+    background_tasks: BackgroundTasks,
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
     email_verification_service: EmailVerificationService = Depends(get_email_verification_service),
@@ -417,6 +458,8 @@ async def register(
     """
     Register new user with email verification and audit logging.
     
+    Performance: Email sending runs in background to improve response time.
+    
     Client ID can be provided via:
     - client_id in request body
     - X-Client-ID header
@@ -424,7 +467,7 @@ async def register(
     - Subdomain in Host header
     
     Returns:
-        Created user data
+        Created user data (immediate response, email sent in background)
     """
     try:
         ip_address = request.client.host if request.client else None
@@ -455,23 +498,30 @@ async def register(
             metadata={"email": user.email, "username": user.username}
         )
         
-        # Send email verification (if enabled)
+        # ⚡ PERFORMANCE: Send email verification in background
+        # This prevents blocking the registration response (improves UX)
+        # Email sending typically takes 1-2 seconds - user doesn't need to wait
         from config.settings import settings
         if settings.require_email_verification or True:  # Always send for now
-            try:
-                await email_verification_service.send_verification_email(
-                    user_id=user.id,
-                    client_id=client_id
-                )
-                await audit_service.log_event(
-                    client_id=client_id,
-                    event_type=AuditEventType.EMAIL_VERIFICATION_SENT,
-                    user_id=user.id,
-                    status="success"
-                )
-            except Exception as e:
-                logger.error(f"Error sending verification email: {e}", exc_info=True)
-                # Don't fail registration if email fails
+            async def send_verification_email_task():
+                """Background task for sending verification email"""
+                try:
+                    await email_verification_service.send_verification_email(
+                        user_id=user.id,
+                        client_id=client_id
+                    )
+                    await audit_service.log_event(
+                        client_id=client_id,
+                        event_type=AuditEventType.EMAIL_VERIFICATION_SENT,
+                        user_id=user.id,
+                        status="success"
+                    )
+                    logger.info(f"Verification email sent to user {user.id}")
+                except Exception as e:
+                    logger.error(f"Error sending verification email: {e}", exc_info=True)
+                    # Don't fail registration if email fails (already logged)
+            
+            background_tasks.add_task(send_verification_email_task)
         
         return AuthMapper.to_user_response(user)
         

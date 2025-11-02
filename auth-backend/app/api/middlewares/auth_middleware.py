@@ -109,6 +109,11 @@ async def get_current_user(
     # Store client_id in request state for later use
     request.state.client_id = user.client_id
     
+    # Store session_id if present in token (for session management)
+    session_id = payload.get("session_id")
+    if session_id:
+        request.state.session_id = session_id
+    
     return user
 
 

@@ -6,6 +6,7 @@ Adapted for multi-tenant architecture with client_id filtering
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import select, delete as sql_delete, and_, func, or_
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, DatabaseError
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.interfaces.secondary.app_user_repository_interface import (
@@ -51,11 +52,15 @@ class AppUserRepository(IAppUserRepository):
         
         Filter Pattern: Applies all filters, pagination, and sorting at SQL level.
         
+        Performance: Uses eager loading (selectinload) to prevent N+1 queries
+        when accessing client relationships.
+        
         Returns:
             List of users (empty list if error, graceful degradation)
         """
         try:
-            query = select(DBAppUser)
+            # ⚡ PERFORMANCE: Eager load client relationship to prevent N+1 queries
+            query = select(DBAppUser).options(selectinload(DBAppUser.client))
             conditions = []
             
             if filter:
@@ -126,12 +131,15 @@ class AppUserRepository(IAppUserRepository):
         
         Returns None if not found (NOT an exception).
         
+        Performance: Uses eager loading to prevent N+1 queries.
+        
         Args:
             user_id: User ID
             client_id: Optional client ID for multi-tenant isolation
         """
         try:
-            query = select(DBAppUser).where(DBAppUser.id == user_id)
+            # ⚡ PERFORMANCE: Eager load client relationship
+            query = select(DBAppUser).options(selectinload(DBAppUser.client)).where(DBAppUser.id == user_id)
             
             # Multi-tenant: Filter by client_id if provided
             if client_id:
@@ -159,6 +167,8 @@ class AppUserRepository(IAppUserRepository):
         Optimized for batch requests - single query instead of N queries.
         Prevents N+1 query problems when fetching multiple users.
         
+        Performance: Uses eager loading to prevent N+1 queries.
+        
         Args:
             user_ids: List of user IDs
             client_id: Optional client ID for multi-tenant isolation
@@ -170,7 +180,8 @@ class AppUserRepository(IAppUserRepository):
             if not user_ids:
                 return []
             
-            query = select(DBAppUser).where(DBAppUser.id.in_(user_ids))
+            # ⚡ PERFORMANCE: Eager load client relationship
+            query = select(DBAppUser).options(selectinload(DBAppUser.client)).where(DBAppUser.id.in_(user_ids))
             
             # Multi-tenant: Filter by client_id if provided
             if client_id:
@@ -194,12 +205,15 @@ class AppUserRepository(IAppUserRepository):
         
         Returns None if not found (NOT an exception).
         
+        Performance: Uses eager loading to prevent N+1 queries.
+        
         Args:
             email: User email
             client_id: Optional client ID for multi-tenant isolation
         """
         try:
-            query = select(DBAppUser).where(DBAppUser.email == email)
+            # ⚡ PERFORMANCE: Eager load client relationship
+            query = select(DBAppUser).options(selectinload(DBAppUser.client)).where(DBAppUser.email == email)
             
             # Multi-tenant: Filter by client_id if provided
             # Note: In multi-tenant, email should be unique per client, not globally

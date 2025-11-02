@@ -225,10 +225,16 @@ class SessionService:
     async def get_active_sessions(
         self,
         user_id: str,
-        client_id: str
+        client_id: str,
+        current_session_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Get all active sessions for a user.
+        
+        Args:
+            user_id: User ID
+            client_id: Client ID
+            current_session_id: Optional current session ID to mark as current
         
         Returns list of session information (sanitized, without sensitive data)
         """
@@ -244,7 +250,7 @@ class SessionService:
                     "location": session.get_location_description(),
                     "last_activity": session.last_activity.isoformat() if session.last_activity else None,
                     "created_at": session.created_at.isoformat() if session.created_at else None,
-                    "is_current": False,  # Will be set by caller based on current session
+                    "is_current": session.id == current_session_id if current_session_id else False,
                 }
                 for session in sessions
             ]

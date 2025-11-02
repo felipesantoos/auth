@@ -5,12 +5,16 @@
 
 import { IAuthService } from '../../core/interfaces/primary/IAuthService';
 import { IAuthRepository } from '../../core/interfaces/secondary/IAuthRepository';
+import { IAuditService } from '../../core/interfaces/primary/IAuditService';
+import { IAuditLogRepository } from '../../core/interfaces/secondary/IAuditLogRepository';
 import { IHttpClient } from '../../core/interfaces/secondary/IHttpClient';
 import { IStorage } from '../../core/interfaces/secondary/IStorage';
 import { ILogger } from '../../core/interfaces/secondary/ILogger';
 
 import { AuthService } from '../../core/services/auth/authService';
 import { AuthRepository } from '../../infra/api/repositories/auth.repository';
+import { AuditService } from '../../core/services/audit/auditService';
+import { auditLogRepository } from '../../infra/api/repositories/audit.repository';
 import { HttpClient } from '../../infra/api/http-client';
 import { LocalStorage } from '../../infra/storage/local-storage';
 import { ConsoleLogger } from '../../infra/logger/console-logger';
@@ -66,6 +70,13 @@ class DIContainer {
       this.instances.set('authService', new AuthService(repository, storage, logger));
     }
     return this.instances.get('authService');
+  }
+
+  static getAuditService(): IAuditService {
+    if (!this.instances.has('auditService')) {
+      this.instances.set('auditService', new AuditService(auditLogRepository));
+    }
+    return this.instances.get('auditService');
   }
 
   static reset(): void {

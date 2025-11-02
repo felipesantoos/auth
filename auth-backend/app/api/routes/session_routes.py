@@ -2,7 +2,7 @@
 Session Management Routes
 Endpoints for managing user sessions across devices
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Path
+from fastapi import APIRouter, Depends, HTTPException, status, Path, Request
 from typing import Annotated
 import logging
 
@@ -25,6 +25,7 @@ router = APIRouter(prefix="/api/auth/sessions", tags=["Sessions"])
 
 @router.get("", response_model=ActiveSessionsResponse)
 async def get_active_sessions(
+    request: Annotated[Request, Depends()],
     current_user: Annotated[AppUser, Depends(get_current_user)],
     session_service: Annotated[SessionService, Depends(get_session_service)]
 ):
@@ -32,11 +33,16 @@ async def get_active_sessions(
     Get all active sessions for current user.
     
     Shows devices, locations, last activity, etc.
+    Current session is marked with is_current=True.
     """
     try:
+        # Get current session_id from request state (set by auth middleware)
+        current_session_id = getattr(request.state, "session_id", None)
+        
         sessions_data = await session_service.get_active_sessions(
             user_id=current_user.id,
-            client_id=current_user.client_id
+            client_id=current_user.client_id,
+            current_session_id=current_session_id
         )
         
         sessions = [SessionInfoResponse(**session) for session in sessions_data]

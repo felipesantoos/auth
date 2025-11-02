@@ -98,9 +98,12 @@ class Settings(BaseSettings):
     session_max_devices: int = 10  # Maximum active sessions per user
     session_inactivity_timeout_days: int = 30
     
-    # Account Security
-    max_login_attempts: int = 5
-    account_lockout_duration_minutes: int = 30
+    # Account Lockout Protection
+    account_lockout_max_attempts: int = 5  # Lock after N failed attempts
+    account_lockout_duration_minutes: int = 30  # How long to lock account
+    account_lockout_window_minutes: int = 15  # Time window for counting attempts
+    ip_lockout_enabled: bool = True  # Enable IP-based lockout in addition to account lockout
+    send_login_notifications: bool = True  # Send email notifications for new device logins
     
     # Passwordless Auth (Magic Links)
     magic_link_expire_minutes: int = 15
@@ -154,6 +157,14 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/1"
     email_use_background_queue: bool = False
+    
+    # Elasticsearch (Optional - for >10M audit logs)
+    elasticsearch_enabled: bool = False
+    elasticsearch_host: str = "localhost"
+    elasticsearch_port: int = 9200
+    elasticsearch_index_prefix: str = "auth_audit"
+    elasticsearch_user: Optional[str] = None
+    elasticsearch_password: Optional[str] = None
     
     # File Upload & Storage
     file_upload_max_size: int = 100 * 1024 * 1024  # 100MB default

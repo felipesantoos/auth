@@ -128,7 +128,7 @@ class AuthService(AuthServiceBase, IAuthService):
         return payload, client_id_to_use, user_id
     
     async def login(
-        self, email: str, password: str, client_id: str
+        self, email: str, password: str, client_id: str, session_id: Optional[str] = None
     ) -> Tuple[str, str, AppUser]:
         """
         Authenticate user and generate tokens (multi-tenant).
@@ -137,6 +137,7 @@ class AuthService(AuthServiceBase, IAuthService):
             email: User email
             password: Plain text password
             client_id: Client (tenant) ID for multi-tenant isolation
+            session_id: Optional session ID to include in access token
             
         Returns:
             Tuple of (access_token, refresh_token, user)
@@ -151,7 +152,7 @@ class AuthService(AuthServiceBase, IAuthService):
         except Exception as e:
             logger.error(f"Unexpected error during login: {e}", exc_info=True, extra={"email": email, "client_id": client_id})
             raise DomainException("Failed to authenticate user due to technical error", "AUTHENTICATION_FAILED")
-        access_token, refresh_token = await self._generate_and_store_tokens(user.id, client_id)
+        access_token, refresh_token = await self._generate_and_store_tokens(user.id, client_id, session_id)
         
         logger.info("Login successful", extra={"user_id": user.id, "client_id": client_id})
         return access_token, refresh_token, user

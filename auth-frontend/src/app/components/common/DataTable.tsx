@@ -6,6 +6,7 @@
  * Compliance: 08d-ui-components.md Section 5
  */
 
+import React from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -42,6 +43,9 @@ interface DataTableProps<TData, TValue> {
  * - Type-safe: Generic TData and TValue
  * - Accessible: Semantic HTML with ARIA attributes
  * 
+ * Performance: Memoized with React.memo to prevent re-renders
+ * when parent components update but props haven't changed.
+ * 
  * Example Usage:
  * ```tsx
  * <DataTable
@@ -54,14 +58,15 @@ interface DataTableProps<TData, TValue> {
  * />
  * ```
  */
-export function DataTable<TData, TValue>({
+// ⚡ PERFORMANCE: Memoized component to prevent re-renders
+const DataTableInner = <TData, TValue>({
   columns,
   data,
   onEdit,
   onDelete,
   searchPlaceholder = 'Buscar...',
   searchColumn = 'name',
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData, TValue>) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
@@ -178,5 +183,8 @@ export function DataTable<TData, TValue>({
       </div>
     </div>
   );
-}
+};
+
+// Export memoized component with generic types support
+export const DataTable = React.memo(DataTableInner) as typeof DataTableInner;
 

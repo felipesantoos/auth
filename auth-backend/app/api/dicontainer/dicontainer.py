@@ -212,6 +212,33 @@ async def get_session_service(
     )
 
 
+async def get_account_lockout_service(
+    session: AsyncSession = Depends(get_db_session)
+):
+    """Factory for AccountLockoutService"""
+    from core.services.auth.account_lockout_service import AccountLockoutService
+    
+    user_repository = await get_app_user_repository(session)
+    audit_service = await get_audit_service(session)
+    settings_provider = SettingsProvider()
+    
+    return AccountLockoutService(
+        user_repository=user_repository,
+        audit_service=audit_service,
+        settings_provider=settings_provider
+    )
+
+
+async def get_suspicious_activity_detector(
+    session: AsyncSession = Depends(get_db_session)
+):
+    """Factory for SuspiciousActivityDetector"""
+    from core.services.auth.suspicious_activity_detector import SuspiciousActivityDetector
+    
+    audit_service = await get_audit_service(session)
+    return SuspiciousActivityDetector(audit_service=audit_service)
+
+
 async def get_email_verification_service(
     session: AsyncSession = Depends(get_db_session)
 ) -> EmailVerificationService:

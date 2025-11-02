@@ -13,13 +13,17 @@ import { ErrorBoundary } from './app/components/ErrorBoundary';
 import { ProtectedRoute } from './app/components/ProtectedRoute';
 import { LoadingSpinner } from './app/components/common/LoadingSpinner';
 
-// Lazy load route components for code splitting
+// ⚡ PERFORMANCE: Lazy load all route components for code splitting
+// Each route is loaded only when accessed, reducing initial bundle size
 const Login = lazy(() => import('./app/pages/Login'));
 const Register = lazy(() => import('./app/pages/Register'));
 const Dashboard = lazy(() => import('./app/pages/Dashboard'));
 const ForgotPassword = lazy(() => import('./app/pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./app/pages/ResetPassword'));
 const OAuthCallback = lazy(() => import('./app/pages/OAuthCallback'));
+const MFASetup = lazy(() => import('./app/pages/MFASetup'));
+const VerifyEmail = lazy(() => import('./app/pages/VerifyEmail'));
+const AuditDashboard = lazy(() => import('./app/pages/AuditDashboard'));
 
 // Page loader component for Suspense fallback
 const PageLoader = () => <LoadingSpinner message="Carregando página..." />;
@@ -77,6 +81,34 @@ function App() {
                   <Suspense fallback={<PageLoader />}>
                     <ProtectedRoute>
                       <Dashboard />
+                    </ProtectedRoute>
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/mfa-setup"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ProtectedRoute>
+                      <MFASetup />
+                    </ProtectedRoute>
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/verify-email"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <VerifyEmail />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/audit"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ProtectedRoute>
+                      <AuditDashboard />
                     </ProtectedRoute>
                   </Suspense>
                 }

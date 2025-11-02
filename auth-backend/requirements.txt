@@ -76,6 +76,9 @@ cryptography>=41.0.0  # For CloudFront signed URLs
 # Monitoring & Observability
 prometheus-client>=0.19.0
 
+# Elasticsearch (Optional - uncomment for >10M audit logs)
+# elasticsearch[async]>=8.10.0
+
 # Development & Testing
 pytest>=7.4.0
 pytest-asyncio>=0.21.0

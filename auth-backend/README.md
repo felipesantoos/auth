@@ -69,6 +69,17 @@ Multi-tenant Authentication and Authorization System built with FastAPI.
 - ✅ **Performance** - GZip compression, request batching, connection pooling
 - ✅ **Maintenance Tasks** - Automated cleanup of expired sessions, tokens, audit logs
 
+### Comprehensive Audit System
+- ✅ **60+ Event Types** - Across 7 categories (authentication, authorization, data access, modifications, business, admin, system)
+- ✅ **Automatic Tracking** - Middleware captures all HTTP requests automatically
+- ✅ **Entity Change Tracking** - Field-level changes with before/after state
+- ✅ **Advanced Queries** - Search, statistics, timelines, entity history
+- ✅ **GDPR Compliance** - Right to Access (export), Right to be Forgotten (anonymize)
+- ✅ **Audit Decorators** - Automatic audit logging for service methods
+- ✅ **Performance Optimization** - Async audit logger with queue (non-blocking)
+- ✅ **Retention Policies** - SOX compliant (7 years), automatic archival
+- ✅ **Security Analytics** - Brute-force detection, suspicious activity monitoring
+
 ## Monitoring & Observability
 
 ### Health Check Endpoints
@@ -227,6 +238,201 @@ response = await paginate_query_with_response(
 - `idx_user_client_active` (client_id, is_active)
 - `idx_user_email_active` (email, is_active)
 - `idx_session_user_active` (user_id, revoked_at, expires_at)
+
+## Comprehensive Audit System
+
+### Overview
+
+Enterprise-grade audit system tracking **all** user and system actions with:
+- **60+ event types** across 7 categories
+- **Field-level change tracking** (before/after state)
+- **GDPR compliance** (export, anonymize)
+- **Performance optimized** (async logging with queue)
+- **Retention policies** (SOX: 7 years)
+
+### Event Categories
+
+| Category | Retention | Examples |
+|----------|-----------|----------|
+| 🔑 **Authentication** | 1 year | Login, logout, password changes, MFA |
+| 🛡️ **Authorization** | 2 years | Role changes, permission grants |
+| 👁️ **Data Access** | 1 year | Views, downloads, exports (GDPR/HIPAA) |
+| ✏️ **Data Modification** | 7 years | Creates, updates, deletes (SOX) |
+| ⚙️ **Business Logic** | 3 years | Workflows, approvals, tasks |
+| ⚡ **Administrative** | 7 years | User management, settings |
+| 🖥️ **System** | 90 days | Backups, migrations, errors |
+
+### Usage Examples
+
+**Automatic auditing (via middleware)**:
+```python
+# All HTTP requests are automatically audited
+# No code changes needed - middleware handles it
+```
+
+**Manual auditing with specialized methods**:
+```python
+from core.services.audit.audit_service import AuditService
+from core.domain.auth.audit_event_type import AuditEventType
+
+# Log data access (sensitive data)
+await audit_service.log_data_access(
+    client_id=client_id,
+    access_type="view",
+    resource_type="financial_report",
+    resource_id="report123",
+    resource_name="Q4 2024 Report",
+    user_id=user.id,
+    username=user.username,
+    is_sensitive=True  # Tags as PII/compliance
+)
+
+# Log entity change with field tracking
+from core.domain.audit.entity_change import EntityChange
+
+changes = [
+    EntityChange(
+        field="status",
+        old_value="draft",
+        new_value="published",
+        field_type="string",
+        change_type="modified"
+    )
+]
+
+await audit_service.log_entity_change(
+    client_id=client_id,
+    event_type=AuditEventType.ENTITY_UPDATED,
+    entity_type="document",
+    entity_id=doc.id,
+    entity_name=doc.title,
+    changes=changes,
+    user_id=user.id,
+    username=user.username
+)
+```
+
+**Automatic auditing with decorators**:
+```python
+from core.decorators.audit_decorator import audit_entity_change
+
+class ProjectService:
+    @audit_entity_change(
+        event_type=AuditEventType.ENTITY_UPDATED,
+        entity_type="project",
+        entity_id_param="project_id",
+        track_changes=True  # Automatic change detection
+    )
+    async def update_project(
+        self,
+        project_id: str,
+        data: UpdateProjectRequest,
+        current_user: AppUser,
+        audit_service: AuditService,  # Auto-logs changes
+        repository: IProjectRepository  # Fetches old state
+    ):
+        updated = await repository.update(project_id, data)
+        return updated
+```
+
+### Advanced Queries
+
+**Entity history** (complete change log):
+```bash
+curl http://localhost:8080/api/audit/entity/project/123/history \
+  -H "Authorization: Bearer TOKEN"
+```
+
+**Statistics dashboard**:
+```bash
+curl http://localhost:8080/api/admin/audit/statistics?days=30 \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+**Activity timeline** (daily counts):
+```bash
+curl http://localhost:8080/api/auth/audit/timeline?days=30 \
+  -H "Authorization: Bearer TOKEN"
+```
+
+**Full-text search**:
+```bash
+curl -X POST http://localhost:8080/api/admin/audit/search \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "password changed",
+    "filters": {"event_category": "authentication"},
+    "limit": 50
+  }'
+```
+
+### GDPR Compliance
+
+**Export my data** (Article 15 - Right to Access):
+```bash
+curl http://localhost:8080/api/gdpr/export-my-data \
+  -H "Authorization: Bearer TOKEN"
+# Returns JSON with complete user data + audit trail
+```
+
+**Delete my data** (Article 17 - Right to be Forgotten):
+```bash
+curl -X POST http://localhost:8080/api/gdpr/delete-my-data \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "password": "your_password",
+    "confirm": true,
+    "reason": "I want my data deleted"
+  }'
+```
+
+### Change Detection
+
+Automatic field-level change tracking:
+```python
+from core.utils.change_detector import ChangeDetector
+
+old_project = Project(name="Old Name", status="draft")
+new_project = Project(name="New Name", status="published")
+
+# Detect changes
+changes = ChangeDetector.detect_changes(old_project, new_project)
+
+for change in changes:
+    print(change.get_summary())
+    # Output: "name: Old Name → New Name"
+    # Output: "status: draft → published"
+```
+
+### Retention & Archival
+
+**Get retention report**:
+```bash
+curl http://localhost:8080/api/admin/audit/retention-report \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+**Retention policies** (automatic cleanup via Celery Beat):
+- Authentication logs: 1 year
+- Data modifications: 7 years (SOX)
+- Administrative actions: 7 years
+- System logs: 90 days
+
+### Performance
+
+**Async audit logging** (non-blocking):
+- Audit events are queued and processed in background
+- Reduces request latency by 10-50ms
+- Queue size: 10,000 events
+- Automatic retry on failures
+
+**Database optimization**:
+- Composite indexes on common queries
+- JSONB for flexible metadata storage
+- Efficient pagination
+- Query optimization
 
 ## File Upload & Storage
 

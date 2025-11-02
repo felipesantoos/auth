@@ -75,14 +75,15 @@ class AuthServiceBase:
         if not re.search(r'[0-9]', password):
             raise InvalidPasswordException("Password must contain at least one number")
     
-    def _generate_token(self, user_id: str, token_type: str, client_id: Optional[str] = None) -> str:
+    def _generate_token(self, user_id: str, token_type: str, client_id: Optional[str] = None, session_id: Optional[str] = None) -> str:
         """
-        Generate JWT token with client_id in payload (multi-tenant).
+        Generate JWT token with client_id and session_id in payload (multi-tenant).
         
         Args:
             user_id: User ID
             token_type: Token type ("access" or "refresh")
             client_id: Client (tenant) ID
+            session_id: Session ID (for tracking active sessions)
         """
         now = datetime.utcnow()
         
@@ -103,6 +104,10 @@ class AuthServiceBase:
         # Multi-tenant: Include client_id in token payload for tenant isolation
         if client_id:
             payload["client_id"] = client_id
+        
+        # Include session_id for session management (only in access tokens)
+        if session_id and token_type == "access":
+            payload["session_id"] = session_id
         
         return jwt.encode(
             payload,
@@ -166,7 +171,7 @@ class AuthServiceBase:
         await self.cache.set(cache_key, user_id, ttl=ttl_seconds)
     
     async def _generate_and_store_tokens(
-        self, user_id: str, client_id: str
+        self, user_id: str, client_id: str, session_id: Optional[str] = None
     ) -> tuple[str, str]:
         """
         Generate both access and refresh tokens, and store refresh token.
@@ -177,12 +182,29 @@ class AuthServiceBase:
         Args:
             user_id: User ID
             client_id: Client (tenant) ID
+            session_id: Session ID (for tracking active sessions)
             
         Returns:
             Tuple of (access_token, refresh_token)
         """
-        access_token = self._generate_token(user_id, "access", client_id)
-        refresh_token = self._generate_token(user_id, "refresh", client_id)
+        access_token = self._generate_token(user_id, "access", client_id, session_id)
+        refresh_token = self._generate_token(user_id, "refresh", client_id, session_id)
         await self._generate_and_store_refresh_token(user_id, refresh_token, client_id)
         return access_token, refresh_token
+    
+    def generate_access_token_with_session(self, user_id: str, client_id: str, session_id: str) -> str:
+        """
+        Generate a new access token with session_id.
+        
+        Used to regenerate access token after session creation.
+        
+        Args:
+            user_id: User ID
+            client_id: Client ID
+            session_id: Session ID
+            
+        Returns:
+            New access token with session_id
+        """
+        return self._generate_token(user_id, "access", client_id, session_id)
 
