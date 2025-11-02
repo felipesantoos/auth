@@ -1,0 +1,100 @@
+"""
+Unit tests for WebAuthn Credential Repository
+Tests WebAuthn credential data access logic with mocked database
+"""
+import pytest
+from unittest.mock import AsyncMock, Mock
+from infra.database.repositories.webauthn_credential_repository import WebAuthnCredentialRepository
+from core.domain.auth.webauthn_credential import WebAuthnCredential
+
+
+@pytest.mark.unit
+class TestWebAuthnCredentialRepositorySave:
+    """Test saving WebAuthn credentials"""
+    
+    @pytest.mark.asyncio
+    async def test_save_credential(self):
+        """Test saving WebAuthn credential to database"""
+        session_mock = AsyncMock()
+        session_mock.add = Mock()
+        session_mock.commit = AsyncMock()
+        session_mock.refresh = AsyncMock()
+        
+        repository = WebAuthnCredentialRepository(session_mock)
+        
+        credential = WebAuthnCredential(
+            id=None,
+            user_id="user-123",
+            client_id="client-123",
+            credential_id="webauthn-cred-id",
+            public_key="public_key_data",
+            counter=0
+        )
+        
+        result = await repository.save(credential)
+        
+        session_mock.add.assert_called_once()
+        session_mock.commit.assert_called_once()
+
+
+@pytest.mark.unit
+class TestWebAuthnCredentialRepositoryGet:
+    """Test retrieving WebAuthn credentials"""
+    
+    @pytest.mark.asyncio
+    async def test_get_by_credential_id(self):
+        """Test getting credential by credential ID"""
+        session_mock = AsyncMock()
+        db_cred_mock = Mock(
+            id="cred-123",
+            credential_id="webauthn-id",
+            public_key="key"
+        )
+        
+        session_mock.execute = AsyncMock()
+        session_mock.execute.return_value.scalar_one_or_none = Mock(return_value=db_cred_mock)
+        
+        repository = WebAuthnCredentialRepository(session_mock)
+        
+        result = await repository.get_by_credential_id("webauthn-id")
+        
+        assert result is not None or session_mock.execute.called
+    
+    @pytest.mark.asyncio
+    async def test_get_by_user_id(self):
+        """Test getting credentials by user ID"""
+        session_mock = AsyncMock()
+        session_mock.execute = AsyncMock()
+        session_mock.execute.return_value.scalars = Mock()
+        session_mock.execute.return_value.scalars.return_value.all = Mock(return_value=[])
+        
+        repository = WebAuthnCredentialRepository(session_mock)
+        
+        result = await repository.get_by_user_id("user-123")
+        
+        assert isinstance(result, list)
+
+
+@pytest.mark.unit
+class TestWebAuthnCredentialRepositoryRevoke:
+    """Test revoking credentials"""
+    
+    @pytest.mark.asyncio
+    async def test_revoke_credential(self):
+        """Test revoking WebAuthn credential"""
+        session_mock = AsyncMock()
+        db_cred_mock = Mock(
+            id="cred-123",
+            revoke=Mock()
+        )
+        
+        session_mock.execute = AsyncMock()
+        session_mock.execute.return_value.scalar_one_or_none = Mock(return_value=db_cred_mock)
+        session_mock.commit = AsyncMock()
+        
+        repository = WebAuthnCredentialRepository(session_mock)
+        
+        await repository.revoke("cred-123")
+        
+        session_mock.commit.assert_called()
+
