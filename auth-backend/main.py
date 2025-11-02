@@ -484,6 +484,7 @@ from app.api.routes.webhooks import email_webhooks
 from app.api.routes import file_routes
 from app.api.routes import serve_files_routes
 from app.api.routes import chunked_upload_routes
+from app.api.routes import task_routes
 
 # Register routers
 logger.info("Registering API routes...")
@@ -532,6 +533,9 @@ app.include_router(email_webhooks.router)
 app.include_router(file_routes.router)
 app.include_router(serve_files_routes.router)
 app.include_router(chunked_upload_routes.router)
+
+# Async Task Management (202 Accepted pattern)
+app.include_router(task_routes.router)
 
 logger.info("All routes registered successfully")
 

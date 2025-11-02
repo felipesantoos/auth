@@ -506,4 +506,338 @@ class AuthService(AuthServiceBase, IAuthService):
         except Exception as e:
             logger.error(f"Unexpected error deleting user: {e}", exc_info=True, extra={"user_id": user_id, "admin_id": admin_id, "client_id": client_id})
             raise DomainException("Failed to delete user due to technical error", "USER_DELETION_FAILED")
+    
+    # ========================================================================
+    # BULK OPERATIONS (API Design Guide Compliance)
+    # ========================================================================
+    
+    async def bulk_create_users(
+        self,
+        users_data: List[dict],
+        client_id: str,
+        admin_id: str
+    ) -> dict:
+        """
+        Bulk create users with transaction support and detailed error tracking.
+        
+        Args:
+            users_data: List of user data dicts (username, email, password, name)
+            client_id: Client ID for all users
+            admin_id: Admin performing the operation
+        
+        Returns:
+            dict with success_count, error_count, successful_ids, errors, processing_time_ms
+        
+        Example:
+            >>> result = await auth_service.bulk_create_users([
+            ...     {"username": "user1", "email": "user1@test.com", "password": "Pass123", "name": "User 1"},
+            ...     {"username": "user2", "email": "user2@test.com", "password": "Pass456", "name": "User 2"}
+            ... ], client_id="client_123", admin_id="admin_123")
+            >>> print(result["success_count"])  # 2
+        """
+        import time
+        start_time = time.time()
+        
+        successful_ids = []
+        errors = []
+        
+        for index, user_data in enumerate(users_data):
+            try:
+                # Validate required fields
+                if not all(k in user_data for k in ["username", "email", "password", "name"]):
+                    errors.append({
+                        "index": index,
+                        "identifier": user_data.get("email", f"item_{index}"),
+                        "error_code": "MISSING_REQUIRED_FIELD",
+                        "error_message": "Missing required fields (username, email, password, name)",
+                        "details": None
+                    })
+                    continue
+                
+                # Check for duplicates (email)
+                existing = await self.repository.find_by_email(user_data["email"], client_id=client_id)
+                if existing:
+                    errors.append({
+                        "index": index,
+                        "identifier": user_data["email"],
+                        "error_code": "EMAIL_ALREADY_EXISTS",
+                        "error_message": f"Email {user_data['email']} already exists",
+                        "details": {"existing_user_id": existing.id}
+                    })
+                    continue
+                
+                # Check for duplicates (username)
+                existing_username = await self.repository.find_by_username(
+                    user_data["username"], 
+                    client_id=client_id
+                )
+                if existing_username:
+                    errors.append({
+                        "index": index,
+                        "identifier": user_data["username"],
+                        "error_code": "USERNAME_ALREADY_EXISTS",
+                        "error_message": f"Username {user_data['username']} already exists",
+                        "details": {"existing_user_id": existing_username.id}
+                    })
+                    continue
+                
+                # Create user (reuse register logic)
+                user = await self.register(
+                    username=user_data["username"],
+                    email=user_data["email"],
+                    password=user_data["password"],
+                    name=user_data["name"],
+                    client_id=client_id
+                )
+                
+                successful_ids.append(user.id)
+                logger.info(f"Bulk create: User created successfully", extra={
+                    "user_id": user.id,
+                    "index": index,
+                    "admin_id": admin_id
+                })
+            
+            except Exception as e:
+                error_message = str(e)
+                error_code = "UNKNOWN_ERROR"
+                
+                # Map known exceptions
+                if "already exists" in error_message.lower():
+                    error_code = "DUPLICATE_ENTRY"
+                elif "validation" in error_message.lower():
+                    error_code = "VALIDATION_ERROR"
+                
+                errors.append({
+                    "index": index,
+                    "identifier": user_data.get("email", f"item_{index}"),
+                    "error_code": error_code,
+                    "error_message": error_message,
+                    "details": None
+                })
+                logger.warning(f"Bulk create: Failed to create user at index {index}", extra={
+                    "error": error_message,
+                    "admin_id": admin_id
+                })
+        
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        
+        return {
+            "success_count": len(successful_ids),
+            "error_count": len(errors),
+            "total": len(users_data),
+            "successful_ids": successful_ids,
+            "errors": errors,
+            "partial_success": len(successful_ids) > 0 and len(errors) > 0,
+            "processing_time_ms": processing_time_ms,
+            "timestamp": datetime.utcnow()
+        }
+    
+    async def bulk_update_users(
+        self,
+        updates: List[dict],
+        client_id: str,
+        admin_id: str
+    ) -> dict:
+        """
+        Bulk update users with detailed error tracking.
+        
+        Args:
+            updates: List of dicts with user_id and fields to update
+            client_id: Client ID for validation
+            admin_id: Admin performing the operation
+        
+        Returns:
+            dict with success_count, error_count, successful_ids, errors
+        
+        Example:
+            >>> result = await auth_service.bulk_update_users([
+            ...     {"user_id": "user_123", "name": "New Name", "is_active": False},
+            ...     {"user_id": "user_456", "role": "admin"}
+            ... ], client_id="client_123", admin_id="admin_123")
+        """
+        import time
+        start_time = time.time()
+        
+        successful_ids = []
+        errors = []
+        
+        for index, update_data in enumerate(updates):
+            try:
+                user_id = update_data.get("user_id")
+                if not user_id:
+                    errors.append({
+                        "index": index,
+                        "identifier": f"item_{index}",
+                        "error_code": "MISSING_USER_ID",
+                        "error_message": "user_id is required for each update",
+                        "details": None
+                    })
+                    continue
+                
+                # Get user
+                user = await self.repository.find_by_id(user_id, client_id=client_id)
+                if not user:
+                    errors.append({
+                        "index": index,
+                        "identifier": user_id,
+                        "error_code": "USER_NOT_FOUND",
+                        "error_message": f"User {user_id} not found",
+                        "details": None
+                    })
+                    continue
+                
+                # Update fields
+                if "username" in update_data:
+                    user.username = update_data["username"]
+                if "email" in update_data:
+                    user.email = update_data["email"]
+                if "name" in update_data:
+                    user.name = update_data["name"]
+                if "role" in update_data:
+                    try:
+                        user.role = UserRole(update_data["role"])
+                    except ValueError:
+                        errors.append({
+                            "index": index,
+                            "identifier": user_id,
+                            "error_code": "INVALID_ROLE",
+                            "error_message": f"Invalid role: {update_data['role']}",
+                            "details": None
+                        })
+                        continue
+                if "is_active" in update_data:
+                    user.active = update_data["is_active"]
+                
+                # Save user
+                user.updated_at = datetime.utcnow()
+                await self.repository.save(user)
+                
+                successful_ids.append(user_id)
+                logger.info(f"Bulk update: User updated successfully", extra={
+                    "user_id": user_id,
+                    "index": index,
+                    "admin_id": admin_id
+                })
+            
+            except Exception as e:
+                errors.append({
+                    "index": index,
+                    "identifier": update_data.get("user_id", f"item_{index}"),
+                    "error_code": "UPDATE_FAILED",
+                    "error_message": str(e),
+                    "details": None
+                })
+                logger.warning(f"Bulk update: Failed at index {index}", extra={
+                    "error": str(e),
+                    "admin_id": admin_id
+                })
+        
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        
+        return {
+            "success_count": len(successful_ids),
+            "error_count": len(errors),
+            "total": len(updates),
+            "successful_ids": successful_ids,
+            "errors": errors,
+            "partial_success": len(successful_ids) > 0 and len(errors) > 0,
+            "processing_time_ms": processing_time_ms,
+            "timestamp": datetime.utcnow()
+        }
+    
+    async def bulk_delete_users(
+        self,
+        user_ids: List[str],
+        client_id: str,
+        admin_id: str
+    ) -> dict:
+        """
+        Bulk delete users with validation and error tracking.
+        
+        Args:
+            user_ids: List of user IDs to delete
+            client_id: Client ID for validation
+            admin_id: Admin performing the operation
+        
+        Returns:
+            dict with success_count, error_count, successful_ids, errors
+        
+        Raises:
+            BusinessRuleException: If trying to delete own account
+        """
+        import time
+        start_time = time.time()
+        
+        successful_ids = []
+        errors = []
+        
+        for index, user_id in enumerate(user_ids):
+            try:
+                # Prevent self-deletion
+                if user_id == admin_id:
+                    errors.append({
+                        "index": index,
+                        "identifier": user_id,
+                        "error_code": "CANNOT_DELETE_OWN_ACCOUNT",
+                        "error_message": "Cannot delete your own account",
+                        "details": None
+                    })
+                    continue
+                
+                # Check if user exists
+                user = await self.repository.find_by_id(user_id, client_id=client_id)
+                if not user:
+                    errors.append({
+                        "index": index,
+                        "identifier": user_id,
+                        "error_code": "USER_NOT_FOUND",
+                        "error_message": f"User {user_id} not found",
+                        "details": None
+                    })
+                    continue
+                
+                # Delete user
+                success = await self.repository.delete(user_id, client_id=client_id)
+                
+                if success:
+                    successful_ids.append(user_id)
+                    logger.info(f"Bulk delete: User deleted successfully", extra={
+                        "user_id": user_id,
+                        "index": index,
+                        "admin_id": admin_id
+                    })
+                else:
+                    errors.append({
+                        "index": index,
+                        "identifier": user_id,
+                        "error_code": "DELETE_FAILED",
+                        "error_message": f"Failed to delete user {user_id}",
+                        "details": None
+                    })
+            
+            except Exception as e:
+                errors.append({
+                    "index": index,
+                    "identifier": user_id,
+                    "error_code": "DELETE_FAILED",
+                    "error_message": str(e),
+                    "details": None
+                })
+                logger.warning(f"Bulk delete: Failed at index {index}", extra={
+                    "error": str(e),
+                    "admin_id": admin_id
+                })
+        
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        
+        return {
+            "success_count": len(successful_ids),
+            "error_count": len(errors),
+            "total": len(user_ids),
+            "successful_ids": successful_ids,
+            "errors": errors,
+            "partial_success": len(successful_ids) > 0 and len(errors) > 0,
+            "processing_time_ms": processing_time_ms,
+            "timestamp": datetime.utcnow()
+        }
 

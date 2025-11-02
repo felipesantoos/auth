@@ -2,7 +2,7 @@
 File Upload & Management Routes
 RESTful API endpoints for file operations
 """
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query, Response
 from typing import Optional
 from core.interfaces.primary import IFileService
 from app.api.dtos.response import (
@@ -86,6 +86,52 @@ async def get_file_info(
     )
     
     return FileInfoResponse(**result)
+
+
+@router.head("/{file_id}")
+async def check_file_exists(
+    file_id: str,
+    response: Response,
+    current_user: AppUser = Depends(get_current_user),
+    file_service: IFileService = Depends()
+):
+    """
+    Check if file exists without returning body.
+    
+    Returns metadata headers:
+    - Content-Type: File MIME type
+    - Content-Length: File size in bytes
+    - Last-Modified: When file was uploaded
+    - ETag: File version hash
+    
+    HTTP Status:
+    - 200 OK: File exists and user has access
+    - 404 Not Found: File doesn't exist or no access
+    
+    Requires authentication.
+    """
+    from app.api.utils.cache_headers import add_last_modified_header, add_etag_header
+    
+    result = await file_service.get_file_info(
+        file_id=file_id,
+        user_id=current_user.id
+    )
+    
+    # Add file-specific headers
+    response.headers["Content-Type"] = result.get("content_type", "application/octet-stream")
+    response.headers["Content-Length"] = str(result.get("size", 0))
+    
+    # Add cache headers
+    if "updated_at" in result:
+        from datetime import datetime
+        updated_at = result["updated_at"]
+        if isinstance(updated_at, str):
+            updated_at = datetime.fromisoformat(updated_at)
+        add_last_modified_header(response, updated_at)
+    
+    add_etag_header(response, result)
+    
+    return Response(status_code=200)
 
 
 @router.get("/{file_id}/download")

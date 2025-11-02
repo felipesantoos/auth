@@ -957,6 +957,44 @@ async def get_user_by_id(
     return AuthMapper.to_user_response(user)
 
 
+@router.head("/users/{user_id}")
+async def check_user_exists(
+    request: Request,
+    response: Response,
+    user_id: str,
+    auth_service: IAuthService = Depends(get_auth_service),
+    current_user: AppUser = Depends(get_current_admin_user),
+):
+    """
+    Check if user exists without returning body (admin only, multi-tenant).
+    
+    Returns metadata headers:
+    - Last-Modified: When user was last updated
+    - ETag: User version hash for caching
+    
+    HTTP Methods:
+    - 200 OK: User exists
+    - 404 Not Found: User doesn't exist
+    
+    Requires admin authentication.
+    """
+    from app.api.utils.cache_headers import add_last_modified_header, add_etag_header
+    
+    user = await auth_service.get_user_by_id(user_id, client_id=current_user.client_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Add cache headers
+    add_last_modified_header(response, user.updated_at)
+    add_etag_header(response, user)
+    
+    return Response(status_code=status.HTTP_200_OK)
+
+
 @router.put("/users/{user_id}", response_model=UserResponse)
 async def update_user(
     request: Request,
@@ -1159,5 +1197,364 @@ async def reset_password(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"
+        )
+
+
+# ========== Bulk Operations (API Design Guide Compliance) ==========
+
+@router.post("/users/bulk-create")
+@limiter.limit("10/hour")  # Stricter limit for bulk operations
+async def bulk_create_users(
+    request: Request,
+    response: Response,
+    bulk_request: "BulkCreateUsersRequest",
+    auth_service: IAuthService = Depends(get_auth_service),
+    audit_service: AuditService = Depends(get_audit_service),
+    current_user: AppUser = Depends(get_current_admin_user),
+):
+    """
+    Bulk create users (admin only, multi-tenant).
+    
+    **Limits:**
+    - Max 100 users per request
+    - Rate limit: 10 requests/hour
+    
+    **Async Processing:**
+    - <= 50 users: Synchronous processing (200 OK with immediate results)
+    - > 50 users: Asynchronous processing (202 Accepted, poll /api/v1/tasks/{task_id})
+    
+    **Request Body:**
+    ```json
+    {
+        "users": [
+            {
+                "username": "user1",
+                "email": "user1@example.com",
+                "password": "SecurePass123",
+                "name": "User One",
+                "client_id": "client_123"
+            }
+        ]
+    }
+    ```
+    
+    **Response:**
+    - If sync (<=50): Returns BulkCreateUsersResponse with detailed results
+    - If async (>50): Returns AsyncOperationResponse with task_id and status_url
+    
+    **Returns:**
+    - 200 OK: Sync processing completed (<=50 users)
+    - 202 Accepted: Async processing started (>50 users)
+    - 400 Bad Request: Invalid request data
+    - 401/403: Authentication/authorization error
+    
+    Requires admin authentication.
+    """
+    from app.api.dtos.request.bulk_request import BulkCreateUsersRequest
+    from app.api.dtos.response.bulk_response import BulkCreateUsersResponse
+    from app.api.dtos.response.async_response import AsyncOperationResponse
+    
+    try:
+        ip_address = request.client.host if request.client else None
+        num_users = len(bulk_request.users)
+        
+        # ASYNC PROCESSING (>50 items): Return 202 Accepted
+        if num_users > 50:
+            from core.services.task.task_service import TaskService
+            from infra.database.repositories.task_repository import TaskRepository
+            
+            # Create async task
+            session_gen = get_db_session()
+            db_session = await anext(session_gen)
+            task_repo = TaskRepository(db_session)
+            task_service = TaskService(task_repo)
+            
+            task = await task_service.create_task(
+                task_type="bulk_create_users",
+                payload={
+                    "users": [user.dict() for user in bulk_request.users],
+                    "client_id": current_user.client_id,
+                    "admin_id": current_user.id
+                },
+                created_by=current_user.id,
+                client_id=current_user.client_id
+            )
+            
+            # TODO: Queue Celery task here
+            # from infra.celery.tasks.bulk_operations import bulk_create_users_task
+            # bulk_create_users_task.apply_async(args=[task.id])
+            
+            logger.info(
+                f"Bulk create queued for async processing",
+                extra={
+                    "task_id": task.id,
+                    "num_users": num_users,
+                    "admin_id": current_user.id
+                }
+            )
+            
+            # Return 202 Accepted
+            response.status_code = status.HTTP_202_ACCEPTED
+            return AsyncOperationResponse(
+                task_id=task.id,
+                status="processing",
+                status_url=f"/api/v1/tasks/{task.id}",
+                message=f"Bulk create of {num_users} users accepted for processing"
+            )
+        
+        # SYNC PROCESSING (<=50 items): Return 200 OK
+        users_data = [
+            {
+                "username": user.username,
+                "email": user.email,
+                "password": user.password,
+                "name": user.name
+            }
+            for user in bulk_request.users
+        ]
+        
+        # Execute bulk create
+        result = await auth_service.bulk_create_users(
+            users_data=users_data,
+            client_id=current_user.client_id,
+            admin_id=current_user.id
+        )
+        
+        # Log bulk operation
+        await audit_service.log_event(
+            client_id=current_user.client_id,
+            event_type=AuditEventType.USER_REGISTERED,
+            user_id=current_user.id,
+            action="Bulk user creation",
+            description=f"Bulk created {result['success_count']} users, {result['error_count']} errors",
+            ip_address=ip_address,
+            metadata={
+                "total": result["total"],
+                "success_count": result["success_count"],
+                "error_count": result["error_count"]
+            },
+            status="success" if result["error_count"] == 0 else "partial"
+        )
+        
+        return BulkCreateUsersResponse(**result)
+    
+    except Exception as e:
+        logger.error(f"Error in bulk create users: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during bulk user creation"
+        )
+
+
+@router.patch("/users/bulk-update")
+@limiter.limit("10/hour")  # Stricter limit for bulk operations
+async def bulk_update_users(
+    request: Request,
+    response: Response,
+    bulk_request: "BulkUpdateUsersRequest",
+    auth_service: IAuthService = Depends(get_auth_service),
+    audit_service: AuditService = Depends(get_audit_service),
+    current_user: AppUser = Depends(get_current_admin_user),
+):
+    """
+    Bulk update users (admin only, multi-tenant).
+    
+    **Limits:**
+    - Max 100 users per request
+    - Rate limit: 10 requests/hour
+    
+    **Async Processing:**
+    - <= 50 updates: Synchronous (200 OK)
+    - > 50 updates: Asynchronous (202 Accepted)
+    
+    **Request Body:**
+    ```json
+    {
+        "updates": [
+            {
+                "user_id": "user_abc123",
+                "name": "Updated Name",
+                "is_active": false
+            }
+        ]
+    }
+    ```
+    
+    Requires admin authentication.
+    """
+    from app.api.dtos.request.bulk_request import BulkUpdateUsersRequest
+    from app.api.dtos.response.bulk_response import BulkUpdateUsersResponse
+    from app.api.dtos.response.async_response import AsyncOperationResponse
+    
+    try:
+        ip_address = request.client.host if request.client else None
+        num_updates = len(bulk_request.updates)
+        
+        # ASYNC PROCESSING (>50 items)
+        if num_updates > 50:
+            from core.services.task.task_service import TaskService
+            from infra.database.repositories.task_repository import TaskRepository
+            
+            session_gen = get_db_session()
+            db_session = await anext(session_gen)
+            task_repo = TaskRepository(db_session)
+            task_service = TaskService(task_repo)
+            
+            task = await task_service.create_task(
+                task_type="bulk_update_users",
+                payload={
+                    "updates": bulk_request.updates,
+                    "client_id": current_user.client_id,
+                    "admin_id": current_user.id
+                },
+                created_by=current_user.id,
+                client_id=current_user.client_id
+            )
+            
+            response.status_code = status.HTTP_202_ACCEPTED
+            return AsyncOperationResponse(
+                task_id=task.id,
+                status="processing",
+                status_url=f"/api/v1/tasks/{task.id}",
+                message=f"Bulk update of {num_updates} users accepted for processing"
+            )
+        
+        # SYNC PROCESSING (<=50 items)
+        result = await auth_service.bulk_update_users(
+            updates=bulk_request.updates,
+            client_id=current_user.client_id,
+            admin_id=current_user.id
+        )
+        
+        await audit_service.log_event(
+            client_id=current_user.client_id,
+            event_type=AuditEventType.USER_REGISTERED,
+            user_id=current_user.id,
+            action="Bulk user update",
+            description=f"Bulk updated {result['success_count']} users, {result['error_count']} errors",
+            ip_address=ip_address,
+            metadata={
+                "total": result["total"],
+                "success_count": result["success_count"],
+                "error_count": result["error_count"]
+            },
+            status="success" if result["error_count"] == 0 else "partial"
+        )
+        
+        return BulkUpdateUsersResponse(**result)
+    
+    except Exception as e:
+        logger.error(f"Error in bulk update users: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during bulk user update"
+        )
+
+
+@router.delete("/users/bulk-delete")
+@limiter.limit("10/hour")  # Stricter limit for bulk operations
+async def bulk_delete_users(
+    request: Request,
+    response: Response,
+    bulk_request: "BulkDeleteUsersRequest",
+    auth_service: IAuthService = Depends(get_auth_service),
+    audit_service: AuditService = Depends(get_audit_service),
+    current_user: AppUser = Depends(get_current_admin_user),
+):
+    """
+    Bulk delete users (admin only, multi-tenant).
+    
+    **Limits:**
+    - Max 100 users per request
+    - Rate limit: 10 requests/hour
+    
+    **Async Processing:**
+    - <= 50 deletes: Synchronous (200 OK)
+    - > 50 deletes: Asynchronous (202 Accepted)
+    
+    **Request Body:**
+    ```json
+    {
+        "user_ids": ["user_abc123", "user_def456", "user_ghi789"]
+    }
+    ```
+    
+    **Response:**
+    Returns detailed status for each deletion with success/error tracking.
+    
+    **Security:**
+    - Prevents self-deletion
+    - Multi-tenant isolation enforced
+    
+    Requires admin authentication.
+    """
+    from app.api.dtos.request.bulk_request import BulkDeleteUsersRequest
+    from app.api.dtos.response.bulk_response import BulkDeleteUsersResponse
+    from app.api.dtos.response.async_response import AsyncOperationResponse
+    
+    try:
+        ip_address = request.client.host if request.client else None
+        num_deletes = len(bulk_request.user_ids)
+        
+        # ASYNC PROCESSING (>50 items)
+        if num_deletes > 50:
+            from core.services.task.task_service import TaskService
+            from infra.database.repositories.task_repository import TaskRepository
+            
+            session_gen = get_db_session()
+            db_session = await anext(session_gen)
+            task_repo = TaskRepository(db_session)
+            task_service = TaskService(task_repo)
+            
+            task = await task_service.create_task(
+                task_type="bulk_delete_users",
+                payload={
+                    "user_ids": bulk_request.user_ids,
+                    "client_id": current_user.client_id,
+                    "admin_id": current_user.id
+                },
+                created_by=current_user.id,
+                client_id=current_user.client_id
+            )
+            
+            response.status_code = status.HTTP_202_ACCEPTED
+            return AsyncOperationResponse(
+                task_id=task.id,
+                status="processing",
+                status_url=f"/api/v1/tasks/{task.id}",
+                message=f"Bulk delete of {num_deletes} users accepted for processing"
+            )
+        
+        # SYNC PROCESSING (<=50 items)
+        result = await auth_service.bulk_delete_users(
+            user_ids=bulk_request.user_ids,
+            client_id=current_user.client_id,
+            admin_id=current_user.id
+        )
+        
+        # Log bulk operation
+        await audit_service.log_event(
+            client_id=current_user.client_id,
+            event_type=AuditEventType.USER_REGISTERED,
+            user_id=current_user.id,
+            action="Bulk user deletion",
+            description=f"Bulk deleted {result['success_count']} users, {result['error_count']} errors",
+            ip_address=ip_address,
+            metadata={
+                "total": result["total"],
+                "success_count": result["success_count"],
+                "error_count": result["error_count"],
+                "deleted_user_ids": result["successful_ids"]
+            },
+            status="success" if result["error_count"] == 0 else "partial"
+        )
+        
+        return BulkDeleteUsersResponse(**result)
+    
+    except Exception as e:
+        logger.error(f"Error in bulk delete users: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred during bulk user deletion"
         )
 

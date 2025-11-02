@@ -71,6 +71,42 @@ async def get_client(
     return ClientMapper.to_response(client)
 
 
+@router.head("/{client_id}")
+async def check_client_exists(
+    client_id: str,
+    response: Response,
+    service: IClientService = Depends(get_client_service),
+):
+    """
+    Check if client exists without returning body (admin only).
+    
+    Returns metadata headers:
+    - Last-Modified: When client was last updated
+    - ETag: Client version hash for caching
+    
+    HTTP Status:
+    - 200 OK: Client exists
+    - 404 Not Found: Client doesn't exist
+    
+    Requires admin authentication (to be implemented).
+    """
+    from app.api.utils.cache_headers import add_last_modified_header, add_etag_header
+    
+    client = await service.get_client_by_id(client_id)
+    
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found"
+        )
+    
+    # Add cache headers
+    add_last_modified_header(response, client.updated_at)
+    add_etag_header(response, client)
+    
+    return Response(status_code=status.HTTP_200_OK)
+
+
 @router.put("/{client_id}", response_model=ClientResponse)
 async def update_client(
     client_id: str,
