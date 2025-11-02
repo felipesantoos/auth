@@ -23,7 +23,7 @@ from core.services.audit.audit_service import AuditService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["Audit"])
+router = APIRouter(prefix="/api/v1/audit", tags=["Audit"])
 
 
 @router.get("/auth/audit", response_model=AuditLogsResponse)

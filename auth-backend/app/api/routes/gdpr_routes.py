@@ -15,7 +15,7 @@ from core.services.compliance.gdpr_service import GDPRService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/gdpr", tags=["GDPR Compliance"])
+router = APIRouter(prefix="/api/v1/gdpr", tags=["GDPR Compliance"])
 
 
 # DTOs

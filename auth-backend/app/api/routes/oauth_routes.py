@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.mappers.auth_mapper import AuthMapper
 from app.api.dtos.response.auth_response import TokenResponse
 
-router = APIRouter(prefix="/api/auth/oauth", tags=["OAuth2"])
+router = APIRouter(prefix="/api/v1/auth/oauth", tags=["OAuth2"])
 logger = logging.getLogger(__name__)
 
 

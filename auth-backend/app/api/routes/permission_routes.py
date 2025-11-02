@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/auth/permissions", tags=["Permissions"])
+router = APIRouter(prefix="/api/v1/auth/permissions", tags=["Permissions"])
 
 
 # DTOs

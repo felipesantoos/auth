@@ -628,6 +628,103 @@ Veja a documentação completa da API em:
 
 ---
 
+## 🔔 Real-Time Communication
+
+O sistema implementa comunicação real-time usando WebSocket e Server-Sent Events (SSE).
+
+### WebSocket Hooks
+
+#### useWebSocket
+
+Hook básico para conexões WebSocket com reconexão automática:
+
+```typescript
+import { useWebSocket } from '@/hooks/useWebSocket';
+
+function MyComponent() {
+  const {
+    isConnected,
+    send,
+    on,
+    off
+  } = useWebSocket(
+    'ws://localhost:8080/ws',
+    token,
+    {
+      onConnected: () => console.log('Connected!'),
+      onDisconnected: () => console.log('Disconnected')
+    }
+  );
+  
+  useEffect(() => {
+    const handleMessage = (data: any) => {
+      console.log('Message:', data);
+    };
+    
+    on('message', handleMessage);
+    return () => off('message', handleMessage);
+  }, [on, off]);
+  
+  return <div>Status: {isConnected ? 'Connected' : 'Disconnected'}</div>;
+}
+```
+
+#### useNotifications
+
+Hook para notificações real-time:
+
+```typescript
+import { useNotifications } from '@/hooks/useNotifications';
+
+function MyComponent() {
+  const {
+    notifications,
+    unreadCount,
+    markAsRead
+  } = useNotifications(token);
+  
+  return (
+    <div>
+      <Badge>{unreadCount}</Badge>
+      {notifications.map(notif => (
+        <div key={notif.id} onClick={() => markAsRead(notif.id)}>
+          {notif.message}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### SSE Hook
+
+```typescript
+import { useSSE } from '@/hooks/useSSE';
+
+function ProgressTracker({ taskId }: { taskId: string }) {
+  const { data, isConnected } = useSSE(
+    `http://localhost:8080/sse/progress/${taskId}`,
+    'message'
+  );
+  
+  return <ProgressBar value={data?.progress || 0} />;
+}
+```
+
+### Componentes
+
+**NotificationBell** - Sino de notificações com dropdown
+**ProgressBar** - Barra de progresso com SSE
+
+**Features:**
+- ✅ Reconexão automática com exponential backoff
+- ✅ Heartbeat/ping-pong
+- ✅ Multi-device support
+- ✅ TypeScript completo
+- ✅ Auto-cleanup no unmount
+
+---
+
 ## 🤝 Contribuindo
 
 Ao adicionar novas features, siga a arquitetura:

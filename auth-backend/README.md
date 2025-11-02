@@ -108,9 +108,13 @@ The system exposes metrics for monitoring:
 curl http://localhost:8080/metrics
 ```
 
-### WebSocket Real-Time Communication
+### Real-Time Communication
 
-Connect to WebSocket endpoint:
+The system provides multiple real-time communication methods:
+
+#### WebSocket Endpoints
+
+**1. General WebSocket** - `/ws`
 ```javascript
 const ws = new WebSocket('ws://localhost:8080/ws?token=YOUR_JWT_TOKEN');
 
@@ -120,13 +124,131 @@ ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
 // Join room
 ws.send(JSON.stringify({ type: 'join_room', room_id: 'room123' }));
 
-// Send room message
-ws.send(JSON.stringify({
-  type: 'room_message',
+// Send message to room
+ws.send(JSON.stringify({ 
+  type: 'room_message', 
   room_id: 'room123',
-  content: 'Hello everyone!'
+  content: 'Hello!' 
 }));
 ```
+
+**2. Chat Rooms** - `/ws/chat/{room_id}`
+```javascript
+const chatWs = new WebSocket('ws://localhost:8080/ws/chat/room123?token=YOUR_JWT_TOKEN');
+
+// Send message
+chatWs.send(JSON.stringify({ 
+  type: 'message', 
+  content: 'Hello everyone!' 
+}));
+
+// Typing indicator
+chatWs.send(JSON.stringify({ 
+  type: 'typing', 
+  is_typing: true 
+}));
+
+// Receive messages
+chatWs.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === 'message') {
+    console.log(`${data.user.name}: ${data.content}`);
+  } else if (data.type === 'user_joined') {
+    console.log(`${data.user.name} joined the room`);
+  }
+};
+```
+
+**3. Notifications** - `/ws/notifications`
+```javascript
+const notifWs = new WebSocket('ws://localhost:8080/ws/notifications?token=YOUR_JWT_TOKEN');
+
+notifWs.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === 'notification') {
+    showNotification(data.notification);
+  }
+};
+```
+
+#### Server-Sent Events (SSE)
+
+**1. Notifications Stream** - `GET /sse/notifications`
+```javascript
+const eventSource = new EventSource('/sse/notifications');
+
+eventSource.addEventListener('notification', (event) => {
+  const notification = JSON.parse(event.data);
+  console.log('New notification:', notification);
+});
+```
+
+**2. Progress Updates** - `GET /sse/progress/{task_id}`
+```javascript
+const progress = new EventSource('/sse/progress/task123');
+
+progress.addEventListener('message', (event) => {
+  const data = JSON.parse(event.data);
+  updateProgressBar(data.progress);
+  
+  if (data.status === 'completed') {
+    progress.close();
+  }
+});
+```
+
+**3. Live Feed** - `GET /sse/feed`
+```javascript
+const feed = new EventSource('/sse/feed');
+
+feed.addEventListener('feed_item', (event) => {
+  const item = JSON.parse(event.data);
+  addToFeed(item);
+});
+```
+
+#### Redis Pub/Sub
+
+The system uses Redis Pub/Sub for broadcasting events across multiple server instances:
+
+**Channels:**
+- `notifications` - User notifications
+- `cache_invalidation` - Cache invalidation events
+- `system_events` - System-wide events
+
+**Publishing a notification:**
+```python
+from infra.redis.redis_pubsub import get_pubsub
+
+pubsub = get_pubsub()
+await pubsub.publish("notifications", {
+    "user_id": "user123",
+    "notification": {
+        "id": "notif456",
+        "type": "info",
+        "message": "New update available"
+    }
+})
+```
+
+**Custom event handlers:**
+```python
+from infra.redis.redis_pubsub import get_pubsub
+
+pubsub = get_pubsub()
+
+@pubsub.on_message("custom_channel")
+async def handle_custom_event(data: dict):
+    print(f"Custom event received: {data}")
+```
+
+**Features:**
+- ✅ Automatic reconnection
+- ✅ Heartbeat/ping-pong
+- ✅ Multi-device support
+- ✅ Room-based messaging
+- ✅ Typing indicators
+- ✅ Event broadcasting across instances
 
 **Get WebSocket stats:**
 ```bash

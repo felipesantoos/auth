@@ -60,7 +60,7 @@ from app.api.middlewares.rate_limit_middleware import limiter
 from infra.database.database import get_db_session
 from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
 
 async def get_client_id_from_request_or_body(
@@ -547,6 +547,7 @@ async def login_with_mfa(
 @limiter.limit("3/minute")  # Limit registration to prevent spam
 async def register(
     request: Request,
+    response: Response,
     register_request: RegisterRequest,
     background_tasks: BackgroundTasks,
     auth_service: IAuthService = Depends(get_auth_service),
@@ -621,6 +622,9 @@ async def register(
                     # Don't fail registration if email fails (already logged)
             
             background_tasks.add_task(send_verification_email_task)
+        
+        # Add Location header pointing to created resource
+        response.headers["Location"] = f"/api/v1/auth/users/{user.id}"
         
         return AuthMapper.to_user_response(user)
         

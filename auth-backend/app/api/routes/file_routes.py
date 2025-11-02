@@ -17,7 +17,7 @@ from app.api.middlewares.upload_rate_limiter import upload_rate_limit
 from app.api.dicontainer.dicontainer import get_file_service
 from core.domain.auth.app_user import AppUser
 
-router = APIRouter(prefix="/api/files", tags=["File Upload"])
+router = APIRouter(prefix="/api/v1/files", tags=["File Upload"])
 
 
 @router.post("/upload", response_model=FileUploadResponse, status_code=201)

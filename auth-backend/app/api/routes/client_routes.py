@@ -2,19 +2,20 @@
 Client Routes
 API endpoints for client management (admin only)
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from core.interfaces.primary.client_service_interface import IClientService
 from app.api.dtos.request.client_request import CreateClientRequest, UpdateClientRequest
 from app.api.dtos.response.client_response import ClientResponse, ClientResponseWithApiKey
 from app.api.mappers.client_mapper import ClientMapper
 from app.api.dicontainer.dicontainer import get_client_service
 
-router = APIRouter(prefix="/api/clients", tags=["Clients"])
+router = APIRouter(prefix="/api/v1/clients", tags=["Clients"])
 
 
 @router.post("", response_model=ClientResponseWithApiKey, status_code=status.HTTP_201_CREATED)
 async def create_client(
     request: CreateClientRequest,
+    response: Response,
     service: IClientService = Depends(get_client_service),
 ):
     """
@@ -24,6 +25,10 @@ async def create_client(
     """
     try:
         client = await service.create_client(request.name, request.subdomain)
+        
+        # Add Location header pointing to created resource
+        response.headers["Location"] = f"/api/v1/clients/{client.id}"
+        
         return ClientMapper.to_response(client, include_api_key=True)
     except ValueError as e:
         raise HTTPException(

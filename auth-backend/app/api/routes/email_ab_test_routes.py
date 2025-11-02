@@ -30,7 +30,7 @@ from app.api.dtos.response.email_ab_test_response import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/email/ab-test", tags=["email-ab-testing"])
+router = APIRouter(prefix="/api/v1/email/ab-test", tags=["email-ab-testing"])
 
 
 @router.post("", response_model=CreateABTestResponse)

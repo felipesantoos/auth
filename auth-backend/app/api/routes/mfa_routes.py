@@ -26,7 +26,7 @@ from core.exceptions import BusinessRuleException, InvalidCredentialsException, 
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/auth/mfa", tags=["MFA"])
+router = APIRouter(prefix="/api/v1/auth/mfa", tags=["MFA"])
 
 
 @router.post("/setup", response_model=SetupMFAResponse)

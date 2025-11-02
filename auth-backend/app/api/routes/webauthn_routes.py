@@ -15,7 +15,7 @@ from core.exceptions import BusinessRuleException, UserNotFoundException
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/auth/webauthn", tags=["WebAuthn"])
+router = APIRouter(prefix="/api/v1/auth/webauthn", tags=["WebAuthn"])
 
 
 @router.post("/register/begin")

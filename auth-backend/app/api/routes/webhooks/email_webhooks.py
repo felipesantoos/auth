@@ -17,7 +17,7 @@ from app.api.dicontainer.dicontainer import get_email_webhook_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/webhooks/email", tags=["webhooks"])
+router = APIRouter(prefix="/api/v1/webhooks/email", tags=["webhooks"])
 
 
 class EmailWebhookEvent(BaseModel):

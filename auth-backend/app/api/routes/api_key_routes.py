@@ -22,7 +22,7 @@ from core.exceptions import BusinessRuleException, ValidationException
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/auth/api-keys", tags=["API Keys"])
+router = APIRouter(prefix="/api/v1/auth/api-keys", tags=["API Keys"])
 
 
 @router.post("", response_model=CreateApiKeyResponse, status_code=status.HTTP_201_CREATED)

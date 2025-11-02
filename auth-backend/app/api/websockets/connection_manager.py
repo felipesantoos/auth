@@ -1,6 +1,7 @@
 """
 WebSocket Connection Manager
 Manages active WebSocket connections for real-time communication
+Compliant with 25-real-time-streaming.md guide
 """
 from typing import Dict, List, Set
 from fastapi import WebSocket
@@ -19,198 +20,248 @@ class ConnectionManager:
     - Personal messaging
     - Broadcasting to all users
     - Room-based broadcasting
+    - Connection metadata storage
+    - WebSocket-level room management
     """
     
     def __init__(self):
-        # Store connections by user_id (List allows multiple devices per user)
-        self.active_connections: Dict[str, List[WebSocket]] = {}
+        # All active connections
+        self.active_connections: List[WebSocket] = []
         
-        # Store room memberships: room_id -> Set[user_id]
-        self.rooms: Dict[str, Set[str]] = {}
+        # Connections grouped by user (supports multiple devices per user)
+        self.user_connections: Dict[str, List[WebSocket]] = {}
+        
+        # Connections grouped by room/channel (stores WebSocket objects)
+        self.room_connections: Dict[str, Set[WebSocket]] = {}
+        
+        # Connection metadata (device info, IP, connection time, etc.)
+        self.connection_metadata: Dict[WebSocket, dict] = {}
     
-    async def connect(self, websocket: WebSocket, user_id: str):
+    async def connect(
+        self,
+        websocket: WebSocket,
+        user_id: str = None,
+        metadata: dict = None
+    ):
         """
-        Accept new WebSocket connection.
+        Accept and register a new WebSocket connection.
         
         Args:
             websocket: WebSocket connection
-            user_id: User ID
+            user_id: User identifier (optional)
+            metadata: Additional connection metadata (device, IP, etc.)
         """
         await websocket.accept()
         
-        if user_id not in self.active_connections:
-            self.active_connections[user_id] = []
+        # Register connection
+        self.active_connections.append(websocket)
         
-        self.active_connections[user_id].append(websocket)
+        # Track by user
+        if user_id:
+            if user_id not in self.user_connections:
+                self.user_connections[user_id] = []
+            self.user_connections[user_id].append(websocket)
         
-        connection_count = sum(len(conns) for conns in self.active_connections.values())
+        # Store metadata
+        if metadata:
+            self.connection_metadata[websocket] = metadata
+        
         logger.info(
             f"WebSocket connected",
             extra={
                 "user_id": user_id,
-                "user_connection_count": len(self.active_connections[user_id]),
-                "total_connections": connection_count
+                "total_connections": len(self.active_connections)
             }
         )
     
-    def disconnect(self, websocket: WebSocket, user_id: str):
+    def disconnect(self, websocket: WebSocket, user_id: str = None):
         """
-        Remove WebSocket connection.
+        Remove a WebSocket connection.
         
         Args:
             websocket: WebSocket connection
-            user_id: User ID
+            user_id: User ID (optional, for faster cleanup)
         """
-        if user_id in self.active_connections:
-            if websocket in self.active_connections[user_id]:
-                self.active_connections[user_id].remove(websocket)
-            
-            # Clean up empty user entries
-            if not self.active_connections[user_id]:
-                del self.active_connections[user_id]
-                
-                # Remove user from all rooms
-                for room_id in list(self.rooms.keys()):
-                    if user_id in self.rooms[room_id]:
-                        self.rooms[room_id].remove(user_id)
-                        
-                        # Clean up empty rooms
-                        if not self.rooms[room_id]:
-                            del self.rooms[room_id]
+        # Remove from active connections
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
         
-        connection_count = sum(len(conns) for conns in self.active_connections.values())
+        # Remove from user connections
+        if user_id and user_id in self.user_connections:
+            if websocket in self.user_connections[user_id]:
+                self.user_connections[user_id].remove(websocket)
+            
+            # Clean up empty user entry
+            if not self.user_connections[user_id]:
+                del self.user_connections[user_id]
+        
+        # Remove from all rooms
+        for room_id, connections in list(self.room_connections.items()):
+            if websocket in connections:
+                connections.remove(websocket)
+                if not connections:
+                    del self.room_connections[room_id]
+        
+        # Remove metadata
+        if websocket in self.connection_metadata:
+            del self.connection_metadata[websocket]
+        
         logger.info(
             f"WebSocket disconnected",
             extra={
                 "user_id": user_id,
-                "total_connections": connection_count
+                "total_connections": len(self.active_connections)
             }
         )
     
-    async def send_personal_message(self, message: dict, user_id: str):
+    async def send_personal_message(self, message: dict, websocket: WebSocket):
         """
-        Send message to specific user (all their connections/devices).
+        Send message to specific WebSocket connection.
+        
+        Args:
+            message: Message data (will be JSON encoded)
+            websocket: Target WebSocket connection
+        """
+        try:
+            await websocket.send_json(message)
+        except Exception as e:
+            logger.error(f"Failed to send message: {e}")
+            self.disconnect(websocket)
+    
+    async def send_to_user(self, message: dict, user_id: str):
+        """
+        Send message to all connections of a specific user (multi-device).
         
         Args:
             message: Message data (will be JSON encoded)
             user_id: Target user ID
         """
-        if user_id in self.active_connections:
-            disconnected = []
+        if user_id in self.user_connections:
+            dead_connections = []
             
-            for connection in self.active_connections[user_id]:
+            for connection in self.user_connections[user_id]:
                 try:
                     await connection.send_json(message)
                 except Exception as e:
-                    logger.warning(f"Failed to send message to {user_id}: {e}")
-                    disconnected.append(connection)
+                    logger.error(f"Failed to send to user {user_id}: {e}")
+                    dead_connections.append(connection)
             
-            # Clean up failed connections
-            for conn in disconnected:
+            # Clean up dead connections
+            for conn in dead_connections:
                 self.disconnect(conn, user_id)
     
-    async def broadcast(self, message: dict, exclude_user: str = None):
+    async def broadcast(self, message: dict, exclude: WebSocket = None):
         """
-        Broadcast message to all connected users.
+        Broadcast message to all active connections.
         
         Args:
             message: Message data (will be JSON encoded)
-            exclude_user: Optional user ID to exclude from broadcast
+            exclude: Optional WebSocket connection to exclude from broadcast
         """
-        sent_count = 0
-        failed_count = 0
+        dead_connections = []
         
-        for user_id, connections in list(self.active_connections.items()):
-            if user_id != exclude_user:
-                disconnected = []
-                
-                for connection in connections:
-                    try:
-                        await connection.send_json(message)
-                        sent_count += 1
-                    except Exception as e:
-                        logger.warning(f"Failed to broadcast to {user_id}: {e}")
-                        disconnected.append(connection)
-                        failed_count += 1
-                
-                # Clean up failed connections
-                for conn in disconnected:
-                    self.disconnect(conn, user_id)
-        
-        logger.debug(
-            f"Broadcast sent",
-            extra={
-                "sent": sent_count,
-                "failed": failed_count,
-                "exclude_user": exclude_user
-            }
-        )
-    
-    async def join_room(self, user_id: str, room_id: str):
-        """
-        Add user to a room for room-based messaging.
-        
-        Args:
-            user_id: User ID
-            room_id: Room ID
-        """
-        if room_id not in self.rooms:
-            self.rooms[room_id] = set()
-        
-        self.rooms[room_id].add(user_id)
-        
-        logger.info(f"User {user_id} joined room {room_id}")
-    
-    async def leave_room(self, user_id: str, room_id: str):
-        """
-        Remove user from a room.
-        
-        Args:
-            user_id: User ID
-            room_id: Room ID
-        """
-        if room_id in self.rooms and user_id in self.rooms[room_id]:
-            self.rooms[room_id].remove(user_id)
-            
-            # Clean up empty rooms
-            if not self.rooms[room_id]:
-                del self.rooms[room_id]
-            
-            logger.info(f"User {user_id} left room {room_id}")
-    
-    async def broadcast_to_room(self, room_id: str, message: dict, exclude_user: str = None):
-        """
-        Broadcast message to all users in a specific room.
-        
-        Args:
-            room_id: Room ID
-            message: Message data (will be JSON encoded)
-            exclude_user: Optional user ID to exclude from broadcast
-        """
-        if room_id not in self.rooms:
-            logger.warning(f"Attempted to broadcast to non-existent room: {room_id}")
-            return
-        
-        sent_count = 0
-        failed_count = 0
-        
-        for user_id in self.rooms[room_id]:
-            if user_id != exclude_user:
+        for connection in self.active_connections:
+            if connection != exclude:
                 try:
-                    await self.send_personal_message(message, user_id)
-                    sent_count += 1
-                except Exception as e:
-                    logger.warning(f"Failed to send room message to {user_id}: {e}")
-                    failed_count += 1
+                    await connection.send_json(message)
+                except Exception:
+                    dead_connections.append(connection)
         
-        logger.debug(
-            f"Room broadcast sent",
+        # Clean up dead connections
+        for conn in dead_connections:
+            self.disconnect(conn)
+    
+    async def join_room(self, websocket: WebSocket, room_id: str):
+        """
+        Add connection to a room.
+        
+        Args:
+            websocket: WebSocket connection
+            room_id: Room ID
+        """
+        if room_id not in self.room_connections:
+            self.room_connections[room_id] = set()
+        self.room_connections[room_id].add(websocket)
+        
+        logger.info(
+            f"Connection joined room",
             extra={
                 "room_id": room_id,
-                "sent": sent_count,
-                "failed": failed_count
+                "room_size": len(self.room_connections[room_id])
             }
         )
+    
+    async def leave_room(self, websocket: WebSocket, room_id: str):
+        """
+        Remove connection from a room.
+        
+        Args:
+            websocket: WebSocket connection
+            room_id: Room ID
+        """
+        if room_id in self.room_connections:
+            if websocket in self.room_connections[room_id]:
+                self.room_connections[room_id].remove(websocket)
+            
+            # Clean up empty room
+            if not self.room_connections[room_id]:
+                del self.room_connections[room_id]
+                logger.info(f"Room closed", extra={"room_id": room_id})
+    
+    async def send_to_room(
+        self,
+        message: dict,
+        room_id: str,
+        exclude: WebSocket = None
+    ):
+        """
+        Send message to all connections in a room.
+        
+        Args:
+            message: Message data (will be JSON encoded)
+            room_id: Room ID
+            exclude: Optional WebSocket connection to exclude from broadcast
+        """
+        if room_id not in self.room_connections:
+            return
+        
+        dead_connections = []
+        
+        for connection in self.room_connections[room_id]:
+            if connection != exclude:
+                try:
+                    await connection.send_json(message)
+                except Exception:
+                    dead_connections.append(connection)
+        
+        # Clean up dead connections
+        for conn in dead_connections:
+            await self.leave_room(conn, room_id)
+            self.disconnect(conn)
+    
+    def get_room_size(self, room_id: str) -> int:
+        """
+        Get number of connections in a room.
+        
+        Args:
+            room_id: Room ID
+        
+        Returns:
+            Number of connections in the room
+        """
+        return len(self.room_connections.get(room_id, set()))
+    
+    def get_user_connection_count(self, user_id: str) -> int:
+        """
+        Get number of active connections for a user.
+        
+        Args:
+            user_id: User ID
+        
+        Returns:
+            Number of active connections for the user
+        """
+        return len(self.user_connections.get(user_id, []))
     
     def get_connected_users(self) -> List[str]:
         """
@@ -219,7 +270,7 @@ class ConnectionManager:
         Returns:
             List of user IDs with active connections
         """
-        return list(self.active_connections.keys())
+        return list(self.user_connections.keys())
     
     def get_connection_count(self) -> int:
         """
@@ -228,7 +279,7 @@ class ConnectionManager:
         Returns:
             Total connection count
         """
-        return sum(len(conns) for conns in self.active_connections.values())
+        return len(self.active_connections)
     
     def is_user_connected(self, user_id: str) -> bool:
         """
@@ -240,7 +291,7 @@ class ConnectionManager:
         Returns:
             True if user is connected, False otherwise
         """
-        return user_id in self.active_connections and len(self.active_connections[user_id]) > 0
+        return user_id in self.user_connections and len(self.user_connections[user_id]) > 0
 
 
 # Singleton instance

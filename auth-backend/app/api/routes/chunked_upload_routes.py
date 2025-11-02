@@ -9,7 +9,7 @@ from app.api.dicontainer.dicontainer import get_chunked_upload_manager
 from core.domain.auth.app_user import AppUser
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/upload/chunked", tags=["Chunked Upload"])
+router = APIRouter(prefix="/api/v1/upload/chunked", tags=["Chunked Upload"])
 
 
 class InitChunkedUploadRequest(BaseModel):

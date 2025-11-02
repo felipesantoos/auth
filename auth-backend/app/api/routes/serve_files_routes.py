@@ -9,7 +9,7 @@ import os
 import mimetypes
 from config.settings import settings
 
-router = APIRouter(prefix="/uploads", tags=["Static Files"])
+router = APIRouter(prefix="/api/v1/uploads", tags=["Static Files"])
 
 
 @router.get("/{file_path:path}")

@@ -24,7 +24,7 @@ from core.exceptions import BusinessRuleException, InvalidCredentialsException
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/auth/sso", tags=["SSO"])
+router = APIRouter(prefix="/api/v1/auth/sso", tags=["SSO"])
 
 
 # ========== SAML Routes ==========

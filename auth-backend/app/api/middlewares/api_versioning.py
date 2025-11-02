@@ -12,14 +12,17 @@ logger = logging.getLogger(__name__)
 
 class APIVersionMiddleware(BaseHTTPMiddleware):
     """
-    API Versioning middleware using headers.
+    API Versioning middleware supporting both URL and header-based versioning.
     
-    Supports versioning via:
-    - X-API-Version header (e.g., "1.0", "2.0")
-    - Accept header with version (e.g., "application/vnd.auth.v1+json")
+    Supports versioning via (in priority order):
+    1. URL path (e.g., "/api/v1/...", "/api/v2/...")  - PREFERRED
+    2. X-API-Version header (e.g., "1.0", "2.0")
+    3. Accept header with version (e.g., "application/vnd.auth.v1+json")
     
     Default version: 1.0
     Supported versions: 1.0, 2.0
+    
+    URL-based versioning is preferred as it's more explicit and easier to cache.
     """
     
     SUPPORTED_VERSIONS = ["1.0", "2.0"]
@@ -28,20 +31,21 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         """Process request and extract API version"""
         
-        # Skip versioning for docs, health checks, and metrics
+        # Skip versioning for docs, health checks, metrics, and websockets
         skip_paths = ["/docs", "/redoc", "/openapi.json", "/health", "/metrics", "/ws"]
         if any(request.url.path.startswith(path) for path in skip_paths):
             return await call_next(request)
         
-        # Extract version from headers
+        # Extract version from URL or headers
         api_version = self._extract_version(request)
         
         # Validate version
         if api_version not in self.SUPPORTED_VERSIONS:
-            logger.warning(f"Unsupported API version requested: {api_version}")
+            logger.warning(f"Unsupported API version requested: {api_version} from path: {request.url.path}")
             return Response(
                 content=f'{{"error": "Unsupported API version: {api_version}", '
-                        f'"supported_versions": {self.SUPPORTED_VERSIONS}}}',
+                        f'"supported_versions": {self.SUPPORTED_VERSIONS}, '
+                        f'"message": "Use /api/v1/... or /api/v2/... in URL path"}}',
                 status_code=status.HTTP_400_BAD_REQUEST,
                 media_type="application/json"
             )
@@ -59,19 +63,27 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
     
     def _extract_version(self, request: Request) -> str:
         """
-        Extract API version from request headers.
+        Extract API version from request URL or headers.
         
         Priority:
-        1. X-API-Version header
-        2. Accept header with version
-        3. Default version
+        1. URL path (/api/v1/..., /api/v2/...)
+        2. X-API-Version header
+        3. Accept header with version
+        4. Default version
         """
-        # Check X-API-Version header
+        # Priority 1: Check URL path for version
+        path = request.url.path
+        if "/api/v1" in path:
+            return "1.0"
+        elif "/api/v2" in path:
+            return "2.0"
+        
+        # Priority 2: Check X-API-Version header
         version = request.headers.get("X-API-Version")
         if version:
             return version
         
-        # Check Accept header (e.g., "application/vnd.auth.v1+json")
+        # Priority 3: Check Accept header (e.g., "application/vnd.auth.v1+json")
         accept = request.headers.get("Accept", "")
         if "vnd.auth.v" in accept:
             try:
@@ -81,7 +93,7 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
             except:
                 pass
         
-        # Return default version
+        # Priority 4: Return default version
         return self.DEFAULT_VERSION
 
 
