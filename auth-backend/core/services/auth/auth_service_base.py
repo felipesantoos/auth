@@ -54,17 +54,20 @@ class AuthServiceBase:
         """
         Validate password strength.
         
-        Requirements:
-        - Minimum 8 characters
+        Requirements (OWASP compliant):
+        - Minimum 12 characters (updated from 8 for better security)
         - At least one uppercase letter
         - At least one lowercase letter
         - At least one digit
+        - At least one special character
+        
+        Reference: 18-security-best-practices.md line 232-238
         
         Raises:
             InvalidPasswordException: If password doesn't meet requirements
         """
-        if len(password) < 8:
-            raise InvalidPasswordException("Password must be at least 8 characters")
+        if len(password) < 12:
+            raise InvalidPasswordException("Password must be at least 12 characters")
         
         if not re.search(r'[A-Z]', password):
             raise InvalidPasswordException("Password must contain at least one uppercase letter")
@@ -74,6 +77,9 @@ class AuthServiceBase:
         
         if not re.search(r'[0-9]', password):
             raise InvalidPasswordException("Password must contain at least one number")
+        
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            raise InvalidPasswordException("Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)")
     
     def _generate_token(self, user_id: str, token_type: str, client_id: Optional[str] = None, session_id: Optional[str] = None) -> str:
         """

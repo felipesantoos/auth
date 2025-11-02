@@ -1,6 +1,11 @@
 /**
  * Auth Service Implementation
  * Implements IAuthService using IAuthRepository
+ * 
+ * Security:
+ * - Tokens stored in httpOnly cookies (NOT localStorage)
+ * - Only user data and client_id stored in localStorage (non-sensitive)
+ * - XSS protection via cookie-based authentication
  */
 
 import { IAuthService } from '../../interfaces/primary/IAuthService';
@@ -30,11 +35,10 @@ export class AuthService implements IAuthService {
 
       const response = await this.repository.login(credentials);
 
-      // Store tokens using IStorage
-      this.storage.setItem('access_token', response.access_token);
-      this.storage.setItem('refresh_token', response.refresh_token);
+      // Tokens are stored in httpOnly cookies by backend (secure)
+      // Only store non-sensitive data in localStorage
 
-      // Store client_id if provided
+      // Store client_id if provided (not sensitive)
       if (credentials.client_id) {
         this.storage.setItem('client_id', credentials.client_id);
       }
@@ -42,7 +46,7 @@ export class AuthService implements IAuthService {
       // Map DTO to Domain
       const user = UserMapper.toDomain(response.user);
 
-      // Store user
+      // Store user data (not sensitive - no password, tokens, etc)
       this.storage.setItem('user', JSON.stringify(response.user));
 
       this.logger.info('Login successful', { userId: user.id });
@@ -60,11 +64,10 @@ export class AuthService implements IAuthService {
 
       const response = await this.repository.register(data);
 
-      // Store tokens using IStorage
-      this.storage.setItem('access_token', response.access_token);
-      this.storage.setItem('refresh_token', response.refresh_token);
+      // Tokens are stored in httpOnly cookies by backend (secure)
+      // Only store non-sensitive data in localStorage
 
-      // Store client_id if provided
+      // Store client_id if provided (not sensitive)
       if (data.client_id) {
         this.storage.setItem('client_id', data.client_id);
       }
@@ -72,7 +75,7 @@ export class AuthService implements IAuthService {
       // Map DTO to Domain
       const user = UserMapper.toDomain(response.user);
 
-      // Store user
+      // Store user data (not sensitive - no password, tokens, etc)
       this.storage.setItem('user', JSON.stringify(response.user));
 
       this.logger.info('Registration successful', { userId: user.id });
@@ -86,15 +89,11 @@ export class AuthService implements IAuthService {
 
   async logout(): Promise<void> {
     try {
-      const refreshToken = this.storage.getItem('refresh_token');
+      // Call logout endpoint (backend will clear httpOnly cookies)
+      // No need to pass refresh_token - it's sent via cookie automatically
+      await this.repository.logout(''); // Empty string - backend reads from cookie
 
-      if (refreshToken) {
-        await this.repository.logout(refreshToken);
-      }
-
-      // Clear all auth data
-      this.storage.removeItem('access_token');
-      this.storage.removeItem('refresh_token');
+      // Clear only localStorage data (tokens are in cookies)
       this.storage.removeItem('user');
       this.storage.removeItem('client_id');
 
@@ -102,8 +101,6 @@ export class AuthService implements IAuthService {
     } catch (error) {
       this.logger.error('Logout failed', error as Error);
       // Clear storage anyway
-      this.storage.removeItem('access_token');
-      this.storage.removeItem('refresh_token');
       this.storage.removeItem('user');
       this.storage.removeItem('client_id');
       throw error;
@@ -131,19 +128,12 @@ export class AuthService implements IAuthService {
 
   async refreshToken(): Promise<void> {
     try {
-      const refreshToken = this.storage.getItem('refresh_token');
+      // Refresh token is sent via cookie automatically
+      // Backend returns new tokens via cookies
+      const response = await this.repository.refreshToken(''); // Empty string - backend reads from cookie
 
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-
-      const response = await this.repository.refreshToken(refreshToken);
-
-      // Store new tokens
-      this.storage.setItem('access_token', response.access_token);
-      this.storage.setItem('refresh_token', response.refresh_token);
-
-      // Update user
+      // Tokens are stored in httpOnly cookies by backend
+      // Only update user data in localStorage
       this.storage.setItem('user', JSON.stringify(response.user));
 
       this.logger.info('Token refreshed successfully');
@@ -178,16 +168,24 @@ export class AuthService implements IAuthService {
   }
 
   isAuthenticated(): boolean {
-    const accessToken = this.storage.getItem('access_token');
-    return !!accessToken;
+    // Tokens are in httpOnly cookies (not accessible via JS)
+    // Check if user is stored in localStorage as indication of auth state
+    const user = this.storage.getItem('user');
+    return !!user;
   }
 
   getAccessToken(): string | null {
-    return this.storage.getItem('access_token');
+    // Tokens are in httpOnly cookies (not accessible via JS)
+    // This method is kept for interface compatibility but returns null
+    console.warn('Tokens are now stored in httpOnly cookies and not accessible via JavaScript');
+    return null;
   }
 
   getRefreshToken(): string | null {
-    return this.storage.getItem('refresh_token');
+    // Tokens are in httpOnly cookies (not accessible via JS)
+    // This method is kept for interface compatibility but returns null
+    console.warn('Tokens are now stored in httpOnly cookies and not accessible via JavaScript');
+    return null;
   }
 
   getClientId(): string | null {

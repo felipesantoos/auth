@@ -16,7 +16,8 @@ interface FileListProps {
   viewMode?: 'table' | 'cards';
 }
 
-export const FileList: React.FC<FileListProps> = ({
+// ⚡ PERFORMANCE: Memoized component to prevent re-renders
+export const FileList = React.memo<FileListProps>(({
   files,
   onDelete,
   onDownload,
@@ -29,8 +30,8 @@ export const FileList: React.FC<FileListProps> = ({
   const [filterType, setFilterType] = useState<string>('all');
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
 
-  // Sort files
-  const sortedFiles = [...files].sort((a, b) => {
+  // ⚡ PERFORMANCE: Memoize sorted files calculation
+  const sortedFiles = React.useMemo(() => [...files].sort((a, b) => {
     const aValue = a[sortField];
     const bValue = b[sortField];
     const multiplier = sortDirection === 'asc' ? 1 : -1;
@@ -39,12 +40,15 @@ export const FileList: React.FC<FileListProps> = ({
       return aValue.localeCompare(bValue) * multiplier;
     }
     return (aValue > bValue ? 1 : -1) * multiplier;
-  });
+  }), [files, sortField, sortDirection]);
 
-  // Filter files by type
-  const filteredFiles = filterType === 'all'
-    ? sortedFiles
-    : sortedFiles.filter(f => f.mime_type.startsWith(filterType));
+  // ⚡ PERFORMANCE: Memoize filtered files calculation
+  const filteredFiles = React.useMemo(() => 
+    filterType === 'all'
+      ? sortedFiles
+      : sortedFiles.filter(f => f.mime_type.startsWith(filterType)),
+    [sortedFiles, filterType]
+  );
 
   const toggleSort = (field: FileSortField) => {
     if (sortField === field) {
@@ -218,5 +222,7 @@ export const FileList: React.FC<FileListProps> = ({
       )}
     </div>
   );
-};
+});
+
+FileList.displayName = 'FileList';
 

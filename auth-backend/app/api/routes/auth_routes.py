@@ -1,13 +1,14 @@
 """
 Authentication Routes
 API endpoints for user authentication and authorization
-Adapted for multi-tenant architecture
+Adapted for multi-tenant architecture with dual-mode authentication (web/mobile)
 """
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, BackgroundTasks, Response
 from core.interfaces.primary.auth_service_interface import IAuthService
 from core.interfaces.primary.password_reset_service_interface import IPasswordResetService
+from app.api.utils.client_detection import detect_client_type, ClientType, get_cookie_settings
 
 logger = logging.getLogger(__name__)
 from core.domain.auth.app_user import AppUser
@@ -95,10 +96,80 @@ async def get_client_id_from_request_or_body(
     )
 
 
+def set_auth_cookies(
+    response: Response,
+    request: Request,
+    access_token: str,
+    refresh_token: str,
+    access_token_expire_seconds: int
+) -> None:
+    """
+    Set authentication cookies with secure settings.
+    
+    For web clients, tokens are stored in httpOnly cookies for XSS protection.
+    
+    Args:
+        response: FastAPI Response object
+        request: FastAPI Request object (for environment detection)
+        access_token: JWT access token
+        refresh_token: JWT refresh token
+        access_token_expire_seconds: Access token expiration in seconds
+    """
+    from config.settings import settings
+    
+    cookie_settings = get_cookie_settings(request)
+    
+    # Set access token cookie
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        max_age=access_token_expire_seconds,
+        **cookie_settings
+    )
+    
+    # Set refresh token cookie (longer expiration)
+    refresh_token_expire_seconds = settings.refresh_token_expire_days * 24 * 60 * 60
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        max_age=refresh_token_expire_seconds,
+        **cookie_settings
+    )
+
+
+def clear_auth_cookies(response: Response, request: Request) -> None:
+    """
+    Clear authentication cookies.
+    
+    Used during logout to invalidate cookies.
+    
+    Args:
+        response: FastAPI Response object
+        request: FastAPI Request object (for environment detection)
+    """
+    cookie_settings = get_cookie_settings(request)
+    
+    # Clear both cookies by setting max_age to 0
+    response.set_cookie(
+        key="access_token",
+        value="",
+        max_age=0,
+        **cookie_settings
+    )
+    
+    response.set_cookie(
+        key="refresh_token",
+        value="",
+        max_age=0,
+        **cookie_settings
+    )
+
+
 @router.post("/login")
 @limiter.limit("5/minute")  # Stricter limit for login (brute-force protection)
 async def login(
     request: Request,
+    response: Response,
     login_request: LoginRequest,
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
@@ -107,7 +178,7 @@ async def login(
     db_session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Authenticate user with advanced security features.
+    Authenticate user with advanced security features and dual-mode support.
     
     Features:
     - Account lockout (brute-force protection - email and IP-based)
@@ -117,6 +188,11 @@ async def login(
     - Session tracking
     - Suspicious activity detection
     - Login notifications
+    - Dual-mode: Cookies for web, tokens in body for mobile
+    
+    Dual-Mode Authentication:
+    - Web (X-Client-Type: web): Tokens sent via httpOnly cookies
+    - Mobile (X-Client-Type: mobile): Tokens sent in response body
     
     Returns TokenResponse or MFARequiredResponse
     """
@@ -316,7 +392,30 @@ async def login(
             status="success"
         )
         
-        return AuthMapper.to_token_response(access_token, refresh_token, user)
+        # 9. DUAL-MODE: Return tokens appropriately based on client type
+        client_type = detect_client_type(request)
+        from config.settings import settings
+        
+        if client_type == ClientType.WEB:
+            # Web: Set tokens in httpOnly cookies (XSS protection)
+            set_auth_cookies(
+                response=response,
+                request=request,
+                access_token=access_token,
+                refresh_token=refresh_token,
+                access_token_expire_seconds=settings.access_token_expire_minutes * 60
+            )
+            
+            # Return user data only (tokens in cookies)
+            return {
+                "message": "Login successful",
+                "user": AuthMapper.to_user_response(user),
+                "token_type": "bearer",
+                "expires_in": settings.access_token_expire_minutes * 60
+            }
+        else:
+            # Mobile: Return tokens in response body (stored in secure storage by app)
+            return AuthMapper.to_token_response(access_token, refresh_token, user)
         
     except HTTPException:
         raise
@@ -546,20 +645,38 @@ async def register(
         )
 
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post("/refresh")
 async def refresh_token(
     request: Request,
+    response: Response,
     refresh_request: RefreshTokenRequest,
     auth_service: IAuthService = Depends(get_auth_service),
     session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Refresh access token using refresh token (multi-tenant).
+    Refresh access token using refresh token (multi-tenant, dual-mode).
+    
+    Dual-Mode:
+    - Web: Reads refresh_token from cookie if not in body, returns new tokens via cookies
+    - Mobile: Reads refresh_token from body, returns tokens in response
     
     Returns:
-        New TokenResponse with fresh tokens
+        TokenResponse (mobile) or user data with cookies (web)
     """
     try:
+        # Dual-mode: Get refresh token from body OR cookie
+        refresh_token_value = refresh_request.refresh_token
+        
+        if not refresh_token_value:
+            # Try to get from cookie (web client)
+            refresh_token_value = request.cookies.get("refresh_token")
+        
+        if not refresh_token_value:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token is required (in body or cookie)"
+            )
+        
         # Get client_id from request (optional, will be validated from token)
         client_id = None
         try:
@@ -571,18 +688,40 @@ async def refresh_token(
         
         # Get new tokens
         new_access_token, new_refresh_token = await auth_service.refresh_access_token(
-            refresh_request.refresh_token, client_id
+            refresh_token_value, client_id
         )
         
         # Verify old refresh token to get user data
-        payload = auth_service.verify_token(refresh_request.refresh_token)
+        payload = auth_service.verify_token(refresh_token_value)
         user_id = payload.get("user_id")
         token_client_id = payload.get("client_id")
         user = await auth_service.get_current_user(user_id, client_id=token_client_id)
         
-        return AuthMapper.to_token_response(
-            new_access_token, new_refresh_token, user
-        )
+        # Dual-mode: Return appropriately
+        client_type = detect_client_type(request)
+        from config.settings import settings
+        
+        if client_type == ClientType.WEB:
+            # Web: Set new tokens in cookies
+            set_auth_cookies(
+                response=response,
+                request=request,
+                access_token=new_access_token,
+                refresh_token=new_refresh_token,
+                access_token_expire_seconds=settings.access_token_expire_minutes * 60
+            )
+            
+            return {
+                "message": "Token refreshed successfully",
+                "user": AuthMapper.to_user_response(user),
+                "token_type": "bearer",
+                "expires_in": settings.access_token_expire_minutes * 60
+            }
+        else:
+            # Mobile: Return tokens in body
+            return AuthMapper.to_token_response(
+                new_access_token, new_refresh_token, user
+            )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -593,6 +732,7 @@ async def refresh_token(
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
     request: Request,
+    response: Response,
     logout_request: RefreshTokenRequest,
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
@@ -601,7 +741,11 @@ async def logout(
     session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Logout user with session revocation and audit logging.
+    Logout user with session revocation, audit logging, and dual-mode support.
+    
+    Dual-Mode:
+    - Web: Clears authentication cookies
+    - Mobile: Just invalidates refresh token (no cookies to clear)
     
     Requires authentication.
     """
@@ -618,8 +762,21 @@ async def logout(
         except Exception:
             client_id = current_user.client_id
         
-        # Logout (invalidate refresh token)
-        await auth_service.logout(logout_request.refresh_token, client_id)
+        # Dual-mode: Get refresh token from body OR cookie
+        refresh_token_value = logout_request.refresh_token
+        
+        if not refresh_token_value:
+            # Try to get from cookie (web client)
+            refresh_token_value = request.cookies.get("refresh_token")
+        
+        if refresh_token_value:
+            # Logout (invalidate refresh token)
+            await auth_service.logout(refresh_token_value, client_id)
+        
+        # Dual-mode: Clear cookies if web client
+        client_type = detect_client_type(request)
+        if client_type == ClientType.WEB:
+            clear_auth_cookies(response, request)
         
         # TODO: Revoke session by token hash
         # For now, we log the logout event

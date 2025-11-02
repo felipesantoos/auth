@@ -91,10 +91,15 @@ app.add_middleware(
         "X-Client-ID",
         "X-Client-Subdomain",
         "X-Request-ID",
+        "X-Client-Type",  # For dual-mode auth (web/mobile)
     ],
     # Expor headers úteis
     expose_headers=["X-Request-ID", "X-RateLimit-Remaining"],
 )
+
+# Configure Security Headers (OWASP Best Practices)
+from app.api.middlewares.security_headers_middleware import SecurityHeadersMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Configure Request/Response Logging
 from app.api.middlewares.logging_middleware import LoggingMiddleware

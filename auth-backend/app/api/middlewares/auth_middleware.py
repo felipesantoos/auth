@@ -1,7 +1,7 @@
 """
 Authentication Middleware
 FastAPI dependency for JWT validation and user authorization
-Adapted for multi-tenant architecture
+Adapted for multi-tenant architecture with dual-mode support (cookies/headers)
 """
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -14,24 +14,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dicontainer.dicontainer import get_auth_service
 from app.api.middlewares.tenant_middleware import get_client_from_request
 
-# HTTP Bearer token scheme
-security = HTTPBearer()
+# HTTP Bearer token scheme (auto_error=False for dual-mode support)
+security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
     request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     auth_service: IAuthService = Depends(get_auth_service),
     session: AsyncSession = Depends(get_db_session),
 ) -> AppUser:
     """
-    Dependency to get current authenticated user from JWT token (multi-tenant).
+    Dependency to get current authenticated user from JWT token (multi-tenant, dual-mode).
+    
+    Dual-Mode Support:
+    - Web: Reads token from httpOnly cookie (XSS protection)
+    - Mobile: Reads token from Authorization header (Bearer token)
+    
+    Priority:
+    1. Authorization header (if present)
+    2. Cookie (if header not present)
     
     Validates that the user's client_id matches the client_id from the request.
     
     Args:
         request: FastAPI request object
-        credentials: HTTP Authorization header with Bearer token
+        credentials: HTTP Authorization header with Bearer token (optional)
         auth_service: Auth service instance
         session: Database session
         
@@ -41,7 +49,22 @@ async def get_current_user(
     Raises:
         HTTPException: If token is invalid, user not found, or client mismatch
     """
-    token = credentials.credentials
+    # Dual-mode: Get token from Authorization header OR cookie
+    token = None
+    
+    if credentials:
+        # Priority 1: Authorization header (mobile apps, API clients)
+        token = credentials.credentials
+    else:
+        # Priority 2: Cookie (web browsers)
+        token = request.cookies.get("access_token")
+    
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required (token not found in header or cookie)",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
     # Verify token
     payload = auth_service.verify_token(token)

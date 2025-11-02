@@ -31,8 +31,10 @@ class Settings(BaseSettings):
     
     # Database (PostgreSQL)
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/auth_system"
-    database_pool_size: int = 10
-    database_max_overflow: int = 20
+    # ⚡ PERFORMANCE: Increased pool size for better concurrency
+    # Handles more simultaneous requests without waiting for connections
+    database_pool_size: int = 20  # Increased from 10
+    database_max_overflow: int = 30  # Increased from 20
     
     # Redis
     redis_host: str = "localhost"
@@ -45,7 +47,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_audience: str = "auth-system-api"
     jwt_issuer: str = "auth-system-api"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = 15  # Reduced from 30 for better security (18-security-best-practices.md line 533)
     refresh_token_expire_days: int = 7
     
     # Default Admin User
