@@ -31,10 +31,12 @@ class Settings(BaseSettings):
     
     # Database (PostgreSQL)
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/auth_system"
+    database_admin_url: Optional[str] = None  # For migrations (separate user with DDL permissions)
     # ⚡ PERFORMANCE: Increased pool size for better concurrency
     # Handles more simultaneous requests without waiting for connections
     database_pool_size: int = 20  # Increased from 10
     database_max_overflow: int = 30  # Increased from 20
+    database_pool_recycle: int = 3600  # Recycle connections every hour (security)
     
     # Redis
     redis_host: str = "localhost"

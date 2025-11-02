@@ -4,7 +4,20 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    
+    <!-- Security: Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self'; 
+                   style-src 'self' 'unsafe-inline'; 
+                   img-src 'self' data: https:; 
+                   font-src 'self' data:; 
+                   connect-src 'self' http://localhost:8080 https:; 
+                   frame-ancestors 'none'; 
+                   base-uri 'self'; 
+                   form-action 'self';">
+    
+    <title>Auth System</title>
   </head>
   <body>
     <div id="root"></div>

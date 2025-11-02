@@ -258,7 +258,7 @@ def handle_exception(request: Request, exc: Exception) -> JSONResponse:
     # UNEXPECTED ERRORS → 500 Internal Server Error
     # ===================================================================
     else:
-        # Log full traceback for debugging
+        # Log full traceback for debugging (server-side only)
         logger.error(
             f"Unexpected error: {exc}\n"
             f"Request: {request.method} {request.url}\n"
@@ -266,13 +266,26 @@ def handle_exception(request: Request, exc: Exception) -> JSONResponse:
             extra={"path": request.url.path, "method": request.method}
         )
         
-        # Don't leak internal details to client
-        error_response = ErrorResponse(
-            error="Internal Server Error",
-            message="An unexpected error occurred" if not settings.debug else str(exc),
-            code="UNEXPECTED_ERROR",
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        # SECURITY: Don't leak internal details to client in production
+        # Only show detailed errors in development/debug mode
+        if settings.environment == "production" or not settings.debug:
+            # Production: Generic error message (no stack trace, no internal details)
+            error_response = ErrorResponse(
+                error="Internal Server Error",
+                message="An unexpected error occurred. Please try again later.",
+                code="INTERNAL_ERROR",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        else:
+            # Development: Show detailed error for debugging
+            error_response = ErrorResponse(
+                error="Internal Server Error",
+                message=str(exc),
+                code="UNEXPECTED_ERROR",
+                details={"traceback": traceback.format_exc().split('\n')} if settings.debug else {},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
         return JSONResponse(
             status_code=error_response.status_code,
             content=error_response.to_dict()
