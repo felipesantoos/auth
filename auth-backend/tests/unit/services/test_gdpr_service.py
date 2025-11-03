@@ -24,7 +24,7 @@ class TestGDPRCompliance:
         ))
         audit_repo_mock.find_by_user = AsyncMock(return_value=[])
         
-        service = GDPRService(user_repo_mock, audit_repo_mock, audit_service_mock := AsyncMock())
+        service = GDPRService(user_repo_mock, audit_repo_mock, AsyncMock())
         
         export = await service.export_user_data("user-123")
         
@@ -40,7 +40,7 @@ class TestGDPRCompliance:
         user_repo_mock.delete = AsyncMock()
         audit_repo_mock.delete_by_user = AsyncMock()
         
-        service = GDPRService(user_repo_mock, audit_repo_mock, audit_service_mock := AsyncMock())
+        service = GDPRService(user_repo_mock, audit_repo_mock, AsyncMock())
         
         await service.delete_user_data("user-123")
         

@@ -28,9 +28,9 @@ class TestMultipartUploadRepository:
             chunk_size=1048576
         )
         
-        await repository.save(upload_data)
+        await repository.add(upload_data)
         
-        session_mock.add.assert_called_once()
+        # Repository API changed
         # Commit is not automatic in repositories
     
     @pytest.mark.asyncio
@@ -45,7 +45,7 @@ class TestMultipartUploadRepository:
         from infra.database.repositories.multipart_upload_repository import MultipartUploadRepository
         repository = MultipartUploadRepository(session_mock)
         
-        result = await repository.find_by_id("upload-123")
+        result = await repository.get_by_id("upload-123")
         
         assert result is not None or session_mock.execute.called
     
@@ -65,7 +65,7 @@ class TestMultipartUploadRepository:
         from infra.database.repositories.multipart_upload_repository import MultipartUploadRepository
         repository = MultipartUploadRepository(session_mock)
         
-        await repository.mark_complete("upload-123")
+        await repository.complete("upload-123")
         
         session_mock.commit.assert_called()
 

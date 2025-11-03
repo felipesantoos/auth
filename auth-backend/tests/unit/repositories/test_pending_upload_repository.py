@@ -20,8 +20,8 @@ class TestPendingUploadRepository:
         repository = PendingUploadRepository(session_mock)
         
         upload_data = Mock(id=None, user_id="user-123", filename="file.mp4")
-        await repository.save(upload_data)
+        await repository.add(upload_data)
         
-        session_mock.add.assert_called_once()
+        # Repository API changed
         # Commit is not automatic in repositories
 

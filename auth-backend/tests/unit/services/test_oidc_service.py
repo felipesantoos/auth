@@ -20,7 +20,7 @@ class TestOIDCAuthentication:
         settings_mock.oidc_authorization_endpoint = "https://provider.com/authorize"
         settings_mock.oidc_redirect_uri = "http://localhost/callback"
         
-        service = OIDCService(user_repo_mock, settings_mock, settings_provider_mock := AsyncMock())
+        service = OIDCService(user_repo_mock, settings_mock, AsyncMock())
         
         url = await service.generate_authorization_url("state-123", "nonce-456")
         
@@ -35,7 +35,7 @@ class TestOIDCAuthentication:
         settings_mock = Mock()
         settings_mock.oidc_token_endpoint = "https://provider.com/token"
         
-        service = OIDCService(user_repo_mock, settings_mock, settings_provider_mock := AsyncMock())
+        service = OIDCService(user_repo_mock, settings_mock, AsyncMock())
         
         with patch('httpx.AsyncClient') as mock_client:
             mock_response = Mock()
@@ -57,7 +57,7 @@ class TestOIDCAuthentication:
         settings_mock = Mock()
         settings_mock.oidc_client_id = "test-client-id"
         
-        service = OIDCService(user_repo_mock, settings_mock, settings_provider_mock := AsyncMock())
+        service = OIDCService(user_repo_mock, settings_mock, AsyncMock())
         
         # Mock JWT verification
         with patch('jwt.decode') as mock_decode:

@@ -23,6 +23,7 @@ class TestBackupCodeRepositorySave:
         repository = BackupCodeRepository(session_mock)
         
         code = BackupCode(
+            client_id="test-client",
             id=None,
             user_id="user-123",
             code_hash="hashed_code",
@@ -49,7 +50,7 @@ class TestBackupCodeRepositoryGet:
         
         repository = BackupCodeRepository(session_mock)
         
-        result = await repository.find_by_user("user-123")
+        result = await repository.find_unused_codes(user_id="user-123", client_id="test-client")
         
         assert isinstance(result, list)
         session_mock.execute.assert_called()

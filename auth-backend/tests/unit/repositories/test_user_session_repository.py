@@ -56,7 +56,7 @@ class TestUserSessionRepositoryGet:
         
         repository = UserSessionRepository(session_mock)
         
-        result = await repository.find_by_id("session-123")
+        result = await repository.find_by_id(session_id="session-123")
         
         assert result is not None or session_mock.execute.called
     
@@ -70,7 +70,7 @@ class TestUserSessionRepositoryGet:
         
         repository = UserSessionRepository(session_mock)
         
-        result = await repository.find_active_by_user("user-123")
+        result = await repository.find_active_by_user(user_id="user-123")
         
         assert isinstance(result, list)
         session_mock.execute.assert_called()

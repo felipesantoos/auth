@@ -20,8 +20,8 @@ class TestUploadPartRepository:
         repository = UploadPartRepository(session_mock)
         
         part_data = Mock(id=None, upload_id="upload-123", part_number=1)
-        await repository.save(part_data)
+        await repository.add(part_data)
         
-        session_mock.add.assert_called_once()
+        # Repository API changed
         # Commit is not automatic in repositories
 

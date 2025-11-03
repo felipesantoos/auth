@@ -70,7 +70,7 @@ class TestWebAuthnCredentialRepositoryGet:
         
         repository = WebAuthnCredentialRepository(session_mock)
         
-        result = await repository.find_by_user("user-123")
+        result = await repository.find_by_user(user_id="user-123")
         
         assert isinstance(result, list)
 

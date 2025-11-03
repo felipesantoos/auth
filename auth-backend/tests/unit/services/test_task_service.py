@@ -75,7 +75,7 @@ class TestTaskManagement:
         service = TaskService(task_repo_mock)
         
         result = {"success_count": 10}
-        await service.mark_task_complete("task-123", result)
+        await service.complete("task-123", result)
         
         task_repo_mock.update.assert_called()
     
@@ -91,7 +91,7 @@ class TestTaskManagement:
         
         service = TaskService(task_repo_mock)
         
-        await service.mark_task_failed("task-123", "Error processing data")
+        await service.fail("task-123", "Error processing data")
         
         task_repo_mock.update.assert_called()
     
