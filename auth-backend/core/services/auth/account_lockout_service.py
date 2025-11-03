@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 from datetime import datetime, timedelta
 
 from core.interfaces.primary.account_lockout_service_interface import IAccountLockoutService
-from core.interfaces.secondary.i_app_user_repository import IAppUserRepository
+from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
 from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.services.audit.audit_service import AuditService
 from core.domain.auth.audit_event_type import AuditEventType

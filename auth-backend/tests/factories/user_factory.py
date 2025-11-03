@@ -8,7 +8,7 @@ import bcrypt
 from faker import Faker
 
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
 
 
 # Initialize Faker with Portuguese locale
@@ -25,15 +25,15 @@ class UserFactory:
         email: Optional[str] = None,
         password: str = "TestPass123",
         name: Optional[str] = None,
-        role: UserRole = UserRole.USER,
-        client_id: str = "test-client-id",
         active: bool = True,
         email_verified: bool = False,
         mfa_enabled: bool = False,
         **kwargs
     ) -> AppUser:
         """
-        Create a test AppUser with realistic data.
+        Create a test AppUser with realistic data (multi-workspace architecture).
+        
+        Note: role and client_id removed - roles now in WorkspaceMember.
         
         Args:
             id: User ID (auto-generated if not provided)
@@ -41,8 +41,6 @@ class UserFactory:
             email: Email (auto-generated if not provided)
             password: Plain password to hash (default: TestPass123)
             name: Full name (auto-generated if not provided)
-            role: User role
-            client_id: Client ID
             active: Whether user is active
             email_verified: Whether email is verified
             mfa_enabled: Whether MFA is enabled
@@ -67,14 +65,13 @@ class UserFactory:
             bcrypt.gensalt(rounds=12)
         ).decode('utf-8')
         
-        return AppUser(
+        # Create user (multi-workspace: no role or client_id)
+        user = AppUser(
             id=id,
             username=username,
             email=email,
             _password_hash=password_hash,
             name=name,
-            role=role,
-            client_id=client_id,
             active=active,
             email_verified=email_verified,
             mfa_enabled=mfa_enabled,
@@ -82,6 +79,8 @@ class UserFactory:
             updated_at=kwargs.get('updated_at', datetime.utcnow()),
             **{k: v for k, v in kwargs.items() if k not in ['created_at', 'updated_at']}
         )
+        
+        return user
     
     @staticmethod
     async def create_persisted(db_session, **kwargs) -> AppUser:
@@ -123,39 +122,33 @@ class UserFactory:
         return users
     
     @staticmethod
-    def create_admin(
-        client_id: str = "test-client-id",
-        **kwargs
-    ) -> AppUser:
-        """Create a test admin user (in-memory)"""
+    def create_admin(**kwargs) -> AppUser:
+        """
+        Create a test admin user (in-memory).
+        Note: Admin role is now per-workspace via WorkspaceMember.
+        This creates a regular user - use WorkspaceMemberFactory for roles.
+        """
         return UserFactory.build(
-            role=UserRole.ADMIN,
-            client_id=client_id,
             email_verified=True,
             **kwargs
         )
     
     @staticmethod
-    def create_manager(
-        client_id: str = "test-client-id",
-        **kwargs
-    ) -> AppUser:
-        """Create a test manager user (in-memory)"""
+    def create_manager(**kwargs) -> AppUser:
+        """
+        Create a test manager user (in-memory).
+        Note: Manager role is now per-workspace via WorkspaceMember.
+        This creates a regular user - use WorkspaceMemberFactory for roles.
+        """
         return UserFactory.build(
-            role=UserRole.MANAGER,
-            client_id=client_id,
             email_verified=True,
             **kwargs
         )
     
     @staticmethod
-    def create_with_mfa(
-        client_id: str = "test-client-id",
-        **kwargs
-    ) -> AppUser:
+    def create_with_mfa(**kwargs) -> AppUser:
         """Create a test user with MFA enabled (in-memory)"""
         return UserFactory.build(
-            client_id=client_id,
             mfa_enabled=True,
             mfa_secret=secrets.token_hex(16),
             email_verified=True,
@@ -163,13 +156,9 @@ class UserFactory:
         )
     
     @staticmethod
-    def create_locked(
-        client_id: str = "test-client-id",
-        **kwargs
-    ) -> AppUser:
+    def create_locked(**kwargs) -> AppUser:
         """Create a test user with locked account (in-memory)"""
         return UserFactory.build(
-            client_id=client_id,
             failed_login_attempts=5,
             locked_until=datetime.utcnow() + timedelta(minutes=30),
             **kwargs

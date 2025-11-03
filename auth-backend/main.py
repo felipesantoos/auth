@@ -127,7 +127,7 @@ app = FastAPI(
     description="""
 # 🔐 Auth System API
 
-Sistema completo de autenticação e autorização multi-tenant com suporte a múltiplos métodos de autenticação.
+Sistema completo de autenticação e autorização com arquitetura **multi-workspace** e suporte a múltiplos métodos de autenticação.
 
 ## ✨ Features
 
@@ -145,10 +145,19 @@ Sistema completo de autenticação e autorização multi-tenant com suporte a m�
   - Account Lockout (brute-force protection)
   - Audit Logging completo
   
-* **👥 Multi-Tenant**
-  - Isolamento por cliente/tenant
+* **🏢 Multi-Workspace Architecture** ⭐ NEW
+  - Usuários com identidade global (email único)
+  - Múltiplos workspaces por usuário (N:M)
+  - Roles diferentes por workspace (admin, manager, user)
+  - Acesso flexível a aplicações (direto ou via workspace)
+  - Workspace pessoal criado automaticamente no registro
+  - Herança de permissões via workspace membership
+  - Proteção de regras de negócio (último admin, último workspace)
+  
+* **👥 Gerenciamento de Acesso**
+  - Controle de membros por workspace
+  - Permissions granulares
   - API Keys por cliente
-  - Subdomain routing
   
 * **📊 Features Empresariais**
   - GDPR Compliance (data export/deletion)
@@ -287,6 +296,14 @@ def custom_openapi():
         {
             "name": "Authentication",
             "description": "Endpoints de autenticação: login, registro, logout, refresh token"
+        },
+        {
+            "name": "Workspaces",
+            "description": "🏢 Gerenciamento de workspaces (organizações/empresas). Arquitetura multi-workspace permite que usuários pertençam a múltiplas organizações com roles diferentes."
+        },
+        {
+            "name": "Workspace Members",
+            "description": "👥 Gerenciamento de membros de workspace. Controle de acesso por workspace com roles: admin, manager, user."
         },
         {
             "name": "MFA",
@@ -492,6 +509,10 @@ from app.api.routes import file_routes
 from app.api.routes import serve_files_routes
 from app.api.routes import chunked_upload_routes
 from app.api.routes import task_routes
+from app.api.routes import workspace_routes
+from app.api.routes import workspace_member_routes
+from app.api.routes import workspace_leave_routes
+from app.api.routes import workspace_client_routes
 
 # Register routers
 logger.info("Registering API routes...")
@@ -508,6 +529,12 @@ app.include_router(client_routes.router)
 
 # Authentication (Basic)
 app.include_router(auth_routes.router)
+
+# Workspace Management (Multi-workspace architecture)
+app.include_router(workspace_routes.router)
+app.include_router(workspace_member_routes.router)
+app.include_router(workspace_leave_routes.router)
+app.include_router(workspace_client_routes.router)
 
 # OAuth2
 app.include_router(oauth_routes.router)

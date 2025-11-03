@@ -1,11 +1,11 @@
 """AppUser Mapper - Converts between DB model and domain"""
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
 from infra.database.models.app_user import DBAppUser
 
 
 class AppUserMapper:
-    """Mapper for AppUser entity"""
+    """Mapper for AppUser entity (multi-workspace architecture)"""
     
     @staticmethod
     def to_domain(db_user: DBAppUser) -> AppUser:
@@ -15,8 +15,8 @@ class AppUserMapper:
             username=db_user.username,
             email=db_user.email,
             name=db_user.full_name,
-            role=UserRole(db_user.role),
-            client_id=db_user.client_id,  # Multi-tenant
+            # REMOVED: role (now in workspace_member)
+            # REMOVED: client_id (now via workspace_member or user_client)
             active=db_user.is_active,
             created_at=db_user.created_at,
             updated_at=db_user.updated_at,
@@ -34,6 +34,12 @@ class AppUserMapper:
             # Passwordless Auth
             magic_link_token=db_user.magic_link_token,
             magic_link_sent_at=db_user.magic_link_sent_at,
+            # Avatar
+            avatar_url=db_user.avatar_url,
+            # KYC
+            kyc_document_id=db_user.kyc_document_id,
+            kyc_status=db_user.kyc_status,
+            kyc_verified_at=db_user.kyc_verified_at,
         )
     
     @staticmethod
@@ -47,9 +53,9 @@ class AppUserMapper:
         db_user.email = user.email
         db_user.hashed_password = user.password_hash  # Access via property (encapsulation)
         db_user.full_name = user.name
-        db_user.role = user.role.value
+        # REMOVED: role (now in workspace_member)
         db_user.is_active = user.active
-        db_user.client_id = user.client_id  # Multi-tenant
+        # REMOVED: client_id (now via workspace_member or user_client)
         db_user.created_at = user.created_at
         db_user.updated_at = user.updated_at
         
@@ -69,6 +75,14 @@ class AppUserMapper:
         # Passwordless Auth
         db_user.magic_link_token = user.magic_link_token
         db_user.magic_link_sent_at = user.magic_link_sent_at
+        
+        # Avatar
+        db_user.avatar_url = user.avatar_url
+        
+        # KYC
+        db_user.kyc_document_id = user.kyc_document_id
+        db_user.kyc_status = user.kyc_status
+        db_user.kyc_verified_at = user.kyc_verified_at
         
         return db_user
 

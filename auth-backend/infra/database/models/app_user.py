@@ -4,8 +4,8 @@ SQLAlchemy model for PostgreSQL persistence
 Adapted for multi-tenant architecture with client_id
 """
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Integer, Index
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, UniqueConstraint
+import sqlalchemy as sa
 from infra.database.database import Base
 import uuid
 
@@ -17,7 +17,7 @@ class DBAppUser(Base):
     This is an infrastructure detail - adapter for the database.
     Domain layer doesn't know about this.
     
-    Multi-tenant: Each user belongs to a client (tenant).
+    Multi-workspace: Users have global identity and can belong to multiple workspaces.
     """
     __tablename__ = "app_user"
     
@@ -31,11 +31,10 @@ class DBAppUser(Base):
     
     # User information
     full_name = Column(String(200), nullable=False)
-    role = Column(String(50), nullable=False, default='user', index=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     
-    # Multi-tenant: Foreign key to client
-    client_id = Column(String, ForeignKey("client.id"), nullable=False, index=True)
+    # REMOVED: role (now in workspace_member table)
+    # REMOVED: client_id (now via workspace_member or user_client tables)
     
     # Email Verification
     email_verified = Column(Boolean, default=False, nullable=False)
@@ -71,18 +70,12 @@ class DBAppUser(Base):
         nullable=False
     )
     
-    # Relationships
-    client = relationship("DBClient", backref="users")
+    # Relationships (updated for multi-workspace)
+    # REMOVED: client relationship (now via workspace_member or user_client)
     
-    # Composite Indexes for query optimization
+    # Composite Indexes for query optimization (updated for multi-workspace)
     __table_args__ = (
-        # Multi-tenant queries: client_id + is_active
-        Index('idx_user_client_active', 'client_id', 'is_active'),
-        # Email lookup with status: email + is_active
-        Index('idx_user_email_active', 'email', 'is_active'),
-        # User search within client: client_id + username
-        Index('idx_user_client_username', 'client_id', 'username'),
-        # Recent active users: client_id + created_at
-        Index('idx_user_client_created', 'client_id', 'created_at'),
+        # Email must be globally unique
+        sa.UniqueConstraint('email', name='uq_user_email'),
     )
 

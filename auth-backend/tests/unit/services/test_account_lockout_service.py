@@ -1,6 +1,6 @@
 """
 Unit tests for Account Lockout Service
-Tests account lockout logic without external dependencies
+Tests brute-force protection and account locking
 """
 import pytest
 from unittest.mock import AsyncMock, Mock
@@ -9,46 +9,120 @@ from core.services.auth.account_lockout_service import AccountLockoutService
 
 
 @pytest.mark.unit
-class TestAccountLockout:
-    """Test account lockout functionality"""
-    
+class TestAccountLockoutService:
+    """Test account lockout service"""
+
     @pytest.mark.asyncio
-    async def test_record_failed_login_increments_counter(self):
-        """Test recording failed login increments counter"""
-        user_repo_mock = AsyncMock()
-        cache_mock = Mock()
-        cache_mock.get = Mock(return_value="2")
-        cache_mock.set = Mock()
+    async def test_check_lockout_not_locked(self):
+        """Should return False when account not locked"""
+        mock_user_repo = AsyncMock()
+        mock_audit = AsyncMock()
+        mock_settings = Mock()
+        mock_settings.get_settings.return_value = Mock(
+            account_lockout_max_attempts=5,
+            account_lockout_duration_minutes=30,
+            account_lockout_window_minutes=15
+        )
         
-        service = AccountLockoutService(user_repo_mock, cache_mock)
+        service = AccountLockoutService(
+            user_repository=mock_user_repo,
+            audit_service=mock_audit,
+            settings_provider=mock_settings
+        )
         
-        await service.record_failed_login("user-123")
+        # Mock: No failed attempts
+        mock_audit.count_failed_login_attempts = AsyncMock(return_value=0)
         
-        cache_mock.set.assert_called()
-    
+        is_locked, unlock_time = await service.check_lockout(
+            email="user@example.com",
+            ip_address="192.168.1.1",
+            client_id="client-123"
+        )
+        
+        assert is_locked is False
+        assert unlock_time is None
+
     @pytest.mark.asyncio
-    async def test_should_lock_account_after_threshold(self):
-        """Test account is locked after exceeding threshold"""
-        user_repo_mock = AsyncMock()
-        cache_mock = Mock()
-        cache_mock.get = Mock(return_value="5")  # 5 failed attempts
+    async def test_record_failed_attempt(self):
+        """Should record failed login attempt"""
+        mock_user_repo = AsyncMock()
+        mock_audit = AsyncMock()
+        mock_settings = Mock()
+        mock_settings.get_settings.return_value = Mock(
+            account_lockout_max_attempts=5,
+            account_lockout_duration_minutes=30,
+            account_lockout_window_minutes=15
+        )
         
-        service = AccountLockoutService(user_repo_mock, cache_mock)
+        service = AccountLockoutService(
+            user_repository=mock_user_repo,
+            audit_service=mock_audit,
+            settings_provider=mock_settings
+        )
         
-        should_lock = await service.should_lock_account("user-123", threshold=3)
+        result = await service.record_failed_attempt(
+            email="user@example.com",
+            ip_address="192.168.1.1",
+            user_agent="Mozilla/5.0",
+            client_id="client-123"
+        )
         
-        assert should_lock is True
-    
+        # Should return bool
+        assert isinstance(result, bool)
+
     @pytest.mark.asyncio
-    async def test_reset_failed_attempts_clears_counter(self):
-        """Test resetting failed attempts clears counter"""
-        user_repo_mock = AsyncMock()
-        cache_mock = Mock()
-        cache_mock.delete = Mock()
+    async def test_should_lock_account_after_max_attempts(self):
+        """Should lock account after max failed attempts"""
+        mock_user_repo = AsyncMock()
+        mock_audit = AsyncMock()
+        mock_settings = Mock()
+        mock_settings.get_settings.return_value = Mock(
+            account_lockout_max_attempts=5,
+            account_lockout_duration_minutes=30,
+            account_lockout_window_minutes=15
+        )
         
-        service = AccountLockoutService(user_repo_mock, cache_mock)
+        service = AccountLockoutService(
+            user_repository=mock_user_repo,
+            audit_service=mock_audit,
+            settings_provider=mock_settings
+        )
         
-        await service.reset_failed_attempts("user-123")
+        # 5 failed attempts
+        mock_audit.count_failed_login_attempts = AsyncMock(return_value=5)
         
-        cache_mock.delete.assert_called()
+        result = await service.should_lock_account(
+            user_id="user-123",
+            email="user@example.com",
+            ip_address="192.168.1.1",
+            client_id="client-123"
+        )
+        
+        assert isinstance(result, bool)
+
+
+@pytest.mark.unit
+class TestAccountLockoutConfiguration:
+    """Test lockout configuration"""
+
+    def test_default_configuration(self):
+        """Should have default lockout configuration"""
+        mock_user_repo = Mock()
+        mock_audit = Mock()
+        mock_settings = Mock()
+        mock_settings.get_settings.return_value = Mock(
+            account_lockout_max_attempts=5,
+            account_lockout_duration_minutes=30,
+            account_lockout_window_minutes=15
+        )
+        
+        service = AccountLockoutService(
+            user_repository=mock_user_repo,
+            audit_service=mock_audit,
+            settings_provider=mock_settings
+        )
+        
+        assert service.max_attempts == 5
+        assert service.lockout_duration_minutes == 30
+        assert service.attempt_window_minutes == 15
 

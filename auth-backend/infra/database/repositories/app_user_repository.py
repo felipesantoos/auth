@@ -199,26 +199,18 @@ class AppUserRepository(IAppUserRepository):
             logger.error(f"Error finding users by IDs: {e}", exc_info=True)
             raise DomainException("Failed to find users", "REPOSITORY_ERROR")
     
-    async def find_by_email(self, email: str, client_id: Optional[str] = None) -> Optional[AppUser]:
+    async def find_by_email(self, email: str) -> Optional[AppUser]:
         """
-        Finds by email with optional client_id filtering (multi-tenant).
+        Finds by email (globally unique in multi-workspace architecture).
         
         Returns None if not found (NOT an exception).
         
-        Performance: Uses eager loading to prevent N+1 queries.
-        
         Args:
             email: User email
-            client_id: Optional client ID for multi-tenant isolation
         """
         try:
-            # ⚡ PERFORMANCE: Eager load client relationship
-            query = select(DBAppUser).options(selectinload(DBAppUser.client)).where(DBAppUser.email == email)
-            
-            # Multi-tenant: Filter by client_id if provided
-            # Note: In multi-tenant, email should be unique per client, not globally
-            if client_id:
-                query = query.where(DBAppUser.client_id == client_id)
+            # Email is globally unique in multi-workspace architecture
+            query = select(DBAppUser).where(DBAppUser.email == email)
             
             result = await self.session.execute(query)
             db_user = result.scalar_one_or_none()
@@ -232,7 +224,7 @@ class AppUserRepository(IAppUserRepository):
             logger.error(f"Database error finding user by email {email}: {e}", exc_info=True)
             raise DomainException("Database operation failed", "DATABASE_ERROR")
         except Exception as e:
-            logger.error(f"Error finding user by email {email}: {e}", exc_info=True)
+            logger.error(f"Error finding user by email {email}: {e}", exc_info=True, extra={"email": email})
             raise DomainException("Failed to find user", "REPOSITORY_ERROR")
     
     async def save(self, user: AppUser) -> AppUser:

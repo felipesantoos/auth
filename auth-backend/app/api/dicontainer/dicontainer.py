@@ -87,6 +87,12 @@ from infra.storage.storage_factory import StorageFactory
 from core.interfaces.secondary import IFileStorage
 from app.api.utils.file_validator import FileValidator
 
+# Workspace (Multi-workspace architecture)
+from infra.database.repositories.workspace_repository import WorkspaceRepository
+from infra.database.repositories.workspace_member_repository import WorkspaceMemberRepository
+from core.services.workspace.workspace_service import WorkspaceService
+from core.services.workspace.workspace_member_service import WorkspaceMemberService
+
 logger = logging.getLogger(__name__)
 
 
@@ -120,21 +126,43 @@ async def get_app_user_repository(
     return AppUserRepository(session)
 
 
+async def get_workspace_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> WorkspaceService:
+    """Factory for WorkspaceService"""
+    repository = WorkspaceRepository(session)
+    return WorkspaceService(repository)
+
+
+async def get_workspace_member_service(
+    session: AsyncSession = Depends(get_db_session)
+) -> WorkspaceMemberService:
+    """Factory for WorkspaceMemberService"""
+    repository = WorkspaceMemberRepository(session)
+    return WorkspaceMemberService(repository)
+
+
 async def get_auth_service(
     session: AsyncSession = Depends(get_db_session)
 ) -> IAuthService:
     """
-    Factory for IAuthService interface.
+    Factory for IAuthService interface (multi-workspace architecture).
     
-    Returns AuthService instance (implements only IAuthService).
+    Returns AuthService instance with workspace services injected
+    for auto-creating workspaces on user registration.
     """
     repository = await get_app_user_repository(session)
     cache_service = CacheService()
     settings_provider = SettingsProvider()
+    workspace_service = await get_workspace_service(session)
+    workspace_member_service = await get_workspace_member_service(session)
+    
     return AuthService(
         repository=repository,
         cache_service=cache_service,
         settings_provider=settings_provider,
+        workspace_service=workspace_service,
+        workspace_member_service=workspace_member_service,
     )
 
 
@@ -162,17 +190,22 @@ async def get_oauth_service(
     session: AsyncSession = Depends(get_db_session)
 ) -> IOAuthService:
     """
-    Factory for IOAuthService interface.
+    Factory for IOAuthService interface (multi-workspace architecture).
     
-    Returns OAuthService instance (implements only IOAuthService).
+    Returns OAuthService instance with workspace services for auto-creating workspaces.
     """
     repository = await get_app_user_repository(session)
     cache_service = CacheService()
     settings_provider = SettingsProvider()
+    workspace_service = await get_workspace_service(session)
+    workspace_member_service = await get_workspace_member_service(session)
+    
     return OAuthService(
         repository=repository,
         cache_service=cache_service,
         settings_provider=settings_provider,
+        workspace_service=workspace_service,
+        workspace_member_service=workspace_member_service,
     )
 
 
@@ -296,26 +329,36 @@ async def get_webauthn_service(
 async def get_saml_service(
     session: AsyncSession = Depends(get_db_session)
 ) -> SAMLService:
-    """Factory for SAMLService"""
+    """Factory for SAMLService (multi-workspace architecture)"""
     user_repository = await get_app_user_repository(session)
     settings_provider = SettingsProvider()
+    workspace_service = await get_workspace_service(session)
+    workspace_member_service = await get_workspace_member_service(session)
+    
     return SAMLService(
         user_repository=user_repository,
         settings_provider=settings_provider,
+        workspace_service=workspace_service,
+        workspace_member_service=workspace_member_service,
     )
 
 
 async def get_oidc_service(
     session: AsyncSession = Depends(get_db_session)
 ) -> OIDCService:
-    """Factory for OIDCService"""
+    """Factory for OIDCService (multi-workspace architecture)"""
     user_repository = await get_app_user_repository(session)
     cache_service = CacheService()
     settings_provider = SettingsProvider()
+    workspace_service = await get_workspace_service(session)
+    workspace_member_service = await get_workspace_member_service(session)
+    
     return OIDCService(
         user_repository=user_repository,
         cache_service=cache_service,
         settings_provider=settings_provider,
+        workspace_service=workspace_service,
+        workspace_member_service=workspace_member_service,
     )
 
 

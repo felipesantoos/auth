@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
 from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
 from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import (
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class SAMLService:
     """
-    Service for SAML 2.0 Single Sign-On.
+    Service for SAML 2.0 Single Sign-On (multi-workspace architecture).
     
     Allows users to authenticate using enterprise identity providers (IdP)
     such as Okta, Azure AD, Google Workspace, etc.
@@ -34,9 +34,13 @@ class SAMLService:
         self,
         user_repository: IAppUserRepository,
         settings_provider: ISettingsProvider,
+        workspace_service=None,
+        workspace_member_service=None,
     ):
         self.user_repository = user_repository
         self.settings = settings_provider.get_settings()
+        self.workspace_service = workspace_service
+        self.workspace_member_service = workspace_member_service
     
     def is_enabled(self) -> bool:
         """Check if SAML is enabled"""

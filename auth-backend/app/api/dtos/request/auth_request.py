@@ -9,19 +9,19 @@ import re
 
 
 class LoginRequest(BaseModel):
-    """DTO for user login (multi-tenant)"""
+    """DTO for user login (multi-workspace)"""
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., min_length=6, description="User password")
-    client_id: Optional[str] = Field(None, description="Client (tenant) ID. Can also be provided via X-Client-ID header or subdomain")
+    client_id: Optional[str] = Field(None, description="[DEPRECATED] Client ID for backwards compatibility")
 
 
 class RegisterRequest(BaseModel):
-    """DTO for user registration (multi-tenant)"""
+    """DTO for user registration (multi-workspace)"""
     username: str = Field(..., min_length=3, max_length=100, description="Unique username")
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="User password (min 8 characters)")
     name: str = Field(..., min_length=2, max_length=255, description="User full name")
-    client_id: Optional[str] = Field(None, description="Client (tenant) ID. Can also be provided via X-Client-ID header or subdomain")
+    workspace_name: Optional[str] = Field(None, min_length=2, max_length=200, description="Custom workspace name (defaults to '{username}'s Workspace')")
     
     @field_validator('password')
     @classmethod

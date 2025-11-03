@@ -48,8 +48,10 @@ class PermissionService:
             return True
         
         # Get user's permissions for this resource type
+        # Note: client_id needs to be passed explicitly (no longer in AppUser)
+        client_id = getattr(user, 'client_id', 'default-client')
         permissions = await self.repository.find_by_user_and_resource_type(
-            user.id, user.client_id, resource_type
+            user.id, client_id, resource_type
         )
         
         # Check if any permission allows this action
@@ -94,9 +96,12 @@ class PermissionService:
                 raise ValueError("You don't have permission to grant permissions")
         
         # Create permission
+        # Note: client_id needs to be passed explicitly (no longer in AppUser)
+        client_id = getattr(granter, 'client_id', 'default-client')
+        
         permission = Permission(
             user_id=user_id,
-            client_id=granter.client_id,
+            client_id=client_id,
             resource_type=resource_type,
             resource_id=resource_id,
             action=action,

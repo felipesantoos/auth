@@ -8,7 +8,7 @@ from datetime import datetime
 import secrets
 
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
 from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
 from core.interfaces.secondary.cache_service_interface import ICacheService
 from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class OIDCService:
     """
-    Service for OpenID Connect (OIDC) authentication.
+    Service for OpenID Connect (OIDC) authentication (multi-workspace architecture).
     
     OIDC is built on top of OAuth 2.0 and provides:
     - Standard authentication flow
@@ -43,10 +43,14 @@ class OIDCService:
         user_repository: IAppUserRepository,
         cache_service: ICacheService,
         settings_provider: ISettingsProvider,
+        workspace_service=None,
+        workspace_member_service=None,
     ):
         self.user_repository = user_repository
         self.cache_service = cache_service
         self.settings = settings_provider.get_settings()
+        self.workspace_service = workspace_service
+        self.workspace_member_service = workspace_member_service
     
     def is_enabled(self) -> bool:
         """Check if OIDC is enabled"""

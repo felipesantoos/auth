@@ -52,7 +52,29 @@ def upgrade() -> None:
     op.create_index(op.f('ix_client_api_key'), 'client', ['api_key'], unique=True)
     op.create_index(op.f('ix_client_active'), 'client', ['active'], unique=False)
     
-    # APP_USER (Main user table with all features)
+    # ========================================================================
+    # WORKSPACE TABLES (Multi-workspace architecture)
+    # ========================================================================
+    
+    # WORKSPACE (Organization/Company/Group)
+    op.create_table(
+        'workspace',
+        sa.Column('id', sa.String(), nullable=False),
+        sa.Column('name', sa.String(length=200), nullable=False),
+        sa.Column('slug', sa.String(length=100), nullable=False),
+        sa.Column('description', sa.Text(), nullable=True),
+        sa.Column('settings', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+        sa.Column('active', sa.Boolean(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), nullable=False),
+        sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_workspace_id'), 'workspace', ['id'], unique=False)
+    op.create_index(op.f('ix_workspace_name'), 'workspace', ['name'], unique=False)
+    op.create_index(op.f('ix_workspace_slug'), 'workspace', ['slug'], unique=True)
+    op.create_index(op.f('ix_workspace_active'), 'workspace', ['active'], unique=False)
+    
+    # APP_USER (Main user table with all features - multi-workspace architecture)
     op.create_table(
         'app_user',
         sa.Column('id', sa.String(), nullable=False),
@@ -60,9 +82,9 @@ def upgrade() -> None:
         sa.Column('email', sa.String(length=255), nullable=False),
         sa.Column('hashed_password', sa.String(length=255), nullable=False),
         sa.Column('full_name', sa.String(length=200), nullable=False),
-        sa.Column('role', sa.String(length=50), nullable=False),
         sa.Column('is_active', sa.Boolean(), nullable=False),
-        sa.Column('client_id', sa.String(), nullable=False),
+        # REMOVED: client_id (now via workspace_member or user_client)
+        # REMOVED: role (now in workspace_member)
         sa.Column('email_verified', sa.Boolean(), nullable=False),
         sa.Column('email_verification_token', sa.String(length=255), nullable=True),
         sa.Column('email_verification_sent_at', sa.DateTime(), nullable=True),
@@ -78,27 +100,87 @@ def upgrade() -> None:
         sa.Column('kyc_verified_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
         sa.Column('updated_at', sa.DateTime(), nullable=False),
-        sa.ForeignKeyConstraint(['client_id'], ['client.id'], ),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('email', name='uq_user_email')  # Email now globally unique
     )
-    # Basic indexes
+    # Basic indexes (updated for multi-workspace)
     op.create_index(op.f('ix_app_user_id'), 'app_user', ['id'], unique=False)
     op.create_index(op.f('ix_app_user_username'), 'app_user', ['username'], unique=False)
-    op.create_index(op.f('ix_app_user_email'), 'app_user', ['email'], unique=False)
-    op.create_index(op.f('ix_app_user_client_id'), 'app_user', ['client_id'], unique=False)
+    op.create_index(op.f('ix_app_user_email'), 'app_user', ['email'], unique=True)  # Globally unique
     op.create_index(op.f('ix_app_user_is_active'), 'app_user', ['is_active'], unique=False)
-    op.create_index(op.f('ix_app_user_role'), 'app_user', ['role'], unique=False)
-    # Composite indexes
-    op.create_index('idx_user_client_active', 'app_user', ['client_id', 'is_active'], unique=False)
-    op.create_index('idx_user_client_created', 'app_user', ['client_id', 'created_at'], unique=False)
-    op.create_index('idx_user_client_username', 'app_user', ['client_id', 'username'], unique=False)
-    op.create_index('idx_user_email_active', 'app_user', ['email', 'is_active'], unique=False)
-    # Performance indexes (from 20251102)
-    op.create_index('idx_app_user_client_active', 'app_user', ['client_id', 'is_active'], unique=False)
-    op.create_index('idx_app_user_client_role', 'app_user', ['client_id', 'role'], unique=False)
+    # REMOVED: client_id indexes (no longer have client_id column)
+    # REMOVED: role indexes (role moved to workspace_member)
+    # Performance indexes
     op.create_index('idx_app_user_email_verified', 'app_user', ['email_verified'], unique=False)
-    op.create_index('idx_app_user_client_email_unique', 'app_user', ['client_id', 'email'], unique=True)
-    op.create_index('idx_app_user_client_username', 'app_user', ['client_id', 'username'], unique=False)
+    op.create_index('idx_app_user_email_active', 'app_user', ['email', 'is_active'], unique=False)
+    
+    # WORKSPACE_MEMBER (N:M relationship between User and Workspace)
+    op.create_table(
+        'workspace_member',
+        sa.Column('id', sa.String(), nullable=False),
+        sa.Column('user_id', sa.String(), nullable=False),
+        sa.Column('workspace_id', sa.String(), nullable=False),
+        sa.Column('role', sa.String(length=50), nullable=False),
+        sa.Column('active', sa.Boolean(), nullable=False),
+        sa.Column('invited_at', sa.DateTime(), nullable=True),
+        sa.Column('joined_at', sa.DateTime(), nullable=True),
+        sa.Column('created_at', sa.DateTime(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), nullable=False),
+        sa.ForeignKeyConstraint(['user_id'], ['app_user.id'], ),
+        sa.ForeignKeyConstraint(['workspace_id'], ['workspace.id'], ),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('user_id', 'workspace_id', name='uq_user_workspace')
+    )
+    op.create_index(op.f('ix_workspace_member_id'), 'workspace_member', ['id'], unique=False)
+    op.create_index(op.f('ix_workspace_member_user_id'), 'workspace_member', ['user_id'], unique=False)
+    op.create_index(op.f('ix_workspace_member_workspace_id'), 'workspace_member', ['workspace_id'], unique=False)
+    op.create_index(op.f('ix_workspace_member_role'), 'workspace_member', ['role'], unique=False)
+    op.create_index(op.f('ix_workspace_member_active'), 'workspace_member', ['active'], unique=False)
+    op.create_index('idx_workspace_member_workspace_active', 'workspace_member', ['workspace_id', 'active'], unique=False)
+    
+    # USER_CLIENT (Direct N:M relationship between User and Client)
+    op.create_table(
+        'user_client',
+        sa.Column('id', sa.String(), nullable=False),
+        sa.Column('user_id', sa.String(), nullable=False),
+        sa.Column('client_id', sa.String(), nullable=False),
+        sa.Column('workspace_id', sa.String(), nullable=True),
+        sa.Column('active', sa.Boolean(), nullable=False),
+        sa.Column('granted_at', sa.DateTime(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), nullable=False),
+        sa.ForeignKeyConstraint(['user_id'], ['app_user.id'], ),
+        sa.ForeignKeyConstraint(['client_id'], ['client.id'], ),
+        sa.ForeignKeyConstraint(['workspace_id'], ['workspace.id'], ),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('user_id', 'client_id', name='uq_user_client')
+    )
+    op.create_index(op.f('ix_user_client_id'), 'user_client', ['id'], unique=False)
+    op.create_index(op.f('ix_user_client_user_id'), 'user_client', ['user_id'], unique=False)
+    op.create_index(op.f('ix_user_client_client_id'), 'user_client', ['client_id'], unique=False)
+    op.create_index(op.f('ix_user_client_active'), 'user_client', ['active'], unique=False)
+    op.create_index('idx_user_client_user_active', 'user_client', ['user_id', 'active'], unique=False)
+    
+    # WORKSPACE_CLIENT (N:M relationship between Workspace and Client)
+    op.create_table(
+        'workspace_client',
+        sa.Column('id', sa.String(), nullable=False),
+        sa.Column('workspace_id', sa.String(), nullable=False),
+        sa.Column('client_id', sa.String(), nullable=False),
+        sa.Column('active', sa.Boolean(), nullable=False),
+        sa.Column('granted_at', sa.DateTime(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(), nullable=False),
+        sa.ForeignKeyConstraint(['workspace_id'], ['workspace.id'], ),
+        sa.ForeignKeyConstraint(['client_id'], ['client.id'], ),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('workspace_id', 'client_id', name='uq_workspace_client')
+    )
+    op.create_index(op.f('ix_workspace_client_id'), 'workspace_client', ['id'], unique=False)
+    op.create_index(op.f('ix_workspace_client_workspace_id'), 'workspace_client', ['workspace_id'], unique=False)
+    op.create_index(op.f('ix_workspace_client_client_id'), 'workspace_client', ['client_id'], unique=False)
+    op.create_index(op.f('ix_workspace_client_active'), 'workspace_client', ['active'], unique=False)
+    op.create_index('idx_workspace_client_workspace_active', 'workspace_client', ['workspace_id', 'active'], unique=False)
     
     # PERMISSION (Fine-grained access control)
     op.create_table(
@@ -641,23 +723,44 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_permission_client_id'), table_name='permission')
     op.drop_table('permission')
     
-    # Drop app_user (many indexes)
-    op.drop_index('idx_app_user_client_username', table_name='app_user')
-    op.drop_index('idx_app_user_client_email_unique', table_name='app_user')
+    # Drop workspace tables (child tables first)
+    op.drop_index('idx_workspace_client_workspace_active', table_name='workspace_client')
+    op.drop_index(op.f('ix_workspace_client_active'), table_name='workspace_client')
+    op.drop_index(op.f('ix_workspace_client_client_id'), table_name='workspace_client')
+    op.drop_index(op.f('ix_workspace_client_workspace_id'), table_name='workspace_client')
+    op.drop_index(op.f('ix_workspace_client_id'), table_name='workspace_client')
+    op.drop_table('workspace_client')
+    
+    op.drop_index('idx_user_client_user_active', table_name='user_client')
+    op.drop_index(op.f('ix_user_client_active'), table_name='user_client')
+    op.drop_index(op.f('ix_user_client_client_id'), table_name='user_client')
+    op.drop_index(op.f('ix_user_client_user_id'), table_name='user_client')
+    op.drop_index(op.f('ix_user_client_id'), table_name='user_client')
+    op.drop_table('user_client')
+    
+    op.drop_index('idx_workspace_member_workspace_active', table_name='workspace_member')
+    op.drop_index(op.f('ix_workspace_member_active'), table_name='workspace_member')
+    op.drop_index(op.f('ix_workspace_member_role'), table_name='workspace_member')
+    op.drop_index(op.f('ix_workspace_member_workspace_id'), table_name='workspace_member')
+    op.drop_index(op.f('ix_workspace_member_user_id'), table_name='workspace_member')
+    op.drop_index(op.f('ix_workspace_member_id'), table_name='workspace_member')
+    op.drop_table('workspace_member')
+    
+    # Drop app_user (updated indexes for multi-workspace)
+    op.drop_index('idx_app_user_email_active', table_name='app_user')
     op.drop_index('idx_app_user_email_verified', table_name='app_user')
-    op.drop_index('idx_app_user_client_role', table_name='app_user')
-    op.drop_index('idx_app_user_client_active', table_name='app_user')
-    op.drop_index('idx_user_email_active', table_name='app_user')
-    op.drop_index('idx_user_client_username', table_name='app_user')
-    op.drop_index('idx_user_client_created', table_name='app_user')
-    op.drop_index('idx_user_client_active', table_name='app_user')
-    op.drop_index(op.f('ix_app_user_role'), table_name='app_user')
     op.drop_index(op.f('ix_app_user_is_active'), table_name='app_user')
-    op.drop_index(op.f('ix_app_user_client_id'), table_name='app_user')
     op.drop_index(op.f('ix_app_user_email'), table_name='app_user')
     op.drop_index(op.f('ix_app_user_username'), table_name='app_user')
     op.drop_index(op.f('ix_app_user_id'), table_name='app_user')
     op.drop_table('app_user')
+    
+    # Drop workspace (parent table)
+    op.drop_index(op.f('ix_workspace_active'), table_name='workspace')
+    op.drop_index(op.f('ix_workspace_slug'), table_name='workspace')
+    op.drop_index(op.f('ix_workspace_name'), table_name='workspace')
+    op.drop_index(op.f('ix_workspace_id'), table_name='workspace')
+    op.drop_table('workspace')
     
     # Drop client (root table)
     op.drop_index(op.f('ix_client_active'), table_name='client')

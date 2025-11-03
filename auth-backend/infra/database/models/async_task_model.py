@@ -4,7 +4,7 @@ SQLAlchemy model for async_tasks table
 """
 from sqlalchemy import Column, String, DateTime, Integer, JSON, Text, Index
 from sqlalchemy.sql import func
-from infra.database.base import Base
+from infra.database.database import Base
 from datetime import datetime
 
 

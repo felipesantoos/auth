@@ -12,7 +12,8 @@ from core.interfaces.secondary.app_user_repository_interface import IAppUserRepo
 from core.interfaces.secondary.cache_service_interface import ICacheService
 from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
+from core.domain.workspace.workspace_role import WorkspaceRole
 from core.services.filters.user_filter import UserFilter
 from core.services.cache.cache_helper import CacheHelper
 from core.exceptions import (
@@ -35,6 +36,7 @@ class AuthService(AuthServiceBase, IAuthService):
     Service implementation for core authentication operations.
     
     Implements only IAuthService interface following Single Responsibility Principle.
+    Multi-workspace architecture: Users now have global identity.
     """
     
     def __init__(
@@ -42,6 +44,8 @@ class AuthService(AuthServiceBase, IAuthService):
         repository: IAppUserRepository,
         cache_service: ICacheService,
         settings_provider: ISettingsProvider,
+        workspace_service=None,  # Optional for backwards compatibility
+        workspace_member_service=None,  # Optional for backwards compatibility
     ):
         """
         Constructor for AuthService.
@@ -50,24 +54,27 @@ class AuthService(AuthServiceBase, IAuthService):
             repository: Repository interface for user operations
             cache_service: Cache service interface
             settings_provider: Settings provider interface
+            workspace_service: Workspace service (for auto-creating workspaces)
+            workspace_member_service: Workspace member service (for adding users to workspaces)
         """
         super().__init__(cache_service, settings_provider)
         self.repository = repository
         self.cache_helper = CacheHelper()  # ⚡ PERFORMANCE: Cache helper for user profiles
+        self.workspace_service = workspace_service
+        self.workspace_member_service = workspace_member_service
     
     async def _validate_login_credentials(
-        self, email: str, password: str, client_id: str
+        self, email: str, password: str
     ) -> AppUser:
         """
         Validate login credentials and return user if valid.
         
-        Security: We check user exists, belongs to client, is active, and password matches.
+        Security: We check user exists, is active, and password matches.
         All errors return the same message to prevent user enumeration attacks.
         
         Args:
             email: User email
             password: Plain text password
-            client_id: Client (tenant) ID
             
         Returns:
             Validated user
@@ -75,8 +82,8 @@ class AuthService(AuthServiceBase, IAuthService):
         Raises:
             InvalidCredentialsException: If credentials are invalid (generic message for security)
         """
-        user = await self.repository.find_by_email(email, client_id=client_id)
-        if not user or user.client_id != client_id or not user.active:
+        user = await self.repository.find_by_email(email)
+        if not user or not user.active:
             raise InvalidCredentialsException()
         
         if not self._verify_password(password, user.password_hash):
@@ -132,33 +139,36 @@ class AuthService(AuthServiceBase, IAuthService):
         return payload, client_id_to_use, user_id
     
     async def login(
-        self, email: str, password: str, client_id: str, session_id: Optional[str] = None
+        self, email: str, password: str, client_id: Optional[str] = None, session_id: Optional[str] = None
     ) -> Tuple[str, str, AppUser]:
         """
-        Authenticate user and generate tokens (multi-tenant).
+        Authenticate user and generate tokens (multi-workspace).
         
         Args:
             email: User email
             password: Plain text password
-            client_id: Client (tenant) ID for multi-tenant isolation
+            client_id: Optional client ID (deprecated, for backwards compatibility)
             session_id: Optional session ID to include in access token
             
         Returns:
             Tuple of (access_token, refresh_token, user)
             
         Raises:
-            InvalidCredentialsException: If credentials are invalid or user doesn't belong to client
+            InvalidCredentialsException: If credentials are invalid
         """
         try:
-            user = await self._validate_login_credentials(email, password, client_id)
+            user = await self._validate_login_credentials(email, password)
         except InvalidCredentialsException:
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during login: {e}", exc_info=True, extra={"email": email, "client_id": client_id})
+            logger.error(f"Unexpected error during login: {e}", exc_info=True, extra={"email": email})
             raise DomainException("Failed to authenticate user due to technical error", "AUTHENTICATION_FAILED")
-        access_token, refresh_token = await self._generate_and_store_tokens(user.id, client_id, session_id)
         
-        logger.info("Login successful", extra={"user_id": user.id, "client_id": client_id})
+        # Use client_id if provided (backwards compatibility), otherwise use user's first workspace
+        effective_client_id = client_id if client_id else "default"
+        access_token, refresh_token = await self._generate_and_store_tokens(user.id, effective_client_id, session_id)
+        
+        logger.info("Login successful", extra={"user_id": user.id, "email": email})
         return access_token, refresh_token, user
     
     async def logout(self, refresh_token: str, client_id: Optional[str] = None) -> bool:
@@ -211,14 +221,14 @@ class AuthService(AuthServiceBase, IAuthService):
         logger.info("Token refresh successful", extra={"user_id": user_id, "client_id": client_id_to_use})
         return new_access_token, new_refresh_token
     
-    async def _ensure_email_not_exists(self, email: str, client_id: str) -> None:
+    async def _ensure_email_not_exists(self, email: str) -> None:
         """
-        Ensure email doesn't already exist for the client.
+        Ensure email doesn't already exist (globally unique).
         
         Raises:
             EmailAlreadyExistsException: If email already exists
         """
-        existing = await self.repository.find_by_email(email, client_id=client_id)
+        existing = await self.repository.find_by_email(email)
         if existing:
             raise EmailAlreadyExistsException(email)
     
@@ -236,17 +246,16 @@ class AuthService(AuthServiceBase, IAuthService):
         return self._hash_password(password)
     
     def _create_user_domain_object(
-        self, username: str, email: str, password_hash: str, name: str, client_id: str
+        self, username: str, email: str, password_hash: str, name: str
     ) -> AppUser:
         """
-        Create and validate user domain object.
+        Create and validate user domain object (multi-workspace).
         
         Args:
             username: Username
             email: User email
             password_hash: Hashed password
             name: User full name
-            client_id: Client (tenant) ID
             
         Returns:
             Created and validated user domain object
@@ -256,8 +265,8 @@ class AuthService(AuthServiceBase, IAuthService):
             username=username,
             email=email,
             name=name,
-            role=UserRole.USER,
-            client_id=client_id,
+            # REMOVED: role (now in WorkspaceMember)
+            # REMOVED: client_id (now via workspace_member or user_client)
             active=True,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
@@ -267,20 +276,27 @@ class AuthService(AuthServiceBase, IAuthService):
         return user
     
     async def register(
-        self, username: str, email: str, password: str, name: str, client_id: str
-    ) -> AppUser:
+        self, 
+        username: str, 
+        email: str, 
+        password: str, 
+        name: str,
+        workspace_name: Optional[str] = None
+    ) -> Tuple[AppUser, Optional[str]]:
         """
-        Register new user (multi-tenant).
+        Register new user (multi-workspace architecture).
+        
+        Automatically creates a personal workspace for the user and adds them as admin.
         
         Args:
             username: Username
             email: User email
             password: Plain text password
             name: User full name
-            client_id: Client (tenant) ID
+            workspace_name: Optional custom workspace name (defaults to "{username}'s Workspace")
             
         Returns:
-            Created user
+            Tuple of (created_user, workspace_id)
             
         Raises:
             EmailAlreadyExistsException: If email already exists
@@ -288,20 +304,65 @@ class AuthService(AuthServiceBase, IAuthService):
             DomainException: If technical error occurs
         """
         try:
-            await self._ensure_email_not_exists(email, client_id)
-            password_hash = self._validate_and_hash_password(password)
-            user = self._create_user_domain_object(username, email, password_hash, name, client_id)
+            # Check email doesn't exist (globally unique)
+            await self._ensure_email_not_exists(email)
             
+            # Create user
+            password_hash = self._validate_and_hash_password(password)
+            user = self._create_user_domain_object(username, email, password_hash, name)
             created_user = await self.repository.save(user)
-            logger.info("User registered successfully", extra={"user_id": created_user.id, "email": email, "client_id": client_id})
-            return created_user
+            
+            # Create personal workspace (if services are available)
+            workspace_id = None
+            if self.workspace_service and self.workspace_member_service:
+                try:
+                    # Auto-generate workspace name if not provided
+                    if not workspace_name:
+                        workspace_name = f"{username}'s Workspace"
+                    
+                    # Create workspace
+                    workspace = await self.workspace_service.create_workspace(
+                        name=workspace_name,
+                        description=f"Personal workspace for {name}"
+                    )
+                    workspace_id = workspace.id
+                    
+                    # Add user as admin of the workspace
+                    await self.workspace_member_service.add_member(
+                        user_id=created_user.id,
+                        workspace_id=workspace.id,
+                        role=WorkspaceRole.ADMIN
+                    )
+                    
+                    logger.info(
+                        "User registered with personal workspace", 
+                        extra={
+                            "user_id": created_user.id, 
+                            "email": email,
+                            "workspace_id": workspace_id
+                        }
+                    )
+                except Exception as workspace_error:
+                    # Log workspace creation error but don't fail registration
+                    logger.error(
+                        f"Failed to create workspace for user: {workspace_error}",
+                        exc_info=True,
+                        extra={"user_id": created_user.id, "email": email}
+                    )
+            else:
+                logger.warning(
+                    "Workspace services not available - user registered without workspace",
+                    extra={"user_id": created_user.id, "email": email}
+                )
+            
+            return created_user, workspace_id
             
         except (EmailAlreadyExistsException, ValidationException):
             # Domain exceptions - let them propagate
             raise
         except Exception as e:
             # Unexpected error (database, network, etc.)
-            logger.error(f"Unexpected error registering user: {e}", exc_info=True, extra={"email": email, "client_id": client_id})
+            logger.error(f"Unexpected error registering user: {e}", exc_info=True, extra={"email": email})
             raise DomainException("Failed to register user due to technical error", "USER_REGISTRATION_FAILED")
     
     async def change_password(

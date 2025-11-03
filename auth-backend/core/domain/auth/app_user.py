@@ -8,7 +8,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 import re
 import secrets
-from .user_role import UserRole
+# REMOVED: from .user_role import UserRole (roles now in WorkspaceMember)
 from core.exceptions import (
     MissingRequiredFieldException,
     InvalidEmailException,
@@ -27,7 +27,8 @@ class AppUser:
     This is pure business logic with no framework dependencies.
     Following Single Responsibility Principle and Encapsulation.
     
-    Multi-tenant: Each user belongs to a client (tenant).
+    Multi-workspace: Users have global identity and can belong to multiple workspaces.
+    Roles are now per-workspace (via WorkspaceMember).
     
     Encapsulation: password_hash is protected and accessed via property and controlled methods.
     """
@@ -35,8 +36,8 @@ class AppUser:
     username: str
     email: str
     name: str
-    role: UserRole
-    client_id: Optional[str]  # Multi-tenant: client (tenant) ID
+    # REMOVED: role (now in WorkspaceMember - roles are per workspace)
+    # REMOVED: client_id (now via workspace_member or user_client)
     _password_hash: str = field(repr=False, init=True)
     active: bool = True
     created_at: Optional[datetime] = None
@@ -132,10 +133,6 @@ class AppUser:
         # Password hash required
         if not self._password_hash:
             raise MissingRequiredFieldException("password_hash")
-        
-        # Client ID required (multi-tenant)
-        if not self.client_id:
-            raise MissingRequiredFieldException("client_id")
     
     def activate(self) -> None:
         """Business operation to activate user"""
@@ -145,21 +142,8 @@ class AppUser:
         """Business operation to deactivate user"""
         self.active = False
     
-    def is_admin(self) -> bool:
-        """Check if user has admin role"""
-        return self.role == UserRole.ADMIN
-    
-    def is_manager(self) -> bool:
-        """Check if user has manager role"""
-        return self.role == UserRole.MANAGER
-    
-    def can_manage_users(self) -> bool:
-        """Check if user can manage other users"""
-        return self.role in [UserRole.ADMIN, UserRole.MANAGER]
-    
-    def belongs_to_client(self, client_id: str) -> bool:
-        """Check if user belongs to a specific client"""
-        return self.client_id == client_id
+    # REMOVED: is_admin(), is_manager(), can_manage_users() - now in WorkspaceMember
+    # REMOVED: belongs_to_client() - access is now via user_client or workspace_client
     
     # Email Verification Methods
     def generate_email_verification_token(self) -> str:

@@ -17,6 +17,10 @@ from .pending_upload import DBPendingUpload
 from .file_share import DBFileShare
 from .multipart_upload import DBMultipartUpload
 from .upload_part import DBUploadPart
+from .workspace import DBWorkspace
+from .workspace_member import DBWorkspaceMember
+from .user_client import DBUserClient
+from .workspace_client import DBWorkspaceClient
 
 __all__ = [
     "DBAppUser",
@@ -37,5 +41,9 @@ __all__ = [
     "DBFileShare",
     "DBMultipartUpload",
     "DBUploadPart",
+    "DBWorkspace",
+    "DBWorkspaceMember",
+    "DBUserClient",
+    "DBWorkspaceClient",
 ]
 

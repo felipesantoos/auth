@@ -62,53 +62,6 @@ class TestAppUserValidation:
         with pytest.raises(InvalidValueException, match="not exceed 255 characters"):
             user.validate()
     
-    def test_missing_client_id_raises_exception(self):
-        """Test that missing client_id raises exception"""
-        user = UserFactory.build(client_id=None)
-        
-        with pytest.raises(MissingRequiredFieldException, match="client_id"):
-            user.validate()
-
-
-@pytest.mark.unit
-class TestAppUserRoles:
-    """Test user role methods"""
-    
-    def test_is_admin_returns_true_for_admin(self):
-        """Test is_admin returns True for admin users"""
-        user = UserFactory.create_admin()
-        assert user.is_admin() is True
-    
-    def test_is_admin_returns_false_for_regular_user(self):
-        """Test is_admin returns False for regular users"""
-        user = UserFactory.build(role=UserRole.USER)
-        assert user.is_admin() is False
-    
-    def test_is_manager_returns_true_for_manager(self):
-        """Test is_manager returns True for manager users"""
-        user = UserFactory.create_manager()
-        assert user.is_manager() is True
-    
-    def test_is_manager_returns_false_for_regular_user(self):
-        """Test is_manager returns False for regular users"""
-        user = UserFactory.build(role=UserRole.USER)
-        assert user.is_manager() is False
-    
-    def test_can_manage_users_for_admin(self):
-        """Test admins can manage users"""
-        user = UserFactory.create_admin()
-        assert user.can_manage_users() is True
-    
-    def test_can_manage_users_for_manager(self):
-        """Test managers can manage users"""
-        user = UserFactory.create_manager()
-        assert user.can_manage_users() is True
-    
-    def test_can_manage_users_for_regular_user(self):
-        """Test regular users cannot manage users"""
-        user = UserFactory.build(role=UserRole.USER)
-        assert user.can_manage_users() is False
-
 
 @pytest.mark.unit
 class TestAppUserActivation:
@@ -126,20 +79,6 @@ class TestAppUserActivation:
         user.deactivate()
         assert user.active is False
 
-
-@pytest.mark.unit
-class TestAppUserMultiTenant:
-    """Test multi-tenant functionality"""
-    
-    def test_belongs_to_client_returns_true_for_matching_client(self):
-        """Test belongs_to_client returns True for matching client"""
-        user = UserFactory.build(client_id="client-123")
-        assert user.belongs_to_client("client-123") is True
-    
-    def test_belongs_to_client_returns_false_for_different_client(self):
-        """Test belongs_to_client returns False for different client"""
-        user = UserFactory.build(client_id="client-123")
-        assert user.belongs_to_client("client-456") is False
 
 
 @pytest.mark.unit

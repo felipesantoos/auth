@@ -36,13 +36,12 @@ class IAppUserRepository(ABC):
         pass
     
     @abstractmethod
-    async def find_by_email(self, email: str, client_id: Optional[str] = None) -> Optional[AppUser]:
+    async def find_by_email(self, email: str) -> Optional[AppUser]:
         """
-        Finds user by email.
+        Finds user by email (globally unique in multi-workspace architecture).
         
         Args:
             email: User email
-            client_id: Optional client ID for multi-tenant isolation
         """
         pass
     

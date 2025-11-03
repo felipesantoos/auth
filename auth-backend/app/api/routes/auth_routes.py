@@ -567,15 +567,11 @@ async def register(
     session: AsyncSession = Depends(get_db_session),
 ):
     """
-    Register new user with email verification and audit logging.
+    Register new user with email verification and audit logging (multi-workspace).
     
     Performance: Email sending runs in background to improve response time.
     
-    Client ID can be provided via:
-    - client_id in request body
-    - X-Client-ID header
-    - X-Client-Subdomain header
-    - Subdomain in Host header
+    Automatically creates a personal workspace for the user.
     
     Returns:
         Created user data (immediate response, email sent in background)
@@ -584,29 +580,31 @@ async def register(
         ip_address = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
         
-        # Get client_id from request or body
-        client_id = await get_client_id_from_request_or_body(
-            request, register_request.client_id, session
-        )
-        
-        # Register user
-        user = await auth_service.register(
+        # Register user (now returns tuple: user, workspace_id)
+        user, workspace_id = await auth_service.register(
             register_request.username,
             register_request.email,
             register_request.password,
             register_request.name,
-            client_id
+            register_request.workspace_name
         )
+        
+        # Use workspace_id as client_id for audit logging (backwards compatibility)
+        client_id_for_audit = workspace_id if workspace_id else "no-workspace"
         
         # Log registration
         await audit_service.log_event(
-            client_id=client_id,
+            client_id=client_id_for_audit,
             event_type=AuditEventType.USER_REGISTERED,
             user_id=user.id,
             ip_address=ip_address,
             user_agent=user_agent,
             status="success",
-            metadata={"email": user.email, "username": user.username}
+            metadata={
+                "email": user.email,
+                "username": user.username,
+                "workspace_id": workspace_id
+            }
         )
         
         # ⚡ PERFORMANCE: Send email verification in background
@@ -619,10 +617,10 @@ async def register(
                 try:
                     await email_verification_service.send_verification_email(
                         user_id=user.id,
-                        client_id=client_id
+                        client_id=client_id_for_audit
                     )
                     await audit_service.log_event(
-                        client_id=client_id,
+                        client_id=client_id_for_audit,
                         event_type=AuditEventType.EMAIL_VERIFICATION_SENT,
                         user_id=user.id,
                         status="success"
