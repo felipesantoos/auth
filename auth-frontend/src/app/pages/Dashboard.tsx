@@ -48,7 +48,8 @@ export const Dashboard: React.FC = () => {
           {/* Dumb: only renders UI with data */}
           <UserProfileCard user={user} />
           <UserContactCard user={user} />
-          <UserPermissionsCard user={user} />
+          {/* Smart: now connects with WorkspaceContext */}
+          <UserPermissionsCard />
         </div>
 
         {/* Dumb: static content */}

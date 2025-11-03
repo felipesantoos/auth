@@ -7,6 +7,10 @@ import { IAuthService } from '../../core/interfaces/primary/IAuthService';
 import { IAuthRepository } from '../../core/interfaces/secondary/IAuthRepository';
 import { IAuditService } from '../../core/interfaces/primary/IAuditService';
 import { IAuditLogRepository } from '../../core/interfaces/secondary/IAuditLogRepository';
+import { IWorkspaceService } from '../../core/interfaces/primary/IWorkspaceService';
+import { IWorkspaceRepository } from '../../core/interfaces/secondary/IWorkspaceRepository';
+import { IPermissionService } from '../../core/interfaces/primary/IPermissionService';
+import { IPermissionRepository } from '../../core/interfaces/secondary/IPermissionRepository';
 import { IHttpClient } from '../../core/interfaces/secondary/IHttpClient';
 import { IStorage } from '../../core/interfaces/secondary/IStorage';
 import { ILogger } from '../../core/interfaces/secondary/ILogger';
@@ -15,6 +19,10 @@ import { AuthService } from '../../core/services/auth/authService';
 import { AuthRepository } from '../../infra/api/repositories/auth.repository';
 import { AuditService } from '../../core/services/audit/auditService';
 import { auditLogRepository } from '../../infra/api/repositories/audit.repository';
+import { WorkspaceService } from '../../core/services/workspace/workspaceService';
+import { WorkspaceRepository } from '../../infra/api/repositories/workspace.repository';
+import { PermissionService } from '../../core/services/permission/permissionService';
+import { PermissionRepository } from '../../infra/api/repositories/permission.repository';
 import { HttpClient } from '../../infra/api/http-client';
 import { LocalStorage } from '../../infra/storage/local-storage';
 import { ConsoleLogger } from '../../infra/logger/console-logger';
@@ -77,6 +85,36 @@ class DIContainer {
       this.instances.set('auditService', new AuditService(auditLogRepository));
     }
     return this.instances.get('auditService');
+  }
+
+  static getWorkspaceRepository(): IWorkspaceRepository {
+    if (!this.instances.has('workspaceRepository')) {
+      this.instances.set('workspaceRepository', new WorkspaceRepository());
+    }
+    return this.instances.get('workspaceRepository');
+  }
+
+  static getWorkspaceService(): IWorkspaceService {
+    if (!this.instances.has('workspaceService')) {
+      const repository = this.getWorkspaceRepository();
+      this.instances.set('workspaceService', new WorkspaceService(repository));
+    }
+    return this.instances.get('workspaceService');
+  }
+
+  static getPermissionRepository(): IPermissionRepository {
+    if (!this.instances.has('permissionRepository')) {
+      this.instances.set('permissionRepository', new PermissionRepository());
+    }
+    return this.instances.get('permissionRepository');
+  }
+
+  static getPermissionService(): IPermissionService {
+    if (!this.instances.has('permissionService')) {
+      const repository = this.getPermissionRepository();
+      this.instances.set('permissionService', new PermissionService(repository));
+    }
+    return this.instances.get('permissionService');
   }
 
   static reset(): void {

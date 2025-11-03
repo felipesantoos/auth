@@ -1,9 +1,10 @@
 /**
  * User Domain Model
  * Pure domain entity - no DTOs or API concerns
+ * 
+ * NOTE: Role is now per-workspace (via WorkspaceMember)
+ * User model only contains core user data
  */
-
-export type UserRole = 'admin' | 'manager' | 'user';
 
 export class User {
   constructor(
@@ -11,22 +12,59 @@ export class User {
     public readonly username: string,
     public readonly email: string,
     public readonly name: string,
-    public readonly role: UserRole,
     public readonly active: boolean,
     public readonly createdAt: Date,
-    public readonly clientId?: string
+    public readonly emailVerified: boolean = false,
+    public readonly mfaEnabled: boolean = false,
+    public readonly avatarUrl?: string,
+    public readonly kycDocumentId?: string,
+    public readonly kycStatus?: 'pending' | 'approved' | 'rejected',
+    public readonly kycVerifiedAt?: Date
   ) {}
 
-  isAdmin(): boolean {
-    return this.role === 'admin';
+  /**
+   * Check if user has completed KYC verification
+   */
+  isKycVerified(): boolean {
+    return this.kycStatus === 'approved' && !!this.kycVerifiedAt;
   }
 
-  isManager(): boolean {
-    return this.role === 'manager';
+  /**
+   * Check if user needs to verify email
+   */
+  needsEmailVerification(): boolean {
+    return !this.emailVerified;
   }
 
-  canManage(resource: string): boolean {
-    return this.isAdmin() || this.isManager();
+  /**
+   * Check if user has MFA enabled
+   */
+  hasMfaEnabled(): boolean {
+    return this.mfaEnabled;
   }
+}
+
+/**
+ * User with workspace context
+ * Includes the user's role in a specific workspace
+ */
+export interface UserWithWorkspace extends User {
+  workspaceId: string;
+  workspaceRole: 'admin' | 'manager' | 'user';
+}
+
+/**
+ * Legacy interface for backward compatibility
+ * @deprecated Use User class instead
+ */
+export interface UserLegacy {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'manager' | 'user';
+  active: boolean;
+  createdAt: Date;
+  clientId?: string;
 }
 

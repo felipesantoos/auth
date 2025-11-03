@@ -9,6 +9,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryProvider } from './app/providers/QueryProvider';
 import { AuthProvider } from './app/contexts/AuthContext';
+import { WorkspaceProvider } from './app/contexts/WorkspaceContext';
 import { ErrorBoundary } from './app/components/ErrorBoundary';
 import { ProtectedRoute } from './app/components/ProtectedRoute';
 import { LoadingSpinner } from './app/components/common/LoadingSpinner';
@@ -24,6 +25,10 @@ const OAuthCallback = lazy(() => import('./app/pages/OAuthCallback'));
 const MFASetup = lazy(() => import('./app/pages/MFASetup'));
 const VerifyEmail = lazy(() => import('./app/pages/VerifyEmail'));
 const AuditDashboard = lazy(() => import('./app/pages/AuditDashboard'));
+const Workspaces = lazy(() => import('./app/pages/Workspaces'));
+const WorkspaceSettings = lazy(() => import('./app/pages/WorkspaceSettings'));
+const WorkspaceMembers = lazy(() => import('./app/pages/WorkspaceMembers'));
+const Permissions = lazy(() => import('./app/pages/Permissions'));
 
 // Page loader component for Suspense fallback
 const PageLoader = () => <LoadingSpinner message="Carregando página..." />;
@@ -33,7 +38,8 @@ function App() {
     <ErrorBoundary>
       <QueryProvider>
         <AuthProvider>
-          <Router>
+          <WorkspaceProvider>
+            <Router>
             <Routes>
               <Route
                 path="/login"
@@ -113,9 +119,50 @@ function App() {
                   </Suspense>
                 }
               />
+              <Route
+                path="/workspaces"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ProtectedRoute>
+                      <Workspaces />
+                    </ProtectedRoute>
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/workspaces/:workspaceId/settings"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ProtectedRoute>
+                      <WorkspaceSettings />
+                    </ProtectedRoute>
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/workspaces/:workspaceId/members"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ProtectedRoute>
+                      <WorkspaceMembers />
+                    </ProtectedRoute>
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/permissions"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ProtectedRoute>
+                      <Permissions />
+                    </ProtectedRoute>
+                  </Suspense>
+                }
+              />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Router>
+          </WorkspaceProvider>
         </AuthProvider>
       </QueryProvider>
     </ErrorBoundary>
