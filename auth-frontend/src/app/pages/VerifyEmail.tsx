@@ -40,9 +40,9 @@ export const VerifyEmail: React.FC = () => {
         
         // Redirect to login after 3 seconds
         setTimeout(() => navigate('/login'), 3000);
-      } catch (error: any) {
+      } catch (error) {
         setStatus('error');
-        setMessage(error.response?.data?.detail || 'Verification failed. The link may be invalid or expired.');
+        setMessage((error as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Verification failed. The link may be invalid or expired.');
       }
     };
 

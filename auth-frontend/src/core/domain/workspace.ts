@@ -8,7 +8,7 @@ export interface Workspace {
   name: string;
   slug: string;
   description?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
   active: boolean;
   created_at: Date;
   updated_at: Date;
@@ -32,14 +32,14 @@ export interface CreateWorkspaceRequest {
   name: string;
   slug?: string;
   description?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }
 
 export interface UpdateWorkspaceRequest {
   name?: string;
   slug?: string;
   description?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }
 
 export interface AddMemberRequest {

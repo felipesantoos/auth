@@ -4,7 +4,7 @@
  */
 
 import { Token } from '../../../core/domain/token';
-import { TokenResponseDTO } from '../dtos/auth.dto';
+import type { TokenResponseDTO } from '../dtos/auth.dto';
 
 export class TokenMapper {
   static toDomain(dto: TokenResponseDTO): Token {

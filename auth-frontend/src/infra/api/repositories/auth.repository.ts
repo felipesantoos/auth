@@ -7,9 +7,17 @@
  */
 
 import axios from 'axios';
-import { IAuthRepository } from '../../../core/interfaces/secondary/IAuthRepository';
-import { IHttpClient } from '../../../core/interfaces/secondary/IHttpClient';
-import {
+import type { IAuthRepository } from '../../../core/interfaces/secondary/IAuthRepository';
+import type { IHttpClient } from '../../../core/interfaces/secondary/IHttpClient';
+import { User } from '../../../core/domain/user';
+import type {
+  LoginCredentials,
+  RegistrationData,
+  PasswordResetRequest,
+  PasswordReset,
+  AuthenticationResult,
+} from '../../../core/domain/auth';
+import type {
   LoginDTO,
   RegisterDTO,
   ForgotPasswordDTO,
@@ -27,11 +35,25 @@ import {
 } from '../../../core/domain/errors';
 
 export class AuthRepository implements IAuthRepository {
-  constructor(private httpClient: IHttpClient) {}
+  private httpClient: IHttpClient;
 
-  async login(credentials: LoginDTO): Promise<TokenResponseDTO> {
+  constructor(httpClient: IHttpClient) {
+    this.httpClient = httpClient;
+  }
+
+  async login(credentials: LoginCredentials): Promise<AuthenticationResult> {
     try {
-      return await this.httpClient.post<TokenResponseDTO>('/api/auth/login', credentials);
+      // Convert domain type to DTO
+      const dto: LoginDTO = {
+        email: credentials.email,
+        password: credentials.password,
+        client_id: credentials.client_id,
+      };
+      
+      const response = await this.httpClient.post<TokenResponseDTO>('/api/auth/login', dto);
+      
+      // Convert DTO to domain type
+      return this.mapToAuthenticationResult(response);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
@@ -48,9 +70,21 @@ export class AuthRepository implements IAuthRepository {
     }
   }
 
-  async register(data: RegisterDTO): Promise<TokenResponseDTO> {
+  async register(data: RegistrationData): Promise<AuthenticationResult> {
     try {
-      return await this.httpClient.post<TokenResponseDTO>('/api/auth/register', data);
+      // Convert domain type to DTO
+      const dto: RegisterDTO = {
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        name: data.name,
+        client_id: data.client_id,
+      };
+      
+      const response = await this.httpClient.post<TokenResponseDTO>('/api/auth/register', dto);
+      
+      // Convert DTO to domain type
+      return this.mapToAuthenticationResult(response);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 409) {
@@ -82,9 +116,12 @@ export class AuthRepository implements IAuthRepository {
     }
   }
 
-  async getCurrentUser(): Promise<UserResponseDTO> {
+  async getCurrentUser(): Promise<User> {
     try {
-      return await this.httpClient.get<UserResponseDTO>('/api/auth/me');
+      const response = await this.httpClient.get<UserResponseDTO>('/api/auth/me');
+      
+      // Convert DTO to domain type
+      return this.mapToUser(response);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
@@ -101,11 +138,14 @@ export class AuthRepository implements IAuthRepository {
     }
   }
 
-  async refreshToken(refreshToken: string): Promise<TokenResponseDTO> {
+  async refreshToken(refreshToken: string): Promise<AuthenticationResult> {
     try {
-      return await this.httpClient.post<TokenResponseDTO>('/api/auth/refresh', {
+      const response = await this.httpClient.post<TokenResponseDTO>('/api/auth/refresh', {
         refresh_token: refreshToken,
       });
+      
+      // Convert DTO to domain type
+      return this.mapToAuthenticationResult(response);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
@@ -119,13 +159,20 @@ export class AuthRepository implements IAuthRepository {
     }
   }
 
-  async forgotPassword(data: ForgotPasswordDTO): Promise<MessageResponseDTO> {
+  async forgotPassword(request: PasswordResetRequest): Promise<{ message: string }> {
     try {
-      return await this.httpClient.post<MessageResponseDTO>('/api/auth/forgot-password', data);
+      // Convert domain type to DTO
+      const dto: ForgotPasswordDTO = {
+        email: request.email,
+        client_id: request.client_id,
+      };
+      
+      const response = await this.httpClient.post<MessageResponseDTO>('/api/auth/forgot-password', dto);
+      return { message: response.message };
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
-          throw new EntityNotFoundError('User', data.email);
+          throw new EntityNotFoundError('User', request.email);
         }
         if (error.response?.status === 422) {
           throw new BusinessValidationError('Invalid email format');
@@ -138,9 +185,17 @@ export class AuthRepository implements IAuthRepository {
     }
   }
 
-  async resetPassword(data: ResetPasswordDTO): Promise<MessageResponseDTO> {
+  async resetPassword(reset: PasswordReset): Promise<{ message: string }> {
     try {
-      return await this.httpClient.post<MessageResponseDTO>('/api/auth/reset-password', data);
+      // Convert domain type to DTO
+      const dto: ResetPasswordDTO = {
+        reset_token: reset.reset_token,
+        new_password: reset.new_password,
+        client_id: reset.client_id,
+      };
+      
+      const response = await this.httpClient.post<MessageResponseDTO>('/api/auth/reset-password', dto);
+      return { message: response.message };
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 400) {
@@ -177,6 +232,39 @@ export class AuthRepository implements IAuthRepository {
       }
       throw error;
     }
+  }
+
+  /**
+   * Map TokenResponseDTO to AuthenticationResult (domain type)
+   */
+  private mapToAuthenticationResult(dto: TokenResponseDTO): AuthenticationResult {
+    return {
+      user: this.mapToUser(dto.user),
+      access_token: dto.access_token,
+      refresh_token: dto.refresh_token,
+      token_type: dto.token_type,
+      expires_in: dto.expires_in,
+    };
+  }
+
+  /**
+   * Map UserResponseDTO to User (domain type)
+   */
+  private mapToUser(dto: UserResponseDTO): User {
+    return new User(
+      dto.id,
+      dto.username,
+      dto.email,
+      dto.name,
+      dto.active,
+      new Date(dto.created_at),
+      false, // emailVerified - adjust based on your API
+      false, // mfaEnabled - adjust based on your API
+      undefined, // avatarUrl
+      undefined, // kycDocumentId
+      undefined, // kycStatus
+      undefined  // kycVerifiedAt
+    );
   }
 }
 

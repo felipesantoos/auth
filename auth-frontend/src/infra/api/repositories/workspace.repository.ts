@@ -4,8 +4,8 @@
  */
 
 import { httpClient } from '../http-client';
-import { IWorkspaceRepository } from '../../../core/interfaces/secondary/IWorkspaceRepository';
-import {
+import type { IWorkspaceRepository } from '../../../core/interfaces/secondary/IWorkspaceRepository';
+import type {
   Workspace,
   WorkspaceMember,
   WorkspaceListResponse,
@@ -15,15 +15,11 @@ import {
   AddMemberRequest,
   UpdateMemberRoleRequest,
 } from '../../../core/domain/workspace';
-import {
+import type {
   WorkspaceDTO,
   WorkspaceMemberDTO,
   WorkspaceListResponseDTO,
   WorkspaceMemberListResponseDTO,
-  CreateWorkspaceDTO,
-  UpdateWorkspaceDTO,
-  AddMemberDTO,
-  UpdateMemberRoleDTO,
 } from '../dtos/workspace.dto';
 import { WorkspaceMapper } from '../mappers/workspace.mapper';
 
@@ -167,7 +163,7 @@ export class WorkspaceRepository implements IWorkspaceRepository {
    * Get user's workspaces
    */
   async getUserWorkspaces(
-    userId: string,
+    _userId: string,
     activeOnly: boolean = true
   ): Promise<WorkspaceMemberListResponse> {
     const params = new URLSearchParams();

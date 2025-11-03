@@ -6,7 +6,7 @@
 import React from 'react';
 import { Building2, Users, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Workspace } from '../../../core/domain/workspace';
+import type { Workspace } from '../../../core/domain/workspace';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';

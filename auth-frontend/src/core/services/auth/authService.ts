@@ -8,28 +8,34 @@
  * - XSS protection via cookie-based authentication
  */
 
-import { IAuthService } from '../../interfaces/primary/IAuthService';
-import { IAuthRepository } from '../../interfaces/secondary/IAuthRepository';
-import { IStorage } from '../../interfaces/secondary/IStorage';
-import { ILogger } from '../../interfaces/secondary/ILogger';
-import { User } from '../../domain/user';
-import { UserMapper } from '../../../infra/api/mappers/user.mapper';
-import { TokenMapper } from '../../../infra/api/mappers/token.mapper';
-import {
-  LoginDTO,
-  RegisterDTO,
-  ForgotPasswordDTO,
-  ResetPasswordDTO,
-} from '../../../infra/api/dtos/auth.dto';
+import type { IAuthService } from '../../interfaces/primary/IAuthService';
+import type { IAuthRepository } from '../../interfaces/secondary/IAuthRepository';
+import type { IStorage } from '../../interfaces/secondary/IStorage';
+import type { ILogger } from '../../interfaces/secondary/ILogger';
+import type { User } from '../../domain/user';
+import type {
+  LoginCredentials,
+  RegistrationData,
+  PasswordResetRequest,
+  PasswordReset,
+} from '../../domain/auth';
 
 export class AuthService implements IAuthService {
-  constructor(
-    private repository: IAuthRepository,
-    private storage: IStorage,
-    private logger: ILogger
-  ) {}
+  private repository: IAuthRepository;
+  private storage: IStorage;
+  private logger: ILogger;
 
-  async login(credentials: LoginDTO): Promise<User> {
+  constructor(
+    repository: IAuthRepository,
+    storage: IStorage,
+    logger: ILogger
+  ) {
+    this.repository = repository;
+    this.storage = storage;
+    this.logger = logger;
+  }
+
+  async login(credentials: LoginCredentials): Promise<User> {
     try {
       this.logger.info('Login attempt', { email: credentials.email });
 
@@ -43,11 +49,11 @@ export class AuthService implements IAuthService {
         this.storage.setItem('client_id', credentials.client_id);
       }
 
-      // Map DTO to Domain
-      const user = UserMapper.toDomain(response.user);
+      // Extract user from authentication result
+      const user = response.user;
 
       // Store user data (not sensitive - no password, tokens, etc)
-      this.storage.setItem('user', JSON.stringify(response.user));
+      this.storage.setItem('user', JSON.stringify(user));
 
       this.logger.info('Login successful', { userId: user.id });
 
@@ -58,7 +64,7 @@ export class AuthService implements IAuthService {
     }
   }
 
-  async register(data: RegisterDTO): Promise<User> {
+  async register(data: RegistrationData): Promise<User> {
     try {
       this.logger.info('Registration attempt', { email: data.email });
 
@@ -72,11 +78,11 @@ export class AuthService implements IAuthService {
         this.storage.setItem('client_id', data.client_id);
       }
 
-      // Map DTO to Domain
-      const user = UserMapper.toDomain(response.user);
+      // Extract user from authentication result
+      const user = response.user;
 
       // Store user data (not sensitive - no password, tokens, etc)
-      this.storage.setItem('user', JSON.stringify(response.user));
+      this.storage.setItem('user', JSON.stringify(user));
 
       this.logger.info('Registration successful', { userId: user.id });
 
@@ -113,11 +119,10 @@ export class AuthService implements IAuthService {
         return null;
       }
 
-      const response = await this.repository.getCurrentUser();
-      const user = UserMapper.toDomain(response);
+      const user = await this.repository.getCurrentUser();
 
       // Update stored user
-      this.storage.setItem('user', JSON.stringify(response));
+      this.storage.setItem('user', JSON.stringify(user));
 
       return user;
     } catch (error) {
@@ -143,11 +148,11 @@ export class AuthService implements IAuthService {
     }
   }
 
-  async forgotPassword(data: ForgotPasswordDTO): Promise<{ message: string }> {
+  async forgotPassword(request: PasswordResetRequest): Promise<{ message: string }> {
     try {
-      this.logger.info('Forgot password request', { email: data.email });
-      const response = await this.repository.forgotPassword(data);
-      this.logger.info('Forgot password email sent', { email: data.email });
+      this.logger.info('Forgot password request', { email: request.email });
+      const response = await this.repository.forgotPassword(request);
+      this.logger.info('Forgot password email sent', { email: request.email });
       return response;
     } catch (error) {
       this.logger.error('Forgot password failed', error as Error);
@@ -155,10 +160,10 @@ export class AuthService implements IAuthService {
     }
   }
 
-  async resetPassword(data: ResetPasswordDTO): Promise<{ message: string }> {
+  async resetPassword(reset: PasswordReset): Promise<{ message: string }> {
     try {
       this.logger.info('Reset password attempt');
-      const response = await this.repository.resetPassword(data);
+      const response = await this.repository.resetPassword(reset);
       this.logger.info('Password reset successful');
       return response;
     } catch (error) {

@@ -8,7 +8,7 @@ export interface WorkspaceDTO {
   name: string;
   slug: string;
   description?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -30,14 +30,14 @@ export interface CreateWorkspaceDTO {
   name: string;
   slug?: string;
   description?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }
 
 export interface UpdateWorkspaceDTO {
   name?: string;
   slug?: string;
   description?: string;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }
 
 export interface AddMemberDTO {

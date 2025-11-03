@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Shield, Trash2 } from 'lucide-react';
-import { Permission } from '../../../core/domain/permission';
+import type { Permission } from '../../../core/domain/permission';
 import { DataTable } from '../common/DataTable';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';

@@ -15,12 +15,13 @@
  * Compliance: 08e-frontend-testing.md Section 3.4
  */
 
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import type { Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../AuthContext';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import DIContainer from '../../dicontainer/container';
-import { User } from '../../../core/domain/user';
+import type { User } from '../../../core/domain/user';
 import { 
   AuthenticationError, 
   BusinessValidationError,

@@ -3,7 +3,7 @@
  * Secondary port for workspace data access
  */
 
-import {
+import type {
   Workspace,
   WorkspaceMember,
   WorkspaceListResponse,

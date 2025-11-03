@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { FileUpload } from '../../components/FileUpload/FileUpload';
 import { ImageGallery } from '../../components/ImageGallery/ImageGallery';
-import { FileType } from '../../types/file';
+import type { FileType } from '../../types/file';
 
 export const FilesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<FileType>('all');

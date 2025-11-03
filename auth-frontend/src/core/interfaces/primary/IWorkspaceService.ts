@@ -3,7 +3,7 @@
  * Primary port for workspace business logic
  */
 
-import {
+import type {
   Workspace,
   WorkspaceMember,
   WorkspaceListResponse,

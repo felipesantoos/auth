@@ -5,7 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DIContainer from '../dicontainer/container';
-import {
+import type {
   GrantPermissionRequest,
   PermissionAction,
 } from '../../core/domain/permission';
@@ -54,7 +54,7 @@ export const useRevokePermission = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ permissionId, userId }: { permissionId: string; userId: string }) =>
+    mutationFn: ({ permissionId }: { permissionId: string; userId: string }) =>
       permissionService.revokePermission(permissionId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: permissionKeys.list(variables.userId) });

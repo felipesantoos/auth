@@ -7,20 +7,46 @@
  */
 
 export class User {
+  readonly id: string;
+  readonly username: string;
+  readonly email: string;
+  readonly name: string;
+  readonly active: boolean;
+  readonly createdAt: Date;
+  readonly emailVerified: boolean;
+  readonly mfaEnabled: boolean;
+  readonly avatarUrl?: string;
+  readonly kycDocumentId?: string;
+  readonly kycStatus?: 'pending' | 'approved' | 'rejected';
+  readonly kycVerifiedAt?: Date;
+
   constructor(
-    public readonly id: string,
-    public readonly username: string,
-    public readonly email: string,
-    public readonly name: string,
-    public readonly active: boolean,
-    public readonly createdAt: Date,
-    public readonly emailVerified: boolean = false,
-    public readonly mfaEnabled: boolean = false,
-    public readonly avatarUrl?: string,
-    public readonly kycDocumentId?: string,
-    public readonly kycStatus?: 'pending' | 'approved' | 'rejected',
-    public readonly kycVerifiedAt?: Date
-  ) {}
+    id: string,
+    username: string,
+    email: string,
+    name: string,
+    active: boolean,
+    createdAt: Date,
+    emailVerified?: boolean,
+    mfaEnabled?: boolean,
+    avatarUrl?: string,
+    kycDocumentId?: string,
+    kycStatus?: 'pending' | 'approved' | 'rejected',
+    kycVerifiedAt?: Date
+  ) {
+    this.id = id;
+    this.username = username;
+    this.email = email;
+    this.name = name;
+    this.active = active;
+    this.createdAt = createdAt;
+    this.emailVerified = emailVerified ?? false;
+    this.mfaEnabled = mfaEnabled ?? false;
+    this.avatarUrl = avatarUrl;
+    this.kycDocumentId = kycDocumentId;
+    this.kycStatus = kycStatus;
+    this.kycVerifiedAt = kycVerifiedAt;
+  }
 
   /**
    * Check if user has completed KYC verification

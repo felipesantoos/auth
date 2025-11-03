@@ -3,7 +3,7 @@
  * Display files in table/card format with actions
  */
 import React, { useState } from 'react';
-import { FileInfo, FileSortField } from '../../types/file';
+import type { FileInfo, FileSortField } from '../../types/file';
 import { formatFileSize } from '../../utils/file';
 import './FileList.css';
 

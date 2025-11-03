@@ -3,7 +3,7 @@
  * Handles email verification operations
  */
 import apiClient from '../../repositories/api_client';
-import { 
+import type { 
   VerifyEmailRequest, 
   EmailVerificationStatusResponse,
   ResendVerificationResponse,

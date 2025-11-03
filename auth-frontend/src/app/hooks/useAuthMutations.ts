@@ -12,7 +12,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import DIContainer from '../dicontainer/container';
-import { LoginDTO, RegisterDTO, ForgotPasswordDTO, ResetPasswordDTO } from '../../infra/api/dtos/auth.dto';
+import type { LoginDTO, RegisterDTO, ForgotPasswordDTO, ResetPasswordDTO } from '../../infra/api/dtos/auth.dto';
 
 /**
  * Login Mutation Hook
@@ -162,7 +162,7 @@ export const useForgotPassword = () => {
     
     // No optimistic update needed - doesn't change user state
     // But we include onMutate for consistency with pattern
-    onMutate: async (data) => {
+    onMutate: async (_data) => {
       // Could add "sending email" state here if needed in the future
       return {};
     },
@@ -182,7 +182,7 @@ export const useResetPassword = () => {
     
     // No optimistic update needed - doesn't change user state
     // But we include onMutate for consistency with pattern
-    onMutate: async (data) => {
+    onMutate: async (_data) => {
       // Could add "resetting password" state here if needed in the future
       return {};
     },

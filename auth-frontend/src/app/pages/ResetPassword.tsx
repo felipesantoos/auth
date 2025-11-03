@@ -7,7 +7,8 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { resetPasswordSchema, ResetPasswordFormData } from '../schemas/auth.schema';
+import type { ResetPasswordFormData } from '../schemas/auth.schema';
+import { resetPasswordSchema } from '../schemas/auth.schema';
 import { useResetPassword } from '../hooks/useAuthMutations';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -45,7 +46,7 @@ export const ResetPassword: React.FC = () => {
       });
       // Success - redirect to login after 2 seconds
       setTimeout(() => navigate('/login'), 2000);
-    } catch (error) {
+    } catch {
       // Error is handled by React Query and shown below
     }
   };
@@ -71,7 +72,7 @@ export const ResetPassword: React.FC = () => {
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    {(resetPasswordMutation.error as any)?.response?.data?.detail || 'Erro ao redefinir senha. Token pode estar expirado.'}
+                    {(resetPasswordMutation.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Erro ao redefinir senha. Token pode estar expirado.'}
                   </AlertDescription>
                 </Alert>
               )}

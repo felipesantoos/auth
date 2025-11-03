@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { fileService } from '../infra/services/FileService';
-import { FileInfo, FileType } from '../types/file';
+import type { FileInfo, FileType } from '../types/file';
 
 export function useFileList(fileType?: FileType, autoLoad: boolean = true) {
   const [files, setFiles] = useState<FileInfo[]>([]);

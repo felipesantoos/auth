@@ -3,8 +3,8 @@
  */
 
 import { httpClient } from "../http-client";
-import { IAuditLogRepository } from "../../../core/interfaces/secondary/IAuditLogRepository";
-import {
+import type { IAuditLogRepository } from "../../../core/interfaces/secondary/IAuditLogRepository";
+import type {
   AuditLog,
   AuditFilters,
   AuditStatistics,
@@ -13,11 +13,11 @@ import {
   AuditLogsResponse,
   AuditEventCategory
 } from "../../../core/domain/audit";
-import {
+import type {
   AuditLogDTO,
   AuditLogsResponseDTO,
   AuditStatisticsDTO,
-  UserActivityTimelineDTO
+  UserActivityTimelineDTO,
 } from "../dtos/audit.dto";
 import { AuditMapper } from "../mappers/audit.mapper";
 
@@ -64,7 +64,7 @@ class AuditLogRepository implements IAuditLogRepository {
       `${this.baseUrl}/users/${userId}?${params.toString()}`
     );
     
-    return AuditMapper.toDomainResponse(response.data);
+    return AuditMapper.toDomainResponse(response);
   }
 
   /**
@@ -79,7 +79,7 @@ class AuditLogRepository implements IAuditLogRepository {
       `${this.baseUrl}/entities/${resourceType}/${resourceId}?limit=${limit}`
     );
     
-    return AuditMapper.toDomainArray(response.data);
+    return AuditMapper.toDomainArray(response);
   }
 
   /**
@@ -100,7 +100,7 @@ class AuditLogRepository implements IAuditLogRepository {
       `${this.baseUrl}/recent?${params.toString()}`
     );
     
-    return AuditMapper.toDomainArray(response.data);
+    return AuditMapper.toDomainArray(response);
   }
 
   /**
@@ -141,7 +141,7 @@ class AuditLogRepository implements IAuditLogRepository {
       `${this.baseUrl}/search?${params.toString()}`
     );
     
-    return AuditMapper.toDomainArray(response.data);
+    return AuditMapper.toDomainArray(response);
   }
 
   /**
@@ -155,7 +155,7 @@ class AuditLogRepository implements IAuditLogRepository {
       `${this.baseUrl}/statistics?start_date=${startDate}&end_date=${endDate}`
     );
     
-    return AuditMapper.toDomainStatistics(response.data);
+    return AuditMapper.toDomainStatistics(response);
   }
 
   /**
@@ -169,7 +169,7 @@ class AuditLogRepository implements IAuditLogRepository {
       `${this.baseUrl}/users/${userId}/timeline?days=${days}`
     );
     
-    return AuditMapper.toDomainTimelineArray(response.data);
+    return AuditMapper.toDomainTimelineArray(response);
   }
 
   /**
@@ -180,7 +180,7 @@ class AuditLogRepository implements IAuditLogRepository {
       `${this.baseUrl}/users/${userId}/export`
     );
     
-    return response.data;
+    return response;
   }
 }
 

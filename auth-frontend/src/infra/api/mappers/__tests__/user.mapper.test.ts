@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { UserMapper } from '../user.mapper';
 import { User } from '../../../../core/domain/user';
-import { UserResponseDTO } from '../../dtos/auth.dto';
+import type { UserResponseDTO } from '../../dtos/auth.dto';
 
 describe('UserMapper', () => {
   describe('toDomain', () => {

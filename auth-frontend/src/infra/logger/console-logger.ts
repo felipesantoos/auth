@@ -3,7 +3,8 @@
  * Browser console implementation of ILogger
  */
 
-import { ILogger, LogLevel } from '../../core/interfaces/secondary/ILogger';
+import type { ILogger} from '../../core/interfaces/secondary/ILogger';
+// LogLevel type is defined in ILogger but not needed here
 import { env } from '../../config/env';
 
 export class ConsoleLogger implements ILogger {

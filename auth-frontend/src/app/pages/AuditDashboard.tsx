@@ -18,7 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge";
 import { Alert } from "../components/ui/alert";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
-import { AuditEventCategory, AuditLog } from "../../core/domain/audit";
+import type { AuditLog } from "../../core/domain/audit";
+import { AuditEventCategory } from "../../core/domain/audit";
 
 // ⚡ PERFORMANCE: Memoized component to prevent re-renders
 // Only re-renders when log data changes

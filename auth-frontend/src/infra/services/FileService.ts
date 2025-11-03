@@ -3,9 +3,10 @@
  * Handles all file upload and management operations
  */
 
-import axios, { AxiosProgressEvent } from 'axios';
-import { IFileService } from '../../core/interfaces/secondary/IFileService';
-import {
+import type { AxiosProgressEvent } from 'axios';
+import axios from 'axios';
+import type { IFileService } from '../../core/interfaces/secondary/IFileService';
+import type {
   FileUploadResponse,
   FileListResponse,
   FileInfoDetailed,

@@ -56,9 +56,9 @@ export const OAuthCallback: React.FC = () => {
 
         // Redirect to dashboard
         navigate('/dashboard');
-      } catch (err: any) {
+      } catch (err) {
         console.error('OAuth callback error:', err);
-        setError(err.message || 'OAuth authentication failed');
+        setError((err as Error).message || 'OAuth authentication failed');
         setLoading(false);
         setTimeout(() => navigate('/login'), 3000);
       }

@@ -3,18 +3,22 @@
  * Business logic for permission management
  */
 
-import { IPermissionService } from '../../interfaces/primary/IPermissionService';
-import { IPermissionRepository } from '../../interfaces/secondary/IPermissionRepository';
-import {
+import type { IPermissionService } from '../../interfaces/primary/IPermissionService';
+import type { IPermissionRepository } from '../../interfaces/secondary/IPermissionRepository';
+import type {
   Permission,
   PermissionAction,
   GrantPermissionRequest,
-  PermissionChecker,
 } from '../../domain/permission';
+import { PermissionChecker } from '../../domain/permission';
 import { BusinessValidationError } from '../../domain/errors';
 
 export class PermissionService implements IPermissionService {
-  constructor(private readonly repository: IPermissionRepository) {}
+  private readonly repository: IPermissionRepository;
+
+  constructor(repository: IPermissionRepository) {
+    this.repository = repository;
+  }
 
   /**
    * Grant permission to user

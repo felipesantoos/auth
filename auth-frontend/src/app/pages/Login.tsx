@@ -6,7 +6,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { loginSchema, LoginFormData } from '../schemas/auth.schema';
+import type { LoginFormData } from '../schemas/auth.schema';
+import { loginSchema } from '../schemas/auth.schema';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -35,7 +36,7 @@ export const Login: React.FC = () => {
     try {
       await login(data.email, data.password, clientId || undefined);
       navigate('/dashboard');
-    } catch (error) {
+    } catch {
       // Error is handled by Context and shown below
     }
   };

@@ -5,10 +5,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthService } from '../authService';
-import { IAuthRepository } from '../../../interfaces/secondary/IAuthRepository';
-import { IStorage } from '../../../interfaces/secondary/IStorage';
-import { ILogger } from '../../../interfaces/secondary/ILogger';
-import { TokenResponseDTO, UserResponseDTO } from '../../../../infra/api/dtos/auth.dto';
+import type { IAuthRepository } from '../../../interfaces/secondary/IAuthRepository';
+import type { IStorage } from '../../../interfaces/secondary/IStorage';
+import type { ILogger } from '../../../interfaces/secondary/ILogger';
+import type { TokenResponseDTO, UserResponseDTO } from '../../../../infra/api/dtos/auth.dto';
 
 describe('AuthService', () => {
   let authService: AuthService;

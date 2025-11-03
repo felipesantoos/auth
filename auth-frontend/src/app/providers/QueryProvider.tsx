@@ -11,7 +11,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 // ⚡ PERFORMANCE: Optimized React Query configuration
 const queryClient = new QueryClient({
@@ -40,10 +40,6 @@ const queryClient = new QueryClient({
       
       // Refetch on reconnect (when internet connection is restored)
       refetchOnReconnect: true,
-      
-      // Keep queries in cache even when no components are using them
-      // This improves navigation speed when revisiting pages
-      staleTime: 3 * 60 * 1000, // 3 minutes default
     },
     mutations: {
       // Don't retry mutations by default (they often have side effects)

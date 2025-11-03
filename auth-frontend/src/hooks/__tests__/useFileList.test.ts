@@ -4,7 +4,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useFileList } from '../useFileList';
 import { fileService } from '../../infra/services/FileService';
-import { FileInfo } from '../../types/file';
+import type { FileInfo } from '../../types/file';
 
 jest.mock('../../infra/services/FileService');
 

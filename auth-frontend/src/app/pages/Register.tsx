@@ -7,7 +7,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { registerSchema, RegisterFormData } from '../schemas/auth.schema';
+import type { RegisterFormData } from '../schemas/auth.schema';
+import { registerSchema } from '../schemas/auth.schema';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -38,7 +39,7 @@ export const Register: React.FC = () => {
     try {
       await registerUser(data.username, data.email, data.password, data.name, clientId || undefined);
       navigate('/dashboard');
-    } catch (error) {
+    } catch {
       // Error is handled by Context and shown below
     }
   };

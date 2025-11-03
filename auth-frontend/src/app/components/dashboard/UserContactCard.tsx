@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { User } from '../../../core/domain/user';
+import type { User } from '../../../core/domain/user';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Mail } from 'lucide-react';
 

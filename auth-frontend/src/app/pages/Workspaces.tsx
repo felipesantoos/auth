@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { Workspace } from '../../core/domain/workspace';
 import { useWorkspaces } from '../hooks/useWorkspaces';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
@@ -17,7 +18,7 @@ export const Workspaces: React.FC = () => {
   const { data: workspacesData, isLoading, refetch } = useWorkspaces();
   const { switchWorkspace } = useWorkspace();
 
-  const handleSelectWorkspace = async (workspace: any) => {
+  const handleSelectWorkspace = async (workspace: Workspace) => {
     await switchWorkspace(workspace.id);
     navigate('/dashboard');
   };

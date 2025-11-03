@@ -3,9 +3,9 @@
  * Business logic for workspace management
  */
 
-import { IWorkspaceService } from '../../interfaces/primary/IWorkspaceService';
-import { IWorkspaceRepository } from '../../interfaces/secondary/IWorkspaceRepository';
-import {
+import type { IWorkspaceService } from '../../interfaces/primary/IWorkspaceService';
+import type { IWorkspaceRepository } from '../../interfaces/secondary/IWorkspaceRepository';
+import type {
   Workspace,
   WorkspaceMember,
   WorkspaceListResponse,
@@ -18,7 +18,11 @@ import {
 import { BusinessValidationError } from '../../domain/errors';
 
 export class WorkspaceService implements IWorkspaceService {
-  constructor(private readonly repository: IWorkspaceRepository) {}
+  private readonly repository: IWorkspaceRepository;
+
+  constructor(repository: IWorkspaceRepository) {
+    this.repository = repository;
+  }
 
   /**
    * Create a new workspace
@@ -192,7 +196,7 @@ export class WorkspaceService implements IWorkspaceService {
     try {
       const member = await this.repository.getMember(workspaceId, userId);
       return member.role === 'admin' || member.role === 'manager';
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -204,7 +208,7 @@ export class WorkspaceService implements IWorkspaceService {
     try {
       const member = await this.repository.getMember(workspaceId, userId);
       return member.role === 'admin';
-    } catch (error) {
+    } catch {
       return false;
     }
   }

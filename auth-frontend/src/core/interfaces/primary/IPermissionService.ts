@@ -3,7 +3,7 @@
  * Primary port for permission business logic
  */
 
-import {
+import type {
   Permission,
   PermissionAction,
   GrantPermissionRequest,

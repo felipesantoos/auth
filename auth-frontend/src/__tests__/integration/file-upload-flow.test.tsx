@@ -165,5 +165,5 @@ describe('File Upload E2E Flow', () => {
 });
 
 // Helper for async act
-const { act } = require('@testing-library/react');
+import { act } from '@testing-library/react';
 

@@ -4,7 +4,7 @@
  * Defines contracts for audit business logic
  */
 
-import {
+import type {
   AuditLog,
   AuditFilters,
   AuditStatistics,

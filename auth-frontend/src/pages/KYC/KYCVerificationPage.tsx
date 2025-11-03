@@ -4,7 +4,6 @@
  */
 import React, { useState, useEffect } from 'react';
 import { FileUpload } from '../../components/FileUpload/FileUpload';
-import { fileService } from '../../infra/services/FileService';
 import axios from 'axios';
 import './KYCVerificationPage.css';
 
@@ -48,12 +47,12 @@ export const KYCVerificationPage: React.FC = () => {
       const formData = new FormData();
       formData.append('document', files[0]);
 
-      const response = await axios.post('/api/auth/profile/kyc/document', formData);
+      await axios.post('/api/auth/profile/kyc/document', formData);
       
       setSuccess('KYC document submitted successfully! Awaiting verification.');
       await fetchKYCStatus();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to upload KYC document');
+    } catch (err) {
+      setError((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Failed to upload KYC document');
     } finally {
       setUploading(false);
     }

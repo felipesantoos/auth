@@ -3,7 +3,7 @@
  * Defines the contract for file storage operations
  */
 
-import {
+import type {
   FileUploadResponse,
   FileListResponse,
   FileInfoDetailed,

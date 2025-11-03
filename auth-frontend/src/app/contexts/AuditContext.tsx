@@ -4,11 +4,12 @@
  * Manages state and operations related to auditing
  */
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { IAuditService } from "../../core/interfaces/primary/IAuditService";
+import type { ReactNode } from "react";
+import React, { createContext, useContext, useState } from "react";
+import type { IAuditService } from "../../core/interfaces/primary/IAuditService";
 import { AuditService } from "../../core/services/audit/auditService";
 import { auditLogRepository } from "../../infra/api/repositories/audit.repository";
-import {
+import type {
   AuditLog,
   AuditFilters,
   AuditStatistics,

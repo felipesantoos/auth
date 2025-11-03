@@ -4,15 +4,16 @@
  */
 
 import { httpClient } from '../http-client';
-import { IPermissionRepository } from '../../../core/interfaces/secondary/IPermissionRepository';
-import {
+import type { IPermissionRepository } from '../../../core/interfaces/secondary/IPermissionRepository';
+import type {
   Permission,
   GrantPermissionRequest,
-  PermissionChecker,
 } from '../../../core/domain/permission';
 import {
+  PermissionChecker,
+} from '../../../core/domain/permission';
+import type {
   PermissionDTO,
-  GrantPermissionDTO,
 } from '../dtos/permission.dto';
 import { PermissionMapper } from '../mappers/permission.mapper';
 

@@ -8,8 +8,9 @@
  * - withCredentials: true to send cookies
  */
 
-import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { IHttpClient } from '../../core/interfaces/secondary/IHttpClient';
+import axios from 'axios';
+import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import type { IHttpClient } from '../../core/interfaces/secondary/IHttpClient';
 
 export class HttpClient implements IHttpClient {
   private client: AxiosInstance;
@@ -62,7 +63,7 @@ export class HttpClient implements IHttpClient {
           try {
             // Try to refresh token (cookies sent automatically)
             // Backend reads refresh_token from cookie and sends new tokens via cookie
-            const response = await axios.post(
+            await axios.post(
               `${this.client.defaults.baseURL}/api/auth/refresh`,
               {}, // Empty body - refresh_token comes from cookie
               {
@@ -121,4 +122,8 @@ export class HttpClient implements IHttpClient {
     return response.data;
   }
 }
+
+// Create and export singleton instance
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+export const httpClient = new HttpClient(API_BASE_URL);
 

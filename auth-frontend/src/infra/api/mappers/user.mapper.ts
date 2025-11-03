@@ -1,10 +1,13 @@
 /**
  * User Mapper
  * Transforms between API DTOs and Domain Models
+ * 
+ * Note: Backend still returns 'role' and 'client_id' but we ignore them
+ * in the new domain model (roles are now per-workspace)
  */
 
-import { User, UserRole } from '../../../core/domain/user';
-import { UserResponseDTO } from '../dtos/auth.dto';
+import { User } from '../../../core/domain/user';
+import type { UserResponseDTO } from '../dtos/auth.dto';
 
 export class UserMapper {
   static toDomain(dto: UserResponseDTO): User {
@@ -13,10 +16,14 @@ export class UserMapper {
       dto.username,
       dto.email,
       dto.name,
-      dto.role as UserRole,
       dto.active,
       new Date(dto.created_at),
-      dto.client_id
+      false, // emailVerified - TODO: add to backend response
+      false, // mfaEnabled - TODO: add to backend response
+      undefined, // avatarUrl - TODO: add to backend response
+      undefined, // kycDocumentId
+      undefined, // kycStatus
+      undefined  // kycVerifiedAt
     );
   }
 
@@ -26,10 +33,10 @@ export class UserMapper {
       username: domain.username,
       email: domain.email,
       name: domain.name,
-      role: domain.role,
+      role: 'user', // Deprecated - keeping for backward compatibility
       active: domain.active,
       created_at: domain.createdAt.toISOString(),
-      client_id: domain.clientId,
+      client_id: undefined, // Deprecated - now via workspace
     };
   }
 }

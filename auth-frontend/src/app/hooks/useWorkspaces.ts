@@ -5,7 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DIContainer from '../dicontainer/container';
-import {
+import type {
   CreateWorkspaceRequest,
   UpdateWorkspaceRequest,
   AddMemberRequest,

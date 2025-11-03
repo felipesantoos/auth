@@ -5,7 +5,8 @@
  * Compliance: 08c-react-best-practices.md Section 5.3
  */
 
-import { Component, ErrorInfo, ReactNode } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
+import { Component } from 'react';
 import { Alert, AlertDescription } from './ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from './ui/button';

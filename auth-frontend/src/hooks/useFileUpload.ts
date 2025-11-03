@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { fileService } from '../infra/services/FileService';
-import { FileUploadResponse } from '../types/file';
+import type { FileUploadResponse } from '../types/file';
 
 export function useFileUpload() {
   const [uploading, setUploading] = useState(false);

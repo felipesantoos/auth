@@ -1,26 +1,20 @@
 /**
  * Auth Domain Models
- * TypeScript domain models for authentication
+ * Pure domain types for authentication
  */
 
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'manager' | 'user';
-  active: boolean;
-  client_id?: string;
-  created_at: string;
-}
+import type { User } from './user';
 
-export interface LoginDTO {
+// Re-export User for convenience
+export type { User };
+
+export interface LoginCredentials {
   email: string;
   password: string;
   client_id?: string;
 }
 
-export interface RegisterDTO {
+export interface RegistrationData {
   username: string;
   email: string;
   password: string;
@@ -28,37 +22,25 @@ export interface RegisterDTO {
   client_id?: string;
 }
 
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
-  user: User;
-}
-
-export interface UserResponse {
-  id: string;
-  username: string;
-  email: string;
-  name: string;
-  role: string;
-  active: boolean;
-  client_id?: string;
-  created_at: string;
-}
-
-export interface ForgotPasswordDTO {
+export interface PasswordResetRequest {
   email: string;
   client_id?: string;
 }
 
-export interface ResetPasswordDTO {
+export interface PasswordReset {
   reset_token: string;
   new_password: string;
   client_id?: string;
 }
 
-export interface MessageResponse {
-  message: string;
+export interface AuthenticationResult {
+  user: User;
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
 }
+
+// Alias for backward compatibility
+export type TokenResponse = AuthenticationResult;
 

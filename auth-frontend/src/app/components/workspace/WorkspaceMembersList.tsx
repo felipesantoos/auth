@@ -4,8 +4,8 @@
  */
 
 import React from 'react';
-import { Shield, Trash2, UserCog } from 'lucide-react';
-import { WorkspaceMember } from '../../../core/domain/workspace';
+import { Shield, Trash2 } from 'lucide-react';
+import type { WorkspaceMember } from '../../../core/domain/workspace';
 import { DataTable } from '../common/DataTable';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';

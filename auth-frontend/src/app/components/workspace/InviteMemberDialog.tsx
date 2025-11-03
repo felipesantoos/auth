@@ -17,7 +17,7 @@ import {
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { WorkspaceRole } from '../../../core/domain/workspace';
+import type { WorkspaceRole } from '../../../core/domain/workspace';
 
 interface InviteMemberDialogProps {
   workspaceId: string;

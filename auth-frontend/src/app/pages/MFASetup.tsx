@@ -27,8 +27,8 @@ export const MFASetup: React.FC = () => {
       setSecret(response.secret);
       setBackupCodes(response.backup_codes);
       setStep('scanning');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to initialize MFA setup');
+    } catch (err) {
+      setError((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Failed to initialize MFA setup');
     } finally {
       setLoading(false);
     }
@@ -44,8 +44,8 @@ export const MFASetup: React.FC = () => {
         backup_codes: backupCodes,
       });
       setStep('complete');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid verification code');
+    } catch (err) {
+      setError((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Invalid verification code');
     } finally {
       setLoading(false);
     }

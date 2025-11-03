@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { useAudit } from "../contexts/AuditContext";
-import {
+import type {
   AuditFilters,
   AuditEventCategory,
   PaginationParams

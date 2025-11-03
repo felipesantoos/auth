@@ -3,8 +3,9 @@
  * Global state management for workspaces
  */
 
-import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { Workspace, WorkspaceMember } from '../../core/domain/workspace';
+import type { ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import type { Workspace, WorkspaceMember } from '../../core/domain/workspace';
 import DIContainer from '../dicontainer/container';
 
 interface WorkspaceContextType {

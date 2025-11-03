@@ -1,19 +1,25 @@
 /**
  * Auth Service Interface (Primary Port)
  * Defines the contract for authentication use cases
+ * Uses only domain types - no infrastructure dependencies
  */
 
-import { User } from '../../domain/user';
-import { LoginDTO, RegisterDTO, ForgotPasswordDTO, ResetPasswordDTO } from '../../../infra/api/dtos/auth.dto';
+import type { User } from '../../domain/user';
+import type {
+  LoginCredentials,
+  RegistrationData,
+  PasswordResetRequest,
+  PasswordReset,
+} from '../../domain/auth';
 
 export interface IAuthService {
-  login(credentials: LoginDTO): Promise<User>;
-  register(data: RegisterDTO): Promise<User>;
+  login(credentials: LoginCredentials): Promise<User>;
+  register(data: RegistrationData): Promise<User>;
   logout(): Promise<void>;
   getCurrentUser(): Promise<User | null>;
   refreshToken(): Promise<void>;
-  forgotPassword(data: ForgotPasswordDTO): Promise<{ message: string }>;
-  resetPassword(data: ResetPasswordDTO): Promise<{ message: string }>;
+  forgotPassword(request: PasswordResetRequest): Promise<{ message: string }>;
+  resetPassword(reset: PasswordReset): Promise<{ message: string }>;
   isAuthenticated(): boolean;
   getAccessToken(): string | null;
   getRefreshToken(): string | null;

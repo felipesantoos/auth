@@ -4,9 +4,9 @@
  * Implements business logic for auditing
  */
 
-import { IAuditService } from "../../interfaces/primary/IAuditService";
-import { IAuditLogRepository } from "../../interfaces/secondary/IAuditLogRepository";
-import {
+import type { IAuditService } from "../../interfaces/primary/IAuditService";
+import type { IAuditLogRepository } from "../../interfaces/secondary/IAuditLogRepository";
+import type {
   AuditLog,
   AuditFilters,
   AuditStatistics,
@@ -17,7 +17,11 @@ import {
 } from "../../domain/audit";
 
 export class AuditService implements IAuditService {
-  constructor(private readonly repository: IAuditLogRepository) {}
+  private readonly repository: IAuditLogRepository;
+
+  constructor(repository: IAuditLogRepository) {
+    this.repository = repository;
+  }
 
   /**
    * Get user audit trail

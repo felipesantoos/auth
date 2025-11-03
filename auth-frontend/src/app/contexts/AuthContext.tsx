@@ -14,8 +14,9 @@
  * - 08b-state-management.md Section 2, 6
  * - 08c-react-best-practices.md Section 5.1
  */
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User } from '../../core/domain/user';
+import type { ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { User } from '../../core/domain/user';
 import { 
   DomainError, 
   AuthenticationError, 

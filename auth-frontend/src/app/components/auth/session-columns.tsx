@@ -9,7 +9,7 @@
  * Not currently used in auth-frontend but demonstrates the pattern
  */
 
-import { ColumnDef } from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { ArrowUpDown, MoreHorizontal, Trash2, Eye } from 'lucide-react';

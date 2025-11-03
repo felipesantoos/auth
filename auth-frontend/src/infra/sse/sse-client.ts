@@ -12,18 +12,20 @@ export interface SSEClientOptions {
 
 export class SSEClient {
   private eventSource: EventSource | null = null;
+  private url: string;
   private reconnectAttempts = 0;
   private maxReconnectAttempts: number;
   private reconnectDelay: number;
   private reconnectTimeout: NodeJS.Timeout | null = null;
-  private eventHandlers: Map<string, Function[]> = new Map();
+  private eventHandlers: Map<string, ((...args: unknown[]) => void)[]> = new Map();
   private withCredentials: boolean;
   private isManualClose = false;
   
   constructor(
-    private url: string,
+    url: string,
     options: SSEClientOptions = {}
   ) {
+    this.url = url;
     this.maxReconnectAttempts = options.maxReconnectAttempts || 5;
     this.reconnectDelay = options.reconnectDelay || 1000;
     this.withCredentials = options.withCredentials || false;
@@ -63,7 +65,7 @@ export class SSEClient {
             try {
               const data = JSON.parse(messageEvent.data);
               handler(data, messageEvent);
-            } catch (e) {
+            } catch {
               // Data might not be JSON
               handler(messageEvent.data, messageEvent);
             }
@@ -77,7 +79,7 @@ export class SSEClient {
     }
   }
   
-  on(eventType: string, handler: Function): void {
+  on(eventType: string, handler: (...args: unknown[]) => void): void {
     if (!this.eventHandlers.has(eventType)) {
       this.eventHandlers.set(eventType, []);
     }
@@ -90,14 +92,14 @@ export class SSEClient {
         try {
           const data = JSON.parse(messageEvent.data);
           handler(data, messageEvent);
-        } catch (e) {
+        } catch {
           handler(messageEvent.data, messageEvent);
         }
       });
     }
   }
   
-  off(eventType: string, handler?: Function): void {
+  off(eventType: string, handler?: (...args: unknown[]) => void): void {
     if (!handler) {
       this.eventHandlers.delete(eventType);
     } else {

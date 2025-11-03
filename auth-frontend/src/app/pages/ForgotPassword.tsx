@@ -7,7 +7,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { forgotPasswordSchema, ForgotPasswordFormData } from '../schemas/auth.schema';
+import type { ForgotPasswordFormData } from '../schemas/auth.schema';
+import { forgotPasswordSchema } from '../schemas/auth.schema';
 import { useForgotPassword } from '../hooks/useAuthMutations';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -60,7 +61,7 @@ export const ForgotPassword: React.FC = () => {
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    {(forgotPasswordMutation.error as any)?.response?.data?.detail || 'Erro ao enviar email. Tente novamente.'}
+                    {(forgotPasswordMutation.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Erro ao enviar email. Tente novamente.'}
                   </AlertDescription>
                 </Alert>
               )}

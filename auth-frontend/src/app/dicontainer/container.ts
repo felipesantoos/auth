@@ -3,17 +3,16 @@
  * Manages all service instances and their dependencies
  */
 
-import { IAuthService } from '../../core/interfaces/primary/IAuthService';
-import { IAuthRepository } from '../../core/interfaces/secondary/IAuthRepository';
-import { IAuditService } from '../../core/interfaces/primary/IAuditService';
-import { IAuditLogRepository } from '../../core/interfaces/secondary/IAuditLogRepository';
-import { IWorkspaceService } from '../../core/interfaces/primary/IWorkspaceService';
-import { IWorkspaceRepository } from '../../core/interfaces/secondary/IWorkspaceRepository';
-import { IPermissionService } from '../../core/interfaces/primary/IPermissionService';
-import { IPermissionRepository } from '../../core/interfaces/secondary/IPermissionRepository';
-import { IHttpClient } from '../../core/interfaces/secondary/IHttpClient';
-import { IStorage } from '../../core/interfaces/secondary/IStorage';
-import { ILogger } from '../../core/interfaces/secondary/ILogger';
+import type { IAuthService } from '../../core/interfaces/primary/IAuthService';
+import type { IAuthRepository } from '../../core/interfaces/secondary/IAuthRepository';
+import type { IAuditService } from '../../core/interfaces/primary/IAuditService';
+import type { IWorkspaceService } from '../../core/interfaces/primary/IWorkspaceService';
+import type { IWorkspaceRepository } from '../../core/interfaces/secondary/IWorkspaceRepository';
+import type { IPermissionService } from '../../core/interfaces/primary/IPermissionService';
+import type { IPermissionRepository } from '../../core/interfaces/secondary/IPermissionRepository';
+import type { IHttpClient } from '../../core/interfaces/secondary/IHttpClient';
+import type { IStorage } from '../../core/interfaces/secondary/IStorage';
+import type { ILogger } from '../../core/interfaces/secondary/ILogger';
 
 import { AuthService } from '../../core/services/auth/authService';
 import { AuthRepository } from '../../infra/api/repositories/auth.repository';
@@ -28,6 +27,7 @@ import { LocalStorage } from '../../infra/storage/local-storage';
 import { ConsoleLogger } from '../../infra/logger/console-logger';
 
 class DIContainer {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private static instances = new Map<string, any>();
   private static httpClient: IHttpClient;
   private static storage: IStorage;

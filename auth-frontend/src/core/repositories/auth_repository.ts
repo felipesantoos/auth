@@ -3,7 +3,7 @@
  * API calls for authentication
  */
 import apiClient from './api_client';
-import { LoginDTO, RegisterDTO, TokenResponse, UserResponse, ForgotPasswordDTO, ResetPasswordDTO, MessageResponse } from '../domain/auth';
+import type { LoginDTO, RegisterDTO, TokenResponse, UserResponse, ForgotPasswordDTO, ResetPasswordDTO, MessageResponse } from '../domain/auth';
 
 export class AuthRepository {
   async login(credentials: LoginDTO): Promise<TokenResponse> {

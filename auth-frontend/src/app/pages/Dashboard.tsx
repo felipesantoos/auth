@@ -30,7 +30,7 @@ export const Dashboard: React.FC = () => {
     try {
       await logout();
       navigate('/login');
-    } catch (error) {
+    } catch {
       // Even if logout fails, navigate to login
       navigate('/login');
     }

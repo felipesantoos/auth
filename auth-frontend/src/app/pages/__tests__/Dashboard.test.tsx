@@ -19,7 +19,7 @@ import { Dashboard } from '../Dashboard';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '../../contexts/AuthContext';
 import DIContainer from '../../dicontainer/container';
-import { User } from '../../../core/domain/user';
+import type { User } from '../../../core/domain/user';
 
 const mockNavigate = vi.fn();
 

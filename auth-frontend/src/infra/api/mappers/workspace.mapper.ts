@@ -3,7 +3,7 @@
  * Converts between DTOs and Domain models
  */
 
-import {
+import type {
   Workspace,
   WorkspaceMember,
   WorkspaceRole,
@@ -14,7 +14,7 @@ import {
   AddMemberRequest,
   UpdateMemberRoleRequest,
 } from '../../../core/domain/workspace';
-import {
+import type {
   WorkspaceDTO,
   WorkspaceMemberDTO,
   WorkspaceListResponseDTO,

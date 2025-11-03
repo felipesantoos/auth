@@ -7,16 +7,17 @@
  */
 
 import React from 'react';
+import type {
+  ColumnDef,
+  SortingState,
+  ColumnFiltersState} from '@tanstack/react-table';
 import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   getFilteredRowModel,
-  useReactTable,
-  ColumnDef,
-  SortingState,
-  ColumnFiltersState,
+  useReactTable
 } from '@tanstack/react-table';
 import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';

@@ -3,13 +3,13 @@
  * Converts between DTOs and Domain models
  */
 
-import {
+import type {
   Permission,
   PermissionAction,
   PermissionListResponse,
   GrantPermissionRequest,
 } from '../../../core/domain/permission';
-import {
+import type {
   PermissionDTO,
   GrantPermissionDTO,
   PermissionListResponseDTO,

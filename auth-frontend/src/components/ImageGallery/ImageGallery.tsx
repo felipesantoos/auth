@@ -4,17 +4,17 @@
  */
 
 import React, { useState } from 'react';
-import { Trash2, Download, Share2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useFileList } from '../../hooks/useFileList';
 import { formatFileSize } from '../../utils/file';
-import { FileInfo } from '../../types/file';
+import type { FileInfo } from '../../types/file';
 
 interface ImageGalleryProps {
   onImageClick?: (image: FileInfo) => void;
 }
 
 export const ImageGallery: React.FC<ImageGalleryProps> = ({ onImageClick }) => {
-  const { files, loading, deleteFile, refresh } = useFileList('image');
+  const { files, loading, deleteFile } = useFileList('image');
   const [selectedImage, setSelectedImage] = useState<FileInfo | null>(null);
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -24,7 +24,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({ onImageClick }) => {
 
     try {
       await deleteFile(id);
-    } catch (error) {
+    } catch {
       alert('Falha ao deletar imagem');
     }
   };

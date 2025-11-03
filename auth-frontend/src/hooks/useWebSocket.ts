@@ -5,7 +5,8 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { WebSocketClient, WebSocketClientOptions } from '../infra/websocket/websocket-client';
+import type { WebSocketClientOptions } from '../infra/websocket/websocket-client';
+import { WebSocketClient } from '../infra/websocket/websocket-client';
 
 export interface UseWebSocketOptions extends WebSocketClientOptions {
   onConnected?: () => void;
@@ -16,9 +17,9 @@ export interface UseWebSocketOptions extends WebSocketClientOptions {
 
 export interface UseWebSocketResult {
   isConnected: boolean;
-  send: (message: any) => void;
-  on: (messageType: string, handler: Function) => void;
-  off: (messageType: string, handler?: Function) => void;
+  send: (message: unknown) => void;
+  on: (messageType: string, handler: (...args: unknown[]) => void) => void;
+  off: (messageType: string, handler?: (...args: unknown[]) => void) => void;
   reconnect: () => void;
   disconnect: () => void;
   readyState: number | null;
@@ -95,11 +96,11 @@ export function useWebSocket(
     clientRef.current?.send(message);
   }, []);
   
-  const on = useCallback((messageType: string, handler: Function) => {
+  const on = useCallback((messageType: string, handler: (...args: unknown[]) => void) => {
     clientRef.current?.on(messageType, handler);
   }, []);
   
-  const off = useCallback((messageType: string, handler?: Function) => {
+  const off = useCallback((messageType: string, handler?: (...args: unknown[]) => void) => {
     clientRef.current?.off(messageType, handler);
   }, []);
   

@@ -3,7 +3,7 @@
  * Browser localStorage implementation of IStorage
  */
 
-import { IStorage } from '../../core/interfaces/secondary/IStorage';
+import type { IStorage } from '../../core/interfaces/secondary/IStorage';
 
 export class LocalStorage implements IStorage {
   getItem(key: string): string | null {

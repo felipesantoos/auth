@@ -5,8 +5,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import DIContainer from '../dicontainer/container';
-import { User } from '../../core/domain/user';
-import { LoginFormData, RegisterFormData, ForgotPasswordFormData, ResetPasswordFormData } from '../schemas/auth.schema';
+import type { User } from '../../core/domain/user';
+import type { LoginFormData, RegisterFormData, ForgotPasswordFormData, ResetPasswordFormData } from '../schemas/auth.schema';
 
 const AUTH_KEYS = {
   currentUser: ['auth', 'currentUser'] as const,

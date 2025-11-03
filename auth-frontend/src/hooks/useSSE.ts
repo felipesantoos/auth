@@ -5,7 +5,8 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { SSEClient, SSEClientOptions } from '../infra/sse/sse-client';
+import type { SSEClientOptions } from '../infra/sse/sse-client';
+import { SSEClient } from '../infra/sse/sse-client';
 
 export interface UseSSEOptions extends SSEClientOptions {
   onConnected?: () => void;

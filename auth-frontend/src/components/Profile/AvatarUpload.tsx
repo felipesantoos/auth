@@ -53,8 +53,8 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       if (onUploadSuccess) {
         onUploadSuccess(result.avatar_url);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Falha ao enviar avatar');
+    } catch (err) {
+      setError((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Falha ao enviar avatar');
     } finally {
       setUploading(false);
     }
@@ -71,7 +71,7 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
       if (onUploadSuccess) {
         onUploadSuccess('');
       }
-    } catch (err: any) {
+    } catch {
       setError('Falha ao remover avatar');
     } finally {
       setUploading(false);

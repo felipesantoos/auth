@@ -2,7 +2,7 @@
  * Mapper for audit DTOs and Domain Models
  */
 
-import {
+import type {
   AuditLog,
   AuditFilters,
   AuditStatistics,
@@ -12,7 +12,7 @@ import {
   AuditEventCategory,
   EntityChange
 } from "../../../core/domain/audit";
-import {
+import type {
   AuditLogDTO,
   AuditFiltersDTO,
   AuditStatisticsDTO,

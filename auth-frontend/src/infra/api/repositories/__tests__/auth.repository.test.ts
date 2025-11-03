@@ -5,8 +5,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AuthRepository } from '../auth.repository';
-import { IHttpClient } from '../../../../core/interfaces/secondary/IHttpClient';
-import { TokenResponseDTO, UserResponseDTO } from '../../dtos/auth.dto';
+import type { IHttpClient } from '../../../../core/interfaces/secondary/IHttpClient';
+import type { TokenResponseDTO, UserResponseDTO } from '../../dtos/auth.dto';
 
 describe('AuthRepository', () => {
   let authRepository: AuthRepository;

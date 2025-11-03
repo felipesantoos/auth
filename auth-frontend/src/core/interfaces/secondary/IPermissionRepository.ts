@@ -3,7 +3,7 @@
  * Secondary port for permission data access
  */
 
-import {
+import type {
   Permission,
   GrantPermissionRequest,
 } from '../../domain/permission';

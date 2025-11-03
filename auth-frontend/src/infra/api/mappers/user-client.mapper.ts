@@ -3,12 +3,12 @@
  * Converts between DTOs and Domain models
  */
 
-import {
+import type {
   UserClientAccess,
   UserClientAccessListResponse,
   GrantClientAccessRequest,
 } from '../../../core/domain/user-client';
-import {
+import type {
   UserClientAccessDTO,
   GrantClientAccessDTO,
   UserClientAccessListResponseDTO,

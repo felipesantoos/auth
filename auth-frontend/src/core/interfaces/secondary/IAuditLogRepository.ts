@@ -4,7 +4,7 @@
  * Defines contracts for audit data access
  */
 
-import {
+import type {
   AuditLog,
   AuditFilters,
   AuditStatistics,

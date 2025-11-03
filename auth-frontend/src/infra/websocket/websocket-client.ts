@@ -15,17 +15,21 @@ export class WebSocketClient {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts: number;
+  private url: string;
+  private token: string;
   private reconnectDelay: number;
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private heartbeatIntervalTime: number;
-  private messageHandlers: Map<string, Function[]> = new Map();
+  private messageHandlers: Map<string, ((...args: unknown[]) => void)[]> = new Map();
   private reconnectTimeout: NodeJS.Timeout | null = null;
   
   constructor(
-    private url: string,
-    private token: string,
+    url: string,
+    token: string,
     options: WebSocketClientOptions = {}
   ) {
+    this.url = url;
+    this.token = token;
     this.maxReconnectAttempts = options.maxReconnectAttempts || 5;
     this.reconnectDelay = options.reconnectDelay || 1000;
     this.heartbeatIntervalTime = options.heartbeatInterval || 30000;
@@ -87,14 +91,14 @@ export class WebSocketClient {
     }
   }
   
-  on(messageType: string, handler: Function): void {
+  on(messageType: string, handler: (...args: unknown[]) => void): void {
     if (!this.messageHandlers.has(messageType)) {
       this.messageHandlers.set(messageType, []);
     }
     this.messageHandlers.get(messageType)!.push(handler);
   }
   
-  off(messageType: string, handler?: Function): void {
+  off(messageType: string, handler?: (...args: unknown[]) => void): void {
     if (!handler) {
       this.messageHandlers.delete(messageType);
     } else {

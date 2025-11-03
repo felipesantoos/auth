@@ -8,7 +8,7 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, X, File as FileIcon, Image, Video } from 'lucide-react';
 import { useFileUpload } from '../../hooks/useFileUpload';
 import { formatFileSize } from '../../utils/file';
-import { UploadedFileItem } from '../../types/file';
+import type { UploadedFileItem } from '../../types/file';
 
 interface FileUploadProps {
   accept?: string;

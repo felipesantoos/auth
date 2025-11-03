@@ -3,12 +3,7 @@
  * Defines the contract for logging operations
  */
 
-export enum LogLevel {
-  DEBUG = 'debug',
-  INFO = 'info',
-  WARN = 'warn',
-  ERROR = 'error',
-}
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface ILogger {
   debug(message: string, ...args: any[]): void;

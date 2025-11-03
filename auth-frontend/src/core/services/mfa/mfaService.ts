@@ -3,15 +3,14 @@
  * Handles multi-factor authentication operations
  */
 import apiClient from '../../repositories/api_client';
-import { 
+import type { 
   MFASetupResponse, 
   MFALoginDTO, 
   MFAStatusResponse,
   EnableMFARequest,
-  DisableMFARequest,
   RegenerateBackupCodesResponse
 } from '../../domain/mfa';
-import { TokenResponse } from '../../domain/auth';
+import type { TokenResponse } from '../../domain/auth';
 
 export class MFAService {
   /**

@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Shield } from 'lucide-react';
 import { useGrantPermission } from '../../hooks/usePermissions';
-import { PermissionAction } from '../../../core/domain/permission';
+import type { PermissionAction } from '../../../core/domain/permission';
 import {
   Dialog,
   DialogContent,
