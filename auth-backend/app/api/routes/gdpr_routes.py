@@ -9,7 +9,6 @@ from pydantic import BaseModel
 import logging
 
 from app.api.middlewares.auth_middleware import get_current_user
-from app.api.middlewares.authorization import require_role
 from core.domain.auth.app_user import AppUser
 from core.domain.auth.user_role import UserRole
 from core.services.compliance.gdpr_service import GDPRService

@@ -24,7 +24,7 @@ class TestSAMLAuthentication:
         with patch('onelogin.saml2.auth.OneLogin_Saml2_Auth') as mock_saml:
             mock_saml.return_value.login.return_value = "https://idp.com/sso?SAMLRequest=..."
             
-            authn_request = await service.generate_authn_request()
+            authn_request = await service.create_authn_request()
             
             assert authn_request or mock_saml.called
     

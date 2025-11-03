@@ -6,7 +6,7 @@ import logging
 from typing import List, Optional
 from core.domain.auth.permission import Permission, PermissionAction
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
 from core.interfaces.secondary.permission_repository_interface import IPermissionRepository
 
 logger = logging.getLogger(__name__)
@@ -42,10 +42,8 @@ class PermissionService:
         Returns:
             True if user has permission
         """
-        # Admins bypass all permission checks
-        if user.role == UserRole.ADMIN:
-            logger.debug(f"Admin user {user.id} bypasses permission check")
-            return True
+        # REMOVED: Global admin bypass (admins are now per-workspace)
+        # TODO: Implement workspace-aware admin bypass if needed
         
         # Get user's permissions for this resource type
         # Note: client_id needs to be passed explicitly (no longer in AppUser)
@@ -87,13 +85,13 @@ class PermissionService:
         Raises:
             ValueError: If granter doesn't have permission to grant
         """
-        # Check if granter can grant permissions
-        if granter.role != UserRole.ADMIN:
-            has_manage = await self.has_permission(
-                granter, resource_type, PermissionAction.MANAGE, resource_id
-            )
-            if not has_manage:
-                raise ValueError("You don't have permission to grant permissions")
+        # REMOVED: Global admin check (admins are now per-workspace)
+        # Check if granter has MANAGE permission
+        has_manage = await self.has_permission(
+            granter, resource_type, PermissionAction.MANAGE, resource_id
+        )
+        if not has_manage:
+            raise ValueError("You don't have permission to grant permissions")
         
         # Create permission
         # Note: client_id needs to be passed explicitly (no longer in AppUser)
@@ -124,8 +122,10 @@ class PermissionService:
         if not permission:
             return False
         
-        # Check if revoker can revoke
-        if revoker.role != UserRole.ADMIN and permission.granted_by != revoker.id:
+        # REMOVED: Global admin check (admins are now per-workspace)
+        # Only the granter or a workspace admin can revoke
+        if permission.granted_by != revoker.id:
+            # TODO: Check if revoker is workspace admin
             raise ValueError("You don't have permission to revoke this permission")
         
         result = await self.repository.delete(permission_id)

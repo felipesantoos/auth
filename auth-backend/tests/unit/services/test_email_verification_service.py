@@ -65,7 +65,7 @@ class TestSendVerificationEmail:
         mock_repository.find_by_id.return_value = user
         mock_repository.save.return_value = user
         
-        await email_verification_service.send_verification_email(user.id, user.client_id)
+        await email_verification_service.send_verification_email(user.id, "test-client")
         
         assert user.email_verification_token is not None
         assert user.email_verification_sent_at is not None
@@ -81,7 +81,7 @@ class TestSendVerificationEmail:
         mock_repository.find_by_id.return_value = user
         mock_repository.save.return_value = user
         
-        await email_verification_service.send_verification_email(user.id, user.client_id)
+        await email_verification_service.send_verification_email(user.id, "test-client")
         
         # Check email was sent
         assert mock_email_service.send_email.called
@@ -108,7 +108,7 @@ class TestSendVerificationEmail:
         mock_repository.find_by_id.return_value = user
         
         with pytest.raises(BusinessRuleException, match="already verified"):
-            await email_verification_service.send_verification_email(user.id, user.client_id)
+            await email_verification_service.send_verification_email(user.id, "test-client")
 
 
 @pytest.mark.unit
@@ -128,7 +128,7 @@ class TestVerifyEmail:
         mock_repository.find_by_email.return_value = user
         mock_repository.save.return_value = user
         
-        result = await email_verification_service.verify_email(user.email, token, user.client_id)
+        result = await email_verification_service.verify_email(user.email, token, "test-client")
         
         assert result.email_verified is True
         assert result.email_verification_token is None
@@ -145,7 +145,7 @@ class TestVerifyEmail:
         mock_repository.find_by_email.return_value = user
         
         with pytest.raises(InvalidTokenException):
-            await email_verification_service.verify_email(user.email, "wrong-token", user.client_id)
+            await email_verification_service.verify_email(user.email, "wrong-token", "test-client")
     
     @pytest.mark.asyncio
     async def test_verify_email_with_expired_token_raises(
@@ -161,7 +161,7 @@ class TestVerifyEmail:
         mock_repository.find_by_email.return_value = user
         
         with pytest.raises(TokenExpiredException):
-            await email_verification_service.verify_email(user.email, token, user.client_id)
+            await email_verification_service.verify_email(user.email, token, "test-client")
     
     @pytest.mark.asyncio
     async def test_verify_email_for_nonexistent_user_raises(
@@ -187,7 +187,7 @@ class TestResendVerificationEmail:
         mock_repository.find_by_email.return_value = user
         mock_repository.save.return_value = user
         
-        await email_verification_service.resend_verification_email(user.email, user.client_id)
+        await email_verification_service.resend_verification_email(user.email, "test-client")
         
         assert user.email_verification_token is not None
         assert mock_email_service.send_email.called
@@ -201,7 +201,7 @@ class TestResendVerificationEmail:
         mock_repository.find_by_email.return_value = user
         
         with pytest.raises(BusinessRuleException, match="already verified"):
-            await email_verification_service.resend_verification_email(user.email, user.client_id)
+            await email_verification_service.resend_verification_email(user.email, "test-client")
     
     @pytest.mark.asyncio
     async def test_resend_generates_new_token(
@@ -215,7 +215,7 @@ class TestResendVerificationEmail:
         mock_repository.find_by_email.return_value = user
         mock_repository.save.return_value = user
         
-        await email_verification_service.resend_verification_email(user.email, user.client_id)
+        await email_verification_service.resend_verification_email(user.email, "test-client")
         
         # Should have generated new token
         assert user.email_verification_token != old_token
@@ -267,7 +267,7 @@ class TestEmailVerificationStatus:
         user = UserFactory.build(email_verified=True)
         mock_repository.find_by_id.return_value = user
         
-        status = await email_verification_service.get_verification_status(user.id, user.client_id)
+        status = await email_verification_service.get_verification_status(user.id, "test-client")
         
         assert status["email_verified"] is True
         assert "email_verification_sent_at" in status
@@ -280,7 +280,7 @@ class TestEmailVerificationStatus:
         user = UserFactory.build(email_verified=False)
         mock_repository.find_by_id.return_value = user
         
-        status = await email_verification_service.get_verification_status(user.id, user.client_id)
+        status = await email_verification_service.get_verification_status(user.id, "test-client")
         
         assert status["email_verified"] is False
 

@@ -59,9 +59,11 @@ def mock_validator():
 def file_service(mock_storage, mock_file_repo, mock_validator):
     """Create FileService instance with mocks"""
     return FileService(
-        storage=mock_storage,
         file_repository=mock_file_repo,
-        validator=mock_validator
+        storage=mock_storage,
+        validator=mock_validator,
+        pending_upload_repository=AsyncMock(),
+        file_share_repository=AsyncMock()
     )
 
 

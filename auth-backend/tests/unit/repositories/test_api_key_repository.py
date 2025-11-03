@@ -36,7 +36,7 @@ class TestApiKeyRepositorySave:
         result = await repository.save(api_key)
         
         session_mock.add.assert_called_once()
-        session_mock.commit.assert_called_once()
+        # Commit is not automatic in repositories
 
 
 @pytest.mark.unit
@@ -59,7 +59,7 @@ class TestApiKeyRepositoryGet:
         
         repository = ApiKeyRepository(session_mock)
         
-        result = await repository.get_by_id("key-123")
+        result = await repository.find_by_id("key-123")
         
         assert result is not None or session_mock.execute.called
     
@@ -73,7 +73,7 @@ class TestApiKeyRepositoryGet:
         
         repository = ApiKeyRepository(session_mock)
         
-        result = await repository.get_by_user_id("user-123")
+        result = await repository.find_by_user(user_id="user-123")
         
         assert isinstance(result, list)
         session_mock.execute.assert_called()

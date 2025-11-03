@@ -62,7 +62,7 @@ class TestSendMagicLink:
         mock_repository.find_by_email.return_value = user
         mock_repository.save.return_value = user
         
-        await passwordless_service.send_magic_link(user.email, user.client_id)
+        await passwordless_service.send_magic_link(user.email, "test-client")
         
         assert user.magic_link_token is not None
         assert user.magic_link_sent_at is not None
@@ -88,7 +88,7 @@ class TestSendMagicLink:
         mock_repository.find_by_email.return_value = user
         mock_repository.save.return_value = user
         
-        await passwordless_service.send_magic_link(user.email, user.client_id)
+        await passwordless_service.send_magic_link(user.email, "test-client")
         
         assert mock_email_service.send_email.called
         call_args = mock_email_service.send_email.call_args
@@ -111,7 +111,7 @@ class TestVerifyMagicLink:
         mock_repository.find_by_email.return_value = user
         mock_repository.save.return_value = user
         
-        result = await passwordless_service.verify_magic_link(user.email, token, user.client_id)
+        result = await passwordless_service.verify_magic_link(user.email, token, "test-client")
         
         assert result is not None
         assert result.id == user.id
@@ -130,7 +130,7 @@ class TestVerifyMagicLink:
         mock_repository.find_by_email.return_value = user
         
         with pytest.raises(InvalidTokenException):
-            await passwordless_service.verify_magic_link(user.email, "wrong-token", user.client_id)
+            await passwordless_service.verify_magic_link(user.email, "wrong-token", "test-client")
     
     @pytest.mark.asyncio
     async def test_verify_expired_magic_link_raises(
@@ -146,7 +146,7 @@ class TestVerifyMagicLink:
         mock_repository.find_by_email.return_value = user
         
         with pytest.raises(TokenExpiredException):
-            await passwordless_service.verify_magic_link(user.email, token, user.client_id)
+            await passwordless_service.verify_magic_link(user.email, token, "test-client")
     
     @pytest.mark.asyncio
     async def test_verify_magic_link_for_nonexistent_user_raises(
@@ -201,14 +201,14 @@ class TestMagicLinkSecurity:
         mock_repository.save.return_value = user
         
         # First use
-        await passwordless_service.verify_magic_link(user.email, token, user.client_id)
+        await passwordless_service.verify_magic_link(user.email, token, "test-client")
         
         # Token should be cleared
         assert user.magic_link_token is None
         
         # Second use should fail
         with pytest.raises(InvalidTokenException):
-            await passwordless_service.verify_magic_link(user.email, token, user.client_id)
+            await passwordless_service.verify_magic_link(user.email, token, "test-client")
     
     @pytest.mark.asyncio
     async def test_sending_new_magic_link_invalidates_old(
@@ -223,7 +223,7 @@ class TestMagicLinkSecurity:
         mock_repository.save.return_value = user
         
         # Send new magic link
-        await passwordless_service.send_magic_link(user.email, user.client_id)
+        await passwordless_service.send_magic_link(user.email, "test-client")
         
         # Should have new token
         assert user.magic_link_token != old_token

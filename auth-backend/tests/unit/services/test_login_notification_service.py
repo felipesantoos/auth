@@ -36,10 +36,7 @@ def test_user():
         id="user-123",
         username="testuser",
         email="test@example.com",
-        name="Test User",
-        role=UserRole.USER,
-        client_id="client-123",
-        _password_hash="hashed",
+        name="Test User",        _password_hash="hashed",
         active=True
     )
 
@@ -49,9 +46,7 @@ def test_session():
     """Create test session"""
     return UserSession(
         id="session-123",
-        user_id="user-123",
-        client_id="client-123",
-        refresh_token_hash="hashed",
+        user_id="user-123",        refresh_token_hash="hashed",
         device_name="Chrome on Windows",
         device_type="desktop",
         ip_address="192.168.1.100",

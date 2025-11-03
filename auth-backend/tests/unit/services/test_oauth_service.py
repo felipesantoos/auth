@@ -19,7 +19,7 @@ class TestOAuthService:
         settings_mock.oauth_google_client_id = "test-client-id"
         settings_mock.oauth_google_redirect_uri = "http://localhost/callback"
         
-        service = OAuthService(user_repo_mock, settings_mock)
+        service = OAuthService(user_repo_mock, settings_mock, settings_provider_mock := AsyncMock())
         
         url = await service.generate_authorization_url("google", "state-123")
         
@@ -32,7 +32,7 @@ class TestOAuthService:
         user_repo_mock = AsyncMock()
         settings_mock = Mock()
         
-        service = OAuthService(user_repo_mock, settings_mock)
+        service = OAuthService(user_repo_mock, settings_mock, settings_provider_mock := AsyncMock())
         service._exchange_code_google = AsyncMock(return_value={"access_token": "token123"})
         
         token = await service.exchange_code_for_token("google", "code123")

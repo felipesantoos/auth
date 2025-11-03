@@ -32,7 +32,7 @@ class TestBackupCodeRepositorySave:
         result = await repository.save(code)
         
         session_mock.add.assert_called_once()
-        session_mock.commit.assert_called_once()
+        # Commit is not automatic in repositories
 
 
 @pytest.mark.unit
@@ -49,7 +49,7 @@ class TestBackupCodeRepositoryGet:
         
         repository = BackupCodeRepository(session_mock)
         
-        result = await repository.get_by_user_id("user-123")
+        result = await repository.find_by_user("user-123")
         
         assert isinstance(result, list)
         session_mock.execute.assert_called()

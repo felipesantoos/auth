@@ -17,7 +17,7 @@ class TestCacheInvalidation:
         cache_mock = AsyncMock()
         cache_mock.delete_pattern = AsyncMock(return_value=5)
         
-        service = CacheInvalidationService(cache_mock)
+        service = CacheInvalidationService()
         
         count = await service.invalidate_user_cache("user-123")
         
@@ -30,7 +30,7 @@ class TestCacheInvalidation:
         cache_mock = AsyncMock()
         cache_mock.delete_pattern = AsyncMock(return_value=10)
         
-        service = CacheInvalidationService(cache_mock)
+        service = CacheInvalidationService()
         
         count = await service.invalidate_client_cache("client-123")
         
@@ -43,7 +43,7 @@ class TestCacheInvalidation:
         cache_mock = AsyncMock()
         cache_mock.delete = AsyncMock(return_value=True)
         
-        service = CacheInvalidationService(cache_mock)
+        service = CacheInvalidationService()
         
         result = await service.invalidate_key("user:123:profile")
         
@@ -56,7 +56,7 @@ class TestCacheInvalidation:
         cache_mock = AsyncMock()
         cache_mock.delete_many = AsyncMock(return_value=3)
         
-        service = CacheInvalidationService(cache_mock)
+        service = CacheInvalidationService()
         
         keys = ["key1", "key2", "key3"]
         count = await service.invalidate_keys(keys)

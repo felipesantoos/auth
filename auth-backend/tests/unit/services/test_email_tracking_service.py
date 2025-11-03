@@ -17,7 +17,7 @@ class TestEmailTracking:
         tracking_repo_mock = AsyncMock()
         tracking_repo_mock.save = AsyncMock(return_value=Mock(id="tracking-123"))
         
-        service = EmailTrackingService(tracking_repo_mock)
+        service = EmailTrackingService(tracking_repo_mock, click_repo_mock := AsyncMock(), subscription_repo_mock := AsyncMock())
         
         tracking = await service.record_email_sent(
             user_id="user-123",
@@ -40,7 +40,7 @@ class TestEmailTracking:
         ))
         tracking_repo_mock.update = AsyncMock()
         
-        service = EmailTrackingService(tracking_repo_mock)
+        service = EmailTrackingService(tracking_repo_mock, click_repo_mock := AsyncMock(), subscription_repo_mock := AsyncMock())
         
         await service.record_email_opened("tracking-123")
         
@@ -52,7 +52,7 @@ class TestEmailTracking:
         click_repo_mock = AsyncMock()
         click_repo_mock.save = AsyncMock(return_value=Mock(id="click-123"))
         
-        service = EmailTrackingService(click_repo_mock)
+        service = EmailTrackingService(tracking_repo_mock := AsyncMock(), click_repo_mock, subscription_repo_mock := AsyncMock())
         
         click = await service.record_link_clicked(
             tracking_id="tracking-123",
@@ -69,7 +69,7 @@ class TestEmailTracking:
         tracking_repo_mock.count_by_template = AsyncMock(return_value=100)
         tracking_repo_mock.count_opened = AsyncMock(return_value=75)
         
-        service = EmailTrackingService(tracking_repo_mock)
+        service = EmailTrackingService(tracking_repo_mock, click_repo_mock := AsyncMock(), subscription_repo_mock := AsyncMock())
         
         stats = await service.get_email_stats(template="welcome")
         

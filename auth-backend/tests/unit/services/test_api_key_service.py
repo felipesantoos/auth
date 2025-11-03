@@ -175,7 +175,7 @@ class TestApiKeyListing:
         keys = [ApiKeyFactory.build() for _ in range(3)]
         mock_repository.find_by_user.return_value = keys
         
-        result = await api_key_service.list_api_keys("user-123", "client-456")
+        result = await api_key_service.list_user_api_keys("user-123", "client-456")
         
         assert len(result) == 3
     

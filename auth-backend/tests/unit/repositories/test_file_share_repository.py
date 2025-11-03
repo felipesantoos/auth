@@ -32,7 +32,7 @@ class TestFileShareRepository:
         await repository.save(share_data)
         
         session_mock.add.assert_called_once()
-        session_mock.commit.assert_called_once()
+        # Commit is not automatic in repositories
     
     @pytest.mark.asyncio
     async def test_get_by_file_id(self):

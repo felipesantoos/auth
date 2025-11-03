@@ -23,5 +23,5 @@ class TestPendingUploadRepository:
         await repository.save(upload_data)
         
         session_mock.add.assert_called_once()
-        session_mock.commit.assert_called_once()
+        # Commit is not automatic in repositories
 

@@ -513,6 +513,7 @@ from app.api.routes import workspace_routes
 from app.api.routes import workspace_member_routes
 from app.api.routes import workspace_leave_routes
 from app.api.routes import workspace_client_routes
+from app.api.routes import user_client_access_routes
 
 # Register routers
 logger.info("Registering API routes...")
@@ -535,6 +536,7 @@ app.include_router(workspace_routes.router)
 app.include_router(workspace_member_routes.router)
 app.include_router(workspace_leave_routes.router)
 app.include_router(workspace_client_routes.router)
+app.include_router(user_client_access_routes.router)
 
 # OAuth2
 app.include_router(oauth_routes.router)

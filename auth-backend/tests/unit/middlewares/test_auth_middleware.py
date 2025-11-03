@@ -15,16 +15,15 @@ class TestAuthMiddlewareDependencies:
     async def test_auth_middleware_exists(self):
         """Should be able to import auth middleware functions"""
         from app.api.middlewares.auth_middleware import (
-            get_current_user,
-            get_current_user_optional,
-            get_current_admin_user,
-            security
-        )
+    get_current_user,
+    get_current_user_optional,
+    security
+)
         
         # Check functions exist
         assert callable(get_current_user)
         assert callable(get_current_user_optional)
-        assert callable(get_current_admin_user)
+        assert callable(get_current_user)
         assert security is not None
 
 

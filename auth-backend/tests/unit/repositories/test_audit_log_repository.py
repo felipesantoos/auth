@@ -35,7 +35,7 @@ class TestAuditLogRepositorySave:
         result = await repository.save(audit_log)
         
         session_mock.add.assert_called_once()
-        session_mock.commit.assert_called_once()
+        # Commit is not automatic in repositories
 
 
 @pytest.mark.unit

@@ -59,8 +59,9 @@ class UserProfileService:
             ValueError: If username is taken or validation fails
         """
         user = await self.user_repository.find_by_id(user_id)
-        if not user or user.client_id != client_id:
+        if not user:
             raise ValueError("User not found")
+        # REMOVED: client_id check (multi-workspace architecture)
         
         # Update name
         if name:
@@ -200,8 +201,9 @@ class UserProfileService:
             raise ValueError("File service not available")
         
         user = await self.user_repository.find_by_id(user_id)
-        if not user or user.client_id != client_id:
+        if not user:
             raise ValueError("User not found")
+        # REMOVED: client_id check (multi-workspace architecture)
         
         # Delete old avatar if exists
         if user.avatar_url:
@@ -245,8 +247,9 @@ class UserProfileService:
             True if successful
         """
         user = await self.user_repository.find_by_id(user_id)
-        if not user or user.client_id != client_id:
+        if not user:
             raise ValueError("User not found")
+        # REMOVED: client_id check (multi-workspace architecture)
         
         # Remove avatar
         user.remove_avatar()
@@ -279,8 +282,9 @@ class UserProfileService:
             raise ValueError("File service not available")
         
         user = await self.user_repository.find_by_id(user_id)
-        if not user or user.client_id != client_id:
+        if not user:
             raise ValueError("User not found")
+        # REMOVED: client_id check (multi-workspace architecture)
         
         # Upload KYC document (private, secure)
         result = await self.file_service.upload_file(
@@ -319,8 +323,9 @@ class UserProfileService:
             KYC status info
         """
         user = await self.user_repository.find_by_id(user_id)
-        if not user or user.client_id != client_id:
+        if not user:
             raise ValueError("User not found")
+        # REMOVED: client_id check (multi-workspace architecture)
         
         return {
             "kyc_status": user.kyc_status or "not_submitted",

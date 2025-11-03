@@ -19,7 +19,7 @@ class TestBackgroundFileProcessing:
         image_processor_mock = AsyncMock()
         image_processor_mock.create_thumbnail = AsyncMock(return_value=b"thumbnail_data")
         
-        service = BackgroundFileProcessor(file_repo_mock, storage_mock, image_processor_mock)
+        service = BackgroundFileProcessor(file_repo_mock, storage_mock, image_processor_mock, video_processor_mock := Mock())
         
         file = Mock(
             id="file-123",
@@ -39,7 +39,7 @@ class TestBackgroundFileProcessing:
         video_processor_mock = AsyncMock()
         video_processor_mock.create_preview = AsyncMock(return_value=b"preview_data")
         
-        service = BackgroundFileProcessor(file_repo_mock, storage_mock, video_processor_mock)
+        service = BackgroundFileProcessor(file_repo_mock, storage_mock, image_processor_mock := Mock(), video_processor_mock)
         
         file = Mock(
             id="file-123",
@@ -59,7 +59,7 @@ class TestBackgroundFileProcessing:
         scanner_mock = AsyncMock()
         scanner_mock.scan = AsyncMock(return_value={"clean": True})
         
-        service = BackgroundFileProcessor(file_repo_mock, storage_mock, scanner_mock)
+        service = BackgroundFileProcessor(file_repo_mock, storage_mock, image_processor_mock := Mock(), video_processor_mock := Mock())
         
         file = Mock(id="file-123", file_path="/uploads/document.pdf")
         

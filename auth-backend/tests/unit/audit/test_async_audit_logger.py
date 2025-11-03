@@ -19,7 +19,7 @@ class TestAsyncAuditLogger:
         
         logger = AsyncAuditLogger(audit_service_mock)
         
-        await logger.log_async(
+        await logger.log_event(
             event_type="LOGIN_SUCCESS",
             user_id="user-123",
             client_id="client-123"
@@ -37,7 +37,7 @@ class TestAsyncAuditLogger:
         
         # Should not raise exception even if logging fails
         try:
-            await logger.log_async(
+            await logger.log_event(
                 event_type="LOGIN_SUCCESS",
                 user_id="user-123",
                 client_id="client-123"

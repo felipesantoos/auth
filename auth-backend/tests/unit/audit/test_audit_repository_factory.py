@@ -17,7 +17,7 @@ class TestAuditRepositoryFactory:
         settings_mock.audit_storage = "database"
         
         with patch('infra.audit.audit_repository_factory.settings', settings_mock):
-            repo = AuditRepositoryFactory.get_repository()
+            repo = AuditRepositoryFactory.create_repository()
             
             assert repo is not None
     
@@ -28,7 +28,7 @@ class TestAuditRepositoryFactory:
         settings_mock.elasticsearch_host = "localhost:9200"
         
         with patch('infra.audit.audit_repository_factory.settings', settings_mock):
-            repo = AuditRepositoryFactory.get_repository()
+            repo = AuditRepositoryFactory.create_repository()
             
             assert repo is not None
 

@@ -65,9 +65,7 @@ class TestSessionCreation:
         
         mock_repository.save.return_value = UserSession(
             id="session-123",
-            user_id=user.id,
-            client_id=user.client_id,
-            refresh_token_hash="hashed",
+            user_id=user.id,            refresh_token_hash="hashed",
             device_type="desktop",
             device_name="Chrome on Windows",
             ip_address=ip_address,
@@ -76,9 +74,7 @@ class TestSessionCreation:
         )
         
         session = await session_service.create_session(
-            user_id=user.id,
-            client_id=user.client_id,
-            refresh_token=refresh_token,
+            user_id=user.id,            refresh_token=refresh_token,
             user_agent=user_agent,
             ip_address=ip_address
         )
@@ -95,9 +91,7 @@ class TestSessionCreation:
         # Mock return value
         mock_repository.save.return_value = UserSession(
             id="session-123",
-            user_id=user.id,
-            client_id=user.client_id,
-            refresh_token_hash="hashed",
+            user_id=user.id,            refresh_token_hash="hashed",
             device_type="mobile",
             device_name="Safari on iPhone",
             ip_address="192.168.1.1",
@@ -106,9 +100,7 @@ class TestSessionCreation:
         )
         
         session = await session_service.create_session(
-            user_id=user.id,
-            client_id=user.client_id,
-            refresh_token="token",
+            user_id=user.id,            refresh_token="token",
             user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 14_0)",
             ip_address="192.168.1.1"
         )
@@ -129,9 +121,7 @@ class TestSessionRetrieval:
         sessions = [
             UserSession(
                 id=f"session-{i}",
-                user_id=user.id,
-                client_id=user.client_id,
-                refresh_token_hash="hash",
+                user_id=user.id,                refresh_token_hash="hash",
                 device_type="desktop",
                 ip_address="192.168.1.1",
                 user_agent="Chrome",
@@ -141,7 +131,7 @@ class TestSessionRetrieval:
         ]
         mock_repository.find_active_by_user.return_value = sessions
         
-        active_sessions = await session_service.get_active_sessions(user.id, user.client_id)
+        active_sessions = await session_service.get_active_sessions(user.id, "test-client")
         
         assert len(active_sessions) == 3
         assert all(s.user_id == user.id for s in active_sessions)
@@ -153,16 +143,14 @@ class TestSessionRetrieval:
         
         mock_repository.find_by_id.return_value = UserSession(
             id=session_id,
-            user_id="user-456",
-            client_id="client-789",
-            refresh_token_hash="hash",
+            user_id="user-456",            refresh_token_hash="hash",
             device_type="desktop",
             ip_address="192.168.1.1",
             user_agent="Chrome",
             last_activity=datetime.utcnow()
         )
         
-        session = await session_service.get_session(session_id)
+        session = await session_service.find_session_by_id(session_id)
         
         assert session is not None
         assert session.id == session_id
@@ -213,9 +201,7 @@ class TestSessionMaxDevices:
         existing_sessions = [
             UserSession(
                 id=f"session-{i}",
-                user_id=user.id,
-                client_id=user.client_id,
-                refresh_token_hash="hash",
+                user_id=user.id,                refresh_token_hash="hash",
                 device_type="desktop",
                 ip_address="192.168.1.1",
                 user_agent="Chrome",
@@ -228,9 +214,7 @@ class TestSessionMaxDevices:
         # Should revoke oldest session before creating new one
         mock_repository.save.return_value = UserSession(
             id="new-session",
-            user_id=user.id,
-            client_id=user.client_id,
-            refresh_token_hash="hash",
+            user_id=user.id,            refresh_token_hash="hash",
             device_type="desktop",
             ip_address="192.168.1.1",
             user_agent="Chrome",
@@ -238,9 +222,7 @@ class TestSessionMaxDevices:
         )
         
         session = await session_service.create_session(
-            user_id=user.id,
-            client_id=user.client_id,
-            refresh_token="token",
+            user_id=user.id,            refresh_token="token",
             user_agent="Chrome",
             ip_address="192.168.1.1"
         )
@@ -332,9 +314,7 @@ class TestSessionActivityUpdate:
         """Test updating session last activity"""
         session = UserSession(
             id="session-123",
-            user_id="user-456",
-            client_id="client-789",
-            refresh_token_hash="hash",
+            user_id="user-456",            refresh_token_hash="hash",
             device_type="desktop",
             ip_address="192.168.1.1",
             user_agent="Chrome",
@@ -344,7 +324,7 @@ class TestSessionActivityUpdate:
         mock_repository.find_by_id.return_value = session
         mock_repository.save.return_value = session
         
-        updated_session = await session_service.update_activity(session.id)
+        updated_session = await session_service.update_session_activity(session.id)
         
         assert mock_repository.save.called
         # Last activity should be updated (we can't assert exact time due to timing)

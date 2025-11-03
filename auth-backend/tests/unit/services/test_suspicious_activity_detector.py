@@ -29,7 +29,7 @@ class TestSuspiciousActivityDetection:
         
         is_suspicious = await detector.detect_impossible_travel(
             user_id="user-123",
-            current_ip="5.6.7.8",
+            ip="5.6.7.8",
             current_location="Tokyo, Japan"
         )
         

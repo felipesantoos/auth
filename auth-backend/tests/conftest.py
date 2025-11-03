@@ -71,54 +71,78 @@ async def async_client(db_session):
 
 @pytest.fixture
 async def test_user(db_session):
-    """Create test user"""
+    """Create test user with personal workspace (multi-workspace architecture)"""
     from core.domain.auth.app_user import AppUser
-    from core.domain.auth.user_role import UserRole
+    # REMOVED: from core.domain.auth.user_role import UserRole
     from infra.database.repositories.app_user_repository import AppUserRepository
+    from infra.database.repositories.workspace_repository import WorkspaceRepository
+    from infra.database.repositories.workspace_member_repository import WorkspaceMemberRepository
     from core.services.auth.auth_service import AuthService
+    from core.services.workspace.workspace_service import WorkspaceService
+    from core.services.workspace.workspace_member_service import WorkspaceMemberService
     from infra.redis.cache_service import get_cache_service
     from infra.config.settings_provider import SettingsProvider
     
     repository = AppUserRepository(db_session)
     cache_service = await get_cache_service()
     settings_provider = SettingsProvider()
-    auth_service = AuthService(repository, cache_service, settings_provider)
+    workspace_service = WorkspaceService(WorkspaceRepository(db_session))
+    workspace_member_service = WorkspaceMemberService(WorkspaceMemberRepository(db_session))
     
-    user = await auth_service.register(
+    auth_service = AuthService(
+        repository,
+        cache_service,
+        settings_provider,
+        workspace_service,
+        workspace_member_service
+    )
+    
+    user, workspace_id = await auth_service.register(
         username="testuser",
         email="test@example.com",
         password="TestPass123",
         name="Test User",
-        client_id="test-client-id"
+        workspace_name="Test Workspace"
     )
     
     return user
 
 
+# REMOVED: admin_user fixture (admin is now per-workspace, not global)
+# Use test_user with workspace_admin_member fixture instead
+
 @pytest.fixture
-async def admin_user(db_session):
-    """Create admin user"""
-    from core.domain.auth.app_user import AppUser
-    from core.domain.auth.user_role import UserRole
-    from infra.database.repositories.app_user_repository import AppUserRepository
-    import bcrypt
+async def test_workspace(db_session):
+    """Create test workspace"""
+    from tests.factories.workspace_factory import WorkspaceFactory
+    from infra.database.repositories.workspace_repository import WorkspaceRepository
     
-    repository = AppUserRepository(db_session)
-    
-    password_hash = bcrypt.hashpw("Admin123".encode('utf-8'), bcrypt.gensalt(rounds=12)).decode('utf-8')
-    
-    admin = AppUser(
+    repository = WorkspaceRepository(db_session)
+    workspace = WorkspaceFactory.create_workspace(
         id=None,
-        username="admin",
-        email="admin@test.com",
-        _password_hash=password_hash,
-        name="Admin User",
-        role=UserRole.ADMIN,
-        client_id="test-client-id",
-        active=True
+        name="Test Workspace",
+        slug="test-workspace"
     )
     
-    return await repository.save(admin)
+    return await repository.save(workspace)
+
+
+@pytest.fixture
+async def workspace_admin_member(db_session, test_user, test_workspace):
+    """Create admin workspace membership for test_user"""
+    from tests.factories.workspace_factory import WorkspaceMemberFactory
+    from infra.database.repositories.workspace_member_repository import WorkspaceMemberRepository
+    from core.domain.workspace.workspace_role import WorkspaceRole
+    
+    repository = WorkspaceMemberRepository(db_session)
+    member = WorkspaceMemberFactory.create_member(
+        id=None,
+        user_id=test_user.id,
+        workspace_id=test_workspace.id,
+        role=WorkspaceRole.ADMIN
+    )
+    
+    return await repository.save(member)
 
 
 @pytest.fixture

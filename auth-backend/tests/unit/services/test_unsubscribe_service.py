@@ -23,7 +23,7 @@ class TestUnsubscribe:
         
         service = UnsubscribeService(subscription_repo_mock)
         
-        await service.unsubscribe_all("user@example.com")
+        await service.unsubscribe("user@example.com")
         
         subscription_repo_mock.update.assert_called()
     
@@ -39,7 +39,7 @@ class TestUnsubscribe:
         
         service = UnsubscribeService(subscription_repo_mock)
         
-        await service.unsubscribe_category("user@example.com", "marketing")
+        await service.unsubscribe("user@example.com", "marketing")
         
         subscription_repo_mock.update.assert_called()
     
@@ -55,7 +55,7 @@ class TestUnsubscribe:
         
         service = UnsubscribeService(subscription_repo_mock)
         
-        await service.resubscribe("user@example.com")
+        await service.subscribe("user@example.com")
         
         subscription_repo_mock.update.assert_called()
     
@@ -71,10 +71,10 @@ class TestUnsubscribe:
         service = UnsubscribeService(subscription_repo_mock)
         
         # Should allow transactional
-        is_allowed = await service.is_email_allowed("user@example.com", "transactional")
+        is_allowed = await service.can_send_email("user@example.com", "transactional")
         assert is_allowed is True
         
         # Should not allow marketing
-        is_allowed = await service.is_email_allowed("user@example.com", "marketing")
+        is_allowed = await service.can_send_email("user@example.com", "marketing")
         assert is_allowed is False
 

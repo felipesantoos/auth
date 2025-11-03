@@ -13,15 +13,15 @@ class TestCacheHelper:
     
     def test_generate_cache_key_includes_prefix(self):
         """Test cache key generation includes prefix"""
-        key = CacheHelper.generate_cache_key("user", "123")
+        key = CacheHelper.build_key("user", "123")
         
         assert "user" in key
         assert "123" in key
     
     def test_generate_cache_key_unique_for_different_inputs(self):
         """Test cache keys are unique for different inputs"""
-        key1 = CacheHelper.generate_cache_key("user", "123")
-        key2 = CacheHelper.generate_cache_key("user", "456")
+        key1 = CacheHelper.build_key("user", "123")
+        key2 = CacheHelper.build_key("user", "456")
         
         assert key1 != key2
 

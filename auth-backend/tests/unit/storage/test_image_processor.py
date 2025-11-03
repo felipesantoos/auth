@@ -45,7 +45,7 @@ async def test_create_thumbnail(processor, create_test_image):
     """Test thumbnail creation"""
     image_bytes = create_test_image(width=1000, height=800).read()
     
-    thumbnail = await processor.create_thumbnail(image_bytes, size=(200, 200))
+    thumbnail = await processor.create_thumbnails(image_bytes, size=(200, 200))
     
     assert len(thumbnail) > 0
     
@@ -100,7 +100,7 @@ async def test_extract_dominant_color(processor, create_test_image):
     # Create image with known color
     image_bytes = create_test_image(color=(255, 0, 0)).read()  # Red
     
-    dominant_color = await processor.extract_dominant_color(image_bytes)
+    dominant_color = await processor.extract_dominant_colors(image_bytes)
     
     assert isinstance(dominant_color, tuple)
     assert len(dominant_color) == 3

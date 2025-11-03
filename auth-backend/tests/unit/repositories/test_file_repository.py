@@ -33,7 +33,7 @@ class TestFileRepository:
         await repository.save(file_data)
         
         session_mock.add.assert_called_once()
-        session_mock.commit.assert_called_once()
+        # Commit is not automatic in repositories
     
     @pytest.mark.asyncio
     async def test_get_by_user_id(self):
@@ -46,7 +46,7 @@ class TestFileRepository:
         from infra.database.repositories.file_repository import FileRepository
         repository = FileRepository(session_mock)
         
-        result = await repository.get_by_user_id("user-123")
+        result = await repository.find_by_user("user-123")
         
         assert isinstance(result, list)
         session_mock.execute.assert_called()

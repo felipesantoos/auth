@@ -2,12 +2,13 @@
 User Filter
 Filter parameters for querying users with advanced filtering capabilities
 Inherits from BaseFilter for search, pagination, and sorting
+Multi-workspace architecture: removed role and client_id filters
 """
 from dataclasses import dataclass
 from typing import Optional, List
 from datetime import datetime
 from .base_filter import BaseFilter
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
 
 
 @dataclass
@@ -24,11 +25,13 @@ class UserFilter(BaseFilter):
     Adds user-specific filters:
     
     **Basic Filters:**
-    - client_id: Filter by client (tenant) - required for multi-tenant isolation
-    - role: Filter by user role
     - active: Filter by active status
     - email: Filter by email (exact or partial match)
     - username: Filter by username (exact or partial match)
+    
+    **REMOVED in multi-workspace:**
+    - client_id: Users no longer belong to single client
+    - role: Roles are now per-workspace (use workspace_member filters instead)
     
     **Date Range Filters:**
     - created_after: Users created after this datetime
@@ -47,25 +50,19 @@ class UserFilter(BaseFilter):
     - mfa_enabled: Filter by MFA enabled status
     - is_locked: Filter by account lock status
     
-    **Array Filters:**
-    - roles: Filter by multiple roles (OR logic - any of these roles)
-    - exclude_roles: Exclude users with these roles
-    
     Example:
         >>> # Find active users created in January 2024
         >>> filter = UserFilter(
-        ...     client_id="client_123",
         ...     active=True,
         ...     created_after=datetime(2024, 1, 1),
         ...     created_before=datetime(2024, 2, 1),
         ...     email_verified=True
         ... )
     """
-    # ===== Multi-tenant =====
-    client_id: Optional[str] = None
+    # REMOVED: client_id (multi-workspace architecture)
+    # REMOVED: role (now in workspace_member)
     
     # ===== Basic Filters =====
-    role: Optional[UserRole] = None
     active: Optional[bool] = None
     email: Optional[str] = None
     username: Optional[str] = None
@@ -87,9 +84,5 @@ class UserFilter(BaseFilter):
     mfa_enabled: Optional[bool] = None
     is_locked: Optional[bool] = None
     
-    # ===== Array Filters =====
-    # OR logic: user must have any of these roles
-    roles: Optional[List[UserRole]] = None
-    # Exclude users with any of these roles
-    exclude_roles: Optional[List[UserRole]] = None
+    # REMOVED: roles and exclude_roles (use workspace_member filters instead)
 

@@ -30,7 +30,7 @@ class TestEmailTrackingRepository:
         await repository.save(tracking_data)
         
         session_mock.add.assert_called_once()
-        session_mock.commit.assert_called_once()
+        # Commit is not automatic in repositories
     
     @pytest.mark.asyncio
     async def test_get_by_template(self):
@@ -43,7 +43,7 @@ class TestEmailTrackingRepository:
         from infra.database.repositories.email_tracking_repository import EmailTrackingRepository
         repository = EmailTrackingRepository(session_mock)
         
-        result = await repository.get_by_template("welcome")
+        result = await repository.find_by_template("welcome")
         
         assert isinstance(result, list)
 

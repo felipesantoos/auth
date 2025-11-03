@@ -36,7 +36,7 @@ class TestClientRepositoryFind:
             name="Test Company",
             subdomain="test-company",
             api_key="api_key_value",
-            is_active=True
+            active=True
         )
         
         mock_result = Mock()
@@ -61,7 +61,7 @@ class TestClientRepositoryFind:
             name="Test Company",
             subdomain="test-subdomain",
             api_key="api_key",
-            is_active=True
+            active=True
         )
         
         mock_result = Mock()

@@ -47,10 +47,7 @@ def test_user():
         id="user-123",
         username="testuser",
         email="test@example.com",
-        name="Test User",
-        role=UserRole.USER,
-        client_id="client-123",
-        _password_hash=password_hash,
+        name="Test User",        _password_hash=password_hash,
         active=True
     )
 
@@ -77,9 +74,7 @@ class TestUserProfileService:
         )
         
         updated = await service.update_profile(
-            user_id="user-123",
-            client_id="client-123",
-            name="New Name"
+            user_id="user-123",            name="New Name"
         )
         
         assert updated.name == "New Name"
@@ -105,9 +100,7 @@ class TestUserProfileService:
         )
         
         updated = await service.update_profile(
-            user_id="user-123",
-            client_id="client-123",
-            username="newusername"
+            user_id="user-123",            username="newusername"
         )
         
         assert updated.username == "newusername"
@@ -124,8 +117,7 @@ class TestUserProfileService:
         mock_user_repository.find_by_id.return_value = test_user
         # Another user already has this username
         other_user = AppUser(id="other-123", username="taken", email="other@example.com",
-                            name="Other", role=UserRole.USER, client_id="client-123",
-                            _password_hash="hash", active=True)
+                            name="Other", role=UserRole.USER,                            _password_hash="hash", active=True)
         mock_user_repository.find_by_username.return_value = other_user
         
         service = UserProfileService(
@@ -136,9 +128,7 @@ class TestUserProfileService:
         
         with pytest.raises(ValueError, match="Username already taken"):
             await service.update_profile(
-                user_id="user-123",
-                client_id="client-123",
-                username="taken"
+                user_id="user-123",                username="taken"
             )
     
     @pytest.mark.asyncio

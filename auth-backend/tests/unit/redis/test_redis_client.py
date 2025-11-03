@@ -17,7 +17,7 @@ class TestRedisClient:
         with patch('redis.asyncio.from_url') as mock_redis:
             mock_redis.return_value = AsyncMock()
             
-            client = RedisClient(redis_url="redis://localhost:6379")
+            client = RedisClient()  # RedisClient is singleton
             await client.connect()
             
             assert mock_redis.called
@@ -30,7 +30,7 @@ class TestRedisClient:
             redis_instance.ping = AsyncMock(return_value=True)
             mock_redis.return_value = redis_instance
             
-            client = RedisClient(redis_url="redis://localhost:6379")
+            client = RedisClient()  # RedisClient is singleton
             await client.connect()
             
             is_alive = await client.ping()
@@ -45,7 +45,7 @@ class TestRedisClient:
             redis_instance.close = AsyncMock()
             mock_redis.return_value = redis_instance
             
-            client = RedisClient(redis_url="redis://localhost:6379")
+            client = RedisClient()  # RedisClient is singleton
             await client.connect()
             await client.close()
             

@@ -34,7 +34,7 @@ class TestUserSessionRepositorySave:
         result = await repository.save(user_session)
         
         session_mock.add.assert_called_once()
-        session_mock.commit.assert_called_once()
+        # Commit is not automatic in repositories
 
 
 @pytest.mark.unit
@@ -56,7 +56,7 @@ class TestUserSessionRepositoryGet:
         
         repository = UserSessionRepository(session_mock)
         
-        result = await repository.get_by_id("session-123")
+        result = await repository.find_by_id("session-123")
         
         assert result is not None or session_mock.execute.called
     
@@ -70,7 +70,7 @@ class TestUserSessionRepositoryGet:
         
         repository = UserSessionRepository(session_mock)
         
-        result = await repository.get_active_sessions("user-123")
+        result = await repository.find_active_by_user("user-123")
         
         assert isinstance(result, list)
         session_mock.execute.assert_called()
@@ -108,7 +108,7 @@ class TestUserSessionRepositoryRevoke:
         
         repository = UserSessionRepository(session_mock)
         
-        await repository.revoke_all_for_user("user-123")
+        await repository.revoke_all_by_user("user-123")
         
         session_mock.execute.assert_called()
         session_mock.commit.assert_called()

@@ -1,13 +1,13 @@
 """
 Authentication Middleware
 FastAPI dependency for JWT validation and user authorization
-Adapted for multi-tenant architecture with dual-mode support (cookies/headers)
+Adapted for multi-workspace architecture with dual-mode support (cookies/headers)
 """
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
 from core.interfaces.primary.auth_service_interface import IAuthService
 from infra.database.database import get_db_session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,7 +35,7 @@ async def get_current_user(
     1. Authorization header (if present)
     2. Cookie (if header not present)
     
-    Validates that the user's client_id matches the client_id from the request.
+    Multi-workspace: Token contains client_id for backwards compatibility.
     
     Args:
         request: FastAPI request object
@@ -129,8 +129,10 @@ async def get_current_user(
             detail="User account is deactivated",
         )
     
-    # Store client_id in request state for later use
-    request.state.client_id = user.client_id
+    # REMOVED: Store client_id (no longer exists on user)
+    # Store token client_id in request state for backwards compatibility
+    if token_client_id:
+        request.state.client_id = token_client_id
     
     # Store session_id if present in token (for session management)
     session_id = payload.get("session_id")
@@ -140,27 +142,8 @@ async def get_current_user(
     return user
 
 
-async def get_current_admin_user(
-    current_user: AppUser = Depends(get_current_user),
-) -> AppUser:
-    """
-    Dependency to ensure current user is an admin.
-    
-    Args:
-        current_user: Current authenticated user
-        
-    Returns:
-        Current user if admin
-        
-    Raises:
-        HTTPException: If user is not admin
-    """
-    if not current_user.is_admin():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-    return current_user
+# REMOVED: get_current_user() - admin is now per-workspace, not global
+# Use workspace_middleware.verify_workspace_admin() instead
 
 
 async def get_current_manager_user(

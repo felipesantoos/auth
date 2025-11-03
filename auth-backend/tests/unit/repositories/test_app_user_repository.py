@@ -40,10 +40,7 @@ class TestAppUserRepositoryFind:
             username="testuser",
             email="test@example.com",
             hashed_password="hashed",
-            full_name="Test User",
-            role="user",
-            client_id="client-456",
-            is_active=True
+            full_name="Test User",            active=True
         )
         
         mock_result = Mock()
@@ -83,10 +80,7 @@ class TestAppUserRepositoryFind:
             username="testuser",
             email="test@example.com",
             hashed_password="hashed",
-            full_name="Test User",
-            role="user",
-            client_id="client-456",
-            is_active=True
+            full_name="Test User",            active=True
         )
         
         mock_result = Mock()
@@ -111,10 +105,7 @@ class TestAppUserRepositoryFind:
                 username=f"user{i}",
                 email=f"user{i}@example.com",
                 hashed_password="hashed",
-                full_name=f"User {i}",
-                role="user",
-                client_id="client-456",
-                is_active=True
+                full_name=f"User {i}",                active=True
             )
             for i in range(3)
         ]
@@ -181,10 +172,7 @@ class TestAppUserRepositorySave:
             username="testuser",
             email="test@example.com",
             hashed_password="hashed",
-            full_name="Old Name",
-            role="user",
-            client_id="client-456",
-            is_active=True
+            full_name="Old Name",            active=True
         )
         
         mock_result = Mock()

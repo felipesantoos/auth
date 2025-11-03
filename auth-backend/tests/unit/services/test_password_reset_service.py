@@ -76,7 +76,7 @@ class TestRequestPasswordReset:
         user = UserFactory.build()
         mock_repository.find_by_email.return_value = user
         
-        await password_reset_service.request_password_reset(user.email, user.client_id)
+        await password_reset_service.send_reset_email(user.email, "test-client")
         
         assert mock_cache.set.called
         assert mock_email_service.send_email.called
@@ -89,7 +89,7 @@ class TestRequestPasswordReset:
         mock_repository.find_by_email.return_value = None
         
         # Should not raise exception (prevent user enumeration)
-        await password_reset_service.request_password_reset("nonexistent@test.com", "client")
+        await password_reset_service.send_reset_email("nonexistent@test.com", "client")
         
         # Should not send email
         assert not mock_email_service.send_email.called
@@ -102,7 +102,7 @@ class TestRequestPasswordReset:
         user = UserFactory.build()
         mock_repository.find_by_email.return_value = user
         
-        await password_reset_service.request_password_reset(user.email, user.client_id)
+        await password_reset_service.send_reset_email(user.email, "test-client")
         
         assert mock_email_service.send_email.called
         call_args = mock_email_service.send_email.call_args
@@ -122,12 +122,12 @@ class TestVerifyResetToken:
         user = UserFactory.build()
         
         # Generate valid token
-        token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
+        token = password_reset_service._generate_reset_token(user.id, user.email, "test-client")
         
         # Mock cache to return token exists
         mock_cache.get.return_value = "exists"
         
-        result = await password_reset_service.verify_reset_token(token, user.client_id)
+        result = await password_reset_service.validate_reset_token(token, "test-client")
         
         assert result["user_id"] == user.id
         assert result["email"] == user.email
@@ -143,13 +143,13 @@ class TestVerifyResetToken:
         with patch('core.services.auth.password_reset_service.datetime') as mock_datetime:
             mock_datetime.utcnow.return_value = datetime.utcnow() - timedelta(hours=2)
             expired_token = password_reset_service._generate_reset_token(
-                user.id, user.email, user.client_id
+                user.id, user.email, "test-client"
             )
         
         mock_cache.get.return_value = "exists"
         
         with pytest.raises(InvalidTokenException):
-            await password_reset_service.verify_reset_token(expired_token, user.client_id)
+            await password_reset_service.validate_reset_token(expired_token, "test-client")
     
     @pytest.mark.asyncio
     async def test_verify_invalid_token_raises(
@@ -157,7 +157,7 @@ class TestVerifyResetToken:
     ):
         """Test verifying invalid token raises exception"""
         with pytest.raises(InvalidTokenException):
-            await password_reset_service.verify_reset_token("invalid-token", "client")
+            await password_reset_service.validate_reset_token("invalid-token", "client")
     
     @pytest.mark.asyncio
     async def test_verify_token_not_in_cache_raises(
@@ -165,13 +165,13 @@ class TestVerifyResetToken:
     ):
         """Test verifying token not in cache raises exception"""
         user = UserFactory.build()
-        token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
+        token = password_reset_service._generate_reset_token(user.id, user.email, "test-client")
         
         # Token not in cache (already used or never existed)
         mock_cache.get.return_value = None
         
         with pytest.raises(InvalidTokenException, match="used or invalid"):
-            await password_reset_service.verify_reset_token(token, user.client_id)
+            await password_reset_service.validate_reset_token(token, "test-client")
 
 
 @pytest.mark.unit
@@ -184,14 +184,14 @@ class TestResetPassword:
     ):
         """Test resetting password with valid token"""
         user = UserFactory.build()
-        token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
+        token = password_reset_service._generate_reset_token(user.id, user.email, "test-client")
         new_password = "NewSecurePass123"
         
         mock_cache.get.return_value = "exists"
         mock_repository.find_by_id.return_value = user
         mock_repository.save.return_value = user
         
-        result = await password_reset_service.reset_password(token, new_password, user.client_id)
+        result = await password_reset_service.reset_password(token, new_password, "test-client")
         
         assert result is not None
         assert mock_repository.save.called
@@ -204,12 +204,12 @@ class TestResetPassword:
     ):
         """Test resetting with weak password raises exception"""
         user = UserFactory.build()
-        token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
+        token = password_reset_service._generate_reset_token(user.id, user.email, "test-client")
         
         mock_cache.get.return_value = "exists"
         
         with pytest.raises(ValidationException):
-            await password_reset_service.reset_password(token, "weak", user.client_id)
+            await password_reset_service.reset_password(token, "weak", "test-client")
     
     @pytest.mark.asyncio
     async def test_reset_password_invalidates_token(
@@ -217,13 +217,13 @@ class TestResetPassword:
     ):
         """Test reset password invalidates token (one-time use)"""
         user = UserFactory.build()
-        token = password_reset_service._generate_reset_token(user.id, user.email, user.client_id)
+        token = password_reset_service._generate_reset_token(user.id, user.email, "test-client")
         
         mock_cache.get.return_value = "exists"
         mock_repository.find_by_id.return_value = user
         mock_repository.save.return_value = user
         
-        await password_reset_service.reset_password(token, "NewPass123", user.client_id)
+        await password_reset_service.reset_password(token, "NewPass123", "test-client")
         
         # Token should be deleted
         assert mock_cache.delete.called

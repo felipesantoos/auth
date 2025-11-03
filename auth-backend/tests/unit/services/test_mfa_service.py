@@ -56,7 +56,7 @@ class TestMFASetup:
         user_repo.find_by_id.return_value = user
         user_repo.save.return_value = user
         
-        result = await mfa_service.setup_mfa(user.id, user.client_id)
+        result = await mfa_service.setup_mfa(user.id, "test-client")
         
         assert "secret" in result
         assert "qr_code" in result
@@ -73,7 +73,7 @@ class TestMFASetup:
         user_repo.find_by_id.return_value = user
         user_repo.save.return_value = user
         
-        result = await mfa_service.setup_mfa(user.id, user.client_id)
+        result = await mfa_service.setup_mfa(user.id, "test-client")
         
         assert len(result["backup_codes"]) == 10
         assert all(len(code) == 8 for code in result["backup_codes"])
@@ -88,7 +88,7 @@ class TestMFASetup:
         user_repo.find_by_id.return_value = user
         user_repo.save.return_value = user
         
-        await mfa_service.setup_mfa(user.id, user.client_id)
+        await mfa_service.setup_mfa(user.id, "test-client")
         
         # MFA should not be enabled yet (requires verification)
         assert user.mfa_enabled is False
@@ -113,7 +113,7 @@ class TestMFAEnable:
         totp = pyotp.TOTP(secret)
         valid_code = totp.now()
         
-        result = await mfa_service.enable_mfa(user.id, user.client_id, valid_code)
+        result = await mfa_service.enable_mfa(user.id, "test-client", valid_code)
         
         assert result.mfa_enabled is True
         assert user_repo.save.called
@@ -128,7 +128,7 @@ class TestMFAEnable:
         user_repo.find_by_id.return_value = user
         
         with pytest.raises(ValidationException, match="Invalid"):
-            await mfa_service.enable_mfa(user.id, user.client_id, "000000")
+            await mfa_service.enable_mfa(user.id, "test-client", "000000")
     
     @pytest.mark.asyncio
     async def test_disable_mfa(self, mfa_service, mock_repositories):
@@ -139,7 +139,7 @@ class TestMFAEnable:
         user_repo.find_by_id.return_value = user
         user_repo.save.return_value = user
         
-        result = await mfa_service.disable_mfa(user.id, user.client_id)
+        result = await mfa_service.disable_mfa(user.id, "test-client")
         
         assert result.mfa_enabled is False
         assert result.mfa_secret is None
@@ -179,9 +179,7 @@ class TestMFAVerification:
         
         # Create backup code
         backup_code = BackupCodeFactory.build(
-            user_id=user.id,
-            client_id=user.client_id,
-            code=plain_code,
+            user_id=user.id,            code=plain_code,
             used=False
         )
         
@@ -192,7 +190,7 @@ class TestMFAVerification:
         with patch('bcrypt.checkpw', return_value=True):
             result = await mfa_service.verify_backup_code(
                 user.id,
-                user.client_id,
+                "test-client",
                 plain_code
             )
         
@@ -207,16 +205,14 @@ class TestMFAVerification:
         
         # Create used backup code
         backup_code = BackupCodeFactory.create_used(
-            user_id=user.id,
-            client_id=user.client_id
-        )
+            user_id=user.id,        )
         
         user_repo, backup_repo = mock_repositories
         backup_repo.find_by_user.return_value = [backup_code]
         
         result = await mfa_service.verify_backup_code(
             user.id,
-            user.client_id,
+            "test-client",
             "12345678"
         )
         
@@ -235,7 +231,7 @@ class TestBackupCodeRegeneration:
         user_repo, backup_repo = mock_repositories
         user_repo.find_by_id.return_value = user
         
-        new_codes = await mfa_service.regenerate_backup_codes(user.id, user.client_id)
+        new_codes = await mfa_service.regenerate_backup_codes(user.id, "test-client")
         
         assert len(new_codes) == 10
         # Old codes should be deleted
@@ -252,7 +248,7 @@ class TestBackupCodeRegeneration:
         user_repo.find_by_id.return_value = user
         
         with pytest.raises(BusinessRuleException, match="MFA.*not enabled"):
-            await mfa_service.regenerate_backup_codes(user.id, user.client_id)
+            await mfa_service.regenerate_backup_codes(user.id, "test-client")
 
 
 @pytest.mark.unit

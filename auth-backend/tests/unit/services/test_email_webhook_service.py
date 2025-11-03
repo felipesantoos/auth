@@ -26,7 +26,7 @@ class TestEmailWebhook:
             "timestamp": 1234567890
         }]
         
-        await service.process_sendgrid_webhook(webhook_data)
+        await service.process_sendgrid_event(webhook_data)
         
         # Should process the open event
         assert tracking_service_mock.record_email_opened.called or True
@@ -46,7 +46,7 @@ class TestEmailWebhook:
             "reason": "Invalid mailbox"
         }]
         
-        await service.process_sendgrid_webhook(webhook_data)
+        await service.process_sendgrid_event(webhook_data)
         
         subscription_service_mock.mark_email_bounced.assert_called()
     
@@ -64,7 +64,7 @@ class TestEmailWebhook:
             "email": "user@example.com"
         }]
         
-        await service.process_sendgrid_webhook(webhook_data)
+        await service.process_sendgrid_event(webhook_data)
         
         subscription_service_mock.unsubscribe.assert_called()
 

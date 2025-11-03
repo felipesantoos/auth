@@ -7,7 +7,7 @@ from typing import Optional
 from datetime import datetime
 
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
 from core.interfaces.secondary.app_user_repository_interface import IAppUserRepository
 from core.interfaces.secondary.settings_provider_interface import ISettingsProvider
 from core.exceptions import (
@@ -130,8 +130,8 @@ class LDAPService:
                     username=username,
                     email=email,
                     name=name,
-                    role=UserRole.USER,
-                    client_id=client_id,
+                    # REMOVED: role (now in WorkspaceMember)
+                    # REMOVED: client_id (now via workspace_member)
                     active=True,
                     email_verified=True,  # Auto-verified for LDAP users
                     created_at=datetime.utcnow(),

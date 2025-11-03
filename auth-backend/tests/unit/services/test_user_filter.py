@@ -23,7 +23,7 @@ class TestUserFilter:
         
         filter_service = UserFilter()
         
-        admins = filter_service.filter_by_role(users, "admin")
+        admins = filter_service.apply(users, "admin")
         
         assert len(admins) == 2
         assert all(u.role == "admin" for u in admins)
@@ -38,7 +38,7 @@ class TestUserFilter:
         
         filter_service = UserFilter()
         
-        active_users = filter_service.filter_by_active(users, active=True)
+        active_users = filter_service.apply(users, active=True)
         
         assert len(active_users) == 2
         assert all(u.active is True for u in active_users)
@@ -53,7 +53,7 @@ class TestUserFilter:
         
         filter_service = UserFilter()
         
-        verified_users = filter_service.filter_by_email_verified(users)
+        verified_users = filter_service.apply(users)
         
         assert len(verified_users) == 2
         assert all(u.email_verified is True for u in verified_users)
@@ -69,7 +69,7 @@ class TestUserFilter:
         
         filter_service = UserFilter()
         
-        mfa_users = filter_service.filter_by_mfa_enabled(users)
+        mfa_users = filter_service.apply(users)
         
         assert len(mfa_users) == 2
         assert all(u.mfa_enabled is True for u in mfa_users)
@@ -89,7 +89,7 @@ class TestBaseFilter:
         
         filter_service = BaseFilter()
         
-        active_items = filter_service.filter_by_field(items, "status", "active")
+        active_items = filter_service.apply(items, "status", "active")
         
         assert len(active_items) == 2
         assert all(item.status == "active" for item in active_items)
@@ -104,7 +104,7 @@ class TestBaseFilter:
         
         filter_service = BaseFilter()
         
-        not_deleted = filter_service.exclude_by_field(items, "status", "deleted")
+        not_deleted = filter_service.exclude(items, "status", "deleted")
         
         assert len(not_deleted) == 2
         assert all(item.status != "deleted" for item in not_deleted)

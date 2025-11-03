@@ -31,7 +31,7 @@ async def test_upload_file(local_storage, temp_storage_dir):
     file_stream = BytesIO(file_content)
     
     result = await local_storage.upload_file(
-        file=file_stream,
+        file_data=file_stream,
         filename="test.txt",
         user_id="user123",
         client_id="client1"
@@ -52,7 +52,7 @@ async def test_download_file(local_storage):
     
     # Upload first
     upload_result = await local_storage.upload_file(
-        file=file_stream,
+        file_data=file_stream,
         filename="download_test.txt",
         user_id="user123",
         client_id="client1"
@@ -72,7 +72,7 @@ async def test_delete_file(local_storage, temp_storage_dir):
     
     # Upload first
     upload_result = await local_storage.upload_file(
-        file=file_stream,
+        file_data=file_stream,
         filename="delete_test.txt",
         user_id="user123",
         client_id="client1"
@@ -95,7 +95,7 @@ async def test_get_file_url(local_storage):
     file_stream = BytesIO(file_content)
     
     upload_result = await local_storage.upload_file(
-        file=file_stream,
+        file_data=file_stream,
         filename="url_test.txt",
         user_id="user123",
         client_id="client1"

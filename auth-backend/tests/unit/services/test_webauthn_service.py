@@ -21,7 +21,7 @@ class TestWebAuthnService:
         
         service = WebAuthnService(credential_repo_mock, user_repo_mock, cache_mock)
         
-        options = await service.generate_registration_options(
+        options = await service.begin_registration(
             user_id="user-123",
             username="john"
         )
@@ -44,7 +44,7 @@ class TestWebAuthnService:
         # Mock the verification logic
         service._verify_registration_response = AsyncMock(return_value=True)
         
-        result = await service.verify_registration(
+        result = await service.complete_registration(
             user_id="user-123",
             credential_data={"id": "cred-123", "response": {}}
         )

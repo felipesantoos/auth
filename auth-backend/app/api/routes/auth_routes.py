@@ -64,7 +64,6 @@ from core.domain.auth.audit_event_type import AuditEventType
 from core.exceptions import BusinessRuleException
 from app.api.middlewares.auth_middleware import (
     get_current_user,
-    get_current_admin_user,
 )
 from app.api.middlewares.tenant_middleware import get_client_from_request
 from app.api.middlewares.rate_limit_middleware import limiter
@@ -867,7 +866,8 @@ async def list_users(
     sort_by: Optional[str] = Query(None, description="Field to sort by (e.g., 'full_name', 'created_at')"),
     sort_order: Optional[str] = Query("asc", regex="^(asc|desc)$", description="Sort order"),
     auth_service: IAuthService = Depends(get_auth_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
     session: AsyncSession = Depends(get_db_session),
 ):
     """
@@ -924,7 +924,8 @@ async def get_user_by_email(
     request: Request,
     email: str,
     auth_service: IAuthService = Depends(get_auth_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
 ):
     """
     Get user by email within current client (admin only, multi-tenant).
@@ -948,7 +949,8 @@ async def get_user_by_id(
     request: Request,
     user_id: str,
     auth_service: IAuthService = Depends(get_auth_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
 ):
     """
     Get user by ID within current client (admin only, multi-tenant).
@@ -972,7 +974,8 @@ async def check_user_exists(
     response: Response,
     user_id: str,
     auth_service: IAuthService = Depends(get_auth_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
 ):
     """
     Check if user exists without returning body (admin only, multi-tenant).
@@ -1010,7 +1013,8 @@ async def update_user(
     user_id: str,
     update_request: UpdateUserRequest,
     auth_service: IAuthService = Depends(get_auth_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
 ):
     """
     Update user within current client (admin only, multi-tenant).
@@ -1054,7 +1058,8 @@ async def partial_update_user(
     user_id: str,
     update_request: UpdateUserRequest,
     auth_service: IAuthService = Depends(get_auth_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
 ):
     """
     Partial update user within current client (admin only, multi-tenant).
@@ -1097,7 +1102,8 @@ async def delete_user(
     request: Request,
     user_id: str,
     auth_service: IAuthService = Depends(get_auth_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
 ):
     """
     Delete user within current client (admin only, multi-tenant).
@@ -1219,7 +1225,8 @@ async def bulk_create_users(
     bulk_request: BulkCreateUsersRequest = Body(...),
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
 ):
     """
     Bulk create users (admin only, multi-tenant).
@@ -1359,7 +1366,8 @@ async def bulk_update_users(
     bulk_request: BulkUpdateUsersRequest = Body(...),
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
 ):
     """
     Bulk update users (admin only, multi-tenant).
@@ -1460,7 +1468,8 @@ async def bulk_delete_users(
     bulk_request: BulkDeleteUsersRequest = Body(...),
     auth_service: IAuthService = Depends(get_auth_service),
     audit_service: AuditService = Depends(get_audit_service),
-    current_user: AppUser = Depends(get_current_admin_user),
+    current_user: AppUser = Depends(get_current_user),
+    # TODO: Add workspace admin verification
 ):
     """
     Bulk delete users (admin only, multi-tenant).

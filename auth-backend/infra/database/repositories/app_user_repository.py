@@ -6,7 +6,7 @@ Adapted for multi-tenant architecture with client_id filtering
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import select, delete as sql_delete, and_, func, or_
-from sqlalchemy.orm import selectinload
+# REMOVED: from sqlalchemy.orm import selectinload (no longer need eager loading)
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, DatabaseError
 from sqlalchemy.ext.asyncio import AsyncSession
 from core.interfaces.secondary.app_user_repository_interface import (
@@ -59,14 +59,12 @@ class AppUserRepository(IAppUserRepository):
             List of users (empty list if error, graceful degradation)
         """
         try:
-            # ⚡ PERFORMANCE: Eager load client relationship to prevent N+1 queries
-            query = select(DBAppUser).options(selectinload(DBAppUser.client))
+            # REMOVED: Eager load client (no longer exists in multi-workspace)
+            query = select(DBAppUser)
             conditions = []
             
             if filter:
-                # Multi-tenant: Always filter by client_id if provided
-                if filter.client_id:
-                    conditions.append(DBAppUser.client_id == filter.client_id)
+                # REMOVED: client_id filter (multi-workspace architecture)
                 
                 # Apply search filter (from BaseFilter)
                 if filter.search:
@@ -82,8 +80,7 @@ class AppUserRepository(IAppUserRepository):
                     conditions.append(DBAppUser.email.ilike(f"%{filter.email}%"))
                 if filter.username:
                     conditions.append(DBAppUser.username.ilike(f"%{filter.username}%"))
-                if filter.role:
-                    conditions.append(DBAppUser.role == filter.role.value)
+                # REMOVED: role filter (roles now in workspace_member)
                 if filter.active is not None:
                     conditions.append(DBAppUser.is_active == filter.active)
                 
@@ -138,12 +135,10 @@ class AppUserRepository(IAppUserRepository):
             client_id: Optional client ID for multi-tenant isolation
         """
         try:
-            # ⚡ PERFORMANCE: Eager load client relationship
-            query = select(DBAppUser).options(selectinload(DBAppUser.client)).where(DBAppUser.id == user_id)
+            # REMOVED: Eager load client (no longer exists)
+            query = select(DBAppUser).where(DBAppUser.id == user_id)
             
-            # Multi-tenant: Filter by client_id if provided
-            if client_id:
-                query = query.where(DBAppUser.client_id == client_id)
+            # REMOVED: client_id filter (multi-workspace architecture)
             
             result = await self.session.execute(query)
             db_user = result.scalar_one_or_none()
@@ -180,12 +175,10 @@ class AppUserRepository(IAppUserRepository):
             if not user_ids:
                 return []
             
-            # ⚡ PERFORMANCE: Eager load client relationship
-            query = select(DBAppUser).options(selectinload(DBAppUser.client)).where(DBAppUser.id.in_(user_ids))
+            # REMOVED: Eager load client (no longer exists)
+            query = select(DBAppUser).where(DBAppUser.id.in_(user_ids))
             
-            # Multi-tenant: Filter by client_id if provided
-            if client_id:
-                query = query.where(DBAppUser.client_id == client_id)
+            # REMOVED: client_id filter (multi-workspace architecture)
             
             result = await self.session.execute(query)
             db_users = result.scalars().all()
@@ -336,8 +329,9 @@ class AppUserRepository(IAppUserRepository):
             query = sql_delete(DBAppUser).where(DBAppUser.id == user_id)
             
             # Multi-tenant: Add client_id filter if provided
-            if client_id:
-                query = query.where(DBAppUser.client_id == client_id)
+            # Multi-workspace: client_id no longer in DBAppUser
+            # if client_id:
+            #     query = query.where(DBAppUser.client_id == client_id)
             
             result = await self.session.execute(query)
             await self.session.flush()
@@ -375,9 +369,7 @@ class AppUserRepository(IAppUserRepository):
             if filter:
                 conditions = []
                 
-                # Multi-tenant: Always filter by client_id if provided
-                if filter.client_id:
-                    conditions.append(DBAppUser.client_id == filter.client_id)
+                # REMOVED: client_id filter (multi-workspace architecture)
                 
                 # Apply search filter (from BaseFilter)
                 if filter.search:
@@ -393,8 +385,7 @@ class AppUserRepository(IAppUserRepository):
                     conditions.append(DBAppUser.email.ilike(f"%{filter.email}%"))
                 if filter.username:
                     conditions.append(DBAppUser.username.ilike(f"%{filter.username}%"))
-                if filter.role:
-                    conditions.append(DBAppUser.role == filter.role.value)
+                # REMOVED: role filter (roles now in workspace_member)
                 if filter.active is not None:
                     conditions.append(DBAppUser.is_active == filter.active)
                 

@@ -6,10 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Annotated
 import logging
 
-from app.api.middlewares.auth_middleware import get_current_user, get_current_admin_user
+from app.api.middlewares.auth_middleware import get_current_user
+# REMOVED: get_current_user (admins are now per-workspace)
 from app.api.dicontainer.dicontainer import get_permission_service
 from core.domain.auth.app_user import AppUser
-from core.domain.auth.user_role import UserRole
+# REMOVED: from core.domain.auth.user_role import UserRole (roles now in WorkspaceMember)
 from core.domain.auth.permission import PermissionAction  # ResourceType removed! ✨
 from core.services.auth.permission_service import PermissionService
 from pydantic import BaseModel
@@ -47,7 +48,8 @@ class PermissionResponse(BaseModel):
 @router.post("", response_model=PermissionResponse, status_code=status.HTTP_201_CREATED)
 async def grant_permission(
     request: GrantPermissionRequest,
-    current_user: Annotated[AppUser, Depends(get_current_admin_user)],
+    current_user: Annotated[AppUser, Depends(get_current_user)],
+    # TODO: Add workspace admin verification
     permission_service: Annotated[PermissionService, Depends(get_permission_service)]
 ):
     """

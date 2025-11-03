@@ -18,7 +18,7 @@ class TestStorageFactory:
         settings_mock.local_storage_path = "/tmp/uploads"
         
         with patch('infra.storage.storage_factory.settings', settings_mock):
-            storage = StorageFactory.get_storage()
+            storage = StorageFactory.create_storage()
             
             assert storage is not None
     
@@ -31,7 +31,7 @@ class TestStorageFactory:
         settings_mock.aws_s3_bucket = "bucket"
         
         with patch('infra.storage.storage_factory.settings', settings_mock):
-            storage = StorageFactory.get_storage()
+            storage = StorageFactory.create_storage()
             
             assert storage is not None
     
@@ -43,7 +43,7 @@ class TestStorageFactory:
         
         with patch('infra.storage.storage_factory.settings', settings_mock):
             with patch('google.cloud.storage.Client'):
-                storage = StorageFactory.get_storage()
+                storage = StorageFactory.create_storage()
                 
                 assert storage is not None
 

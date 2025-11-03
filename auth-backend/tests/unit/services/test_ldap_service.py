@@ -26,7 +26,7 @@ class TestLDAPAuthentication:
             mock_conn.return_value.search.return_value = True
             mock_conn.return_value.entries = [Mock(uid="user123", mail="user@example.com")]
             
-            result = await service.authenticate("user123", "password123")
+            result = await service.authenticate_ldap("user123", "password123")
             
             assert result is not None or mock_conn.called
     
@@ -42,7 +42,7 @@ class TestLDAPAuthentication:
         with patch('ldap3.Connection') as mock_conn:
             mock_conn.return_value.bind.return_value = False
             
-            result = await service.authenticate("user123", "wrongpassword")
+            result = await service.authenticate_ldap("user123", "wrongpassword")
             
             assert result is None or not mock_conn.return_value.bind.return_value
     

@@ -18,7 +18,7 @@ class TestVideoProcessing:
         storage_mock.read = AsyncMock(return_value=b"video_data")
         storage_mock.save = AsyncMock(return_value="thumbnail.jpg")
         
-        service = VideoProcessingService(storage_mock)
+        service = VideoProcessingService(storage_mock, file_repository_mock := AsyncMock(), validator_mock := Mock(), video_processor_mock := Mock())
         
         with patch('ffmpeg.input') as mock_ffmpeg:
             mock_ffmpeg.return_value.output.return_value.run.return_value = None
@@ -35,7 +35,7 @@ class TestVideoProcessing:
         """Test extracting video metadata"""
         storage_mock = AsyncMock()
         
-        service = VideoProcessingService(storage_mock)
+        service = VideoProcessingService(storage_mock, file_repository_mock := AsyncMock(), validator_mock := Mock(), video_processor_mock := Mock())
         
         with patch('ffmpeg.probe') as mock_probe:
             mock_probe.return_value = {
@@ -62,7 +62,7 @@ class TestVideoProcessing:
         storage_mock.read = AsyncMock(return_value=b"video_data")
         storage_mock.save = AsyncMock(return_value="video.webm")
         
-        service = VideoProcessingService(storage_mock)
+        service = VideoProcessingService(storage_mock, file_repository_mock := AsyncMock(), validator_mock := Mock(), video_processor_mock := Mock())
         
         with patch('ffmpeg.input') as mock_ffmpeg:
             mock_ffmpeg.return_value.output.return_value.run.return_value = None
