@@ -43,7 +43,7 @@ class TestEmailTrackingRepository:
         from infra.database.repositories.email_tracking_repository import EmailTrackingRepository
         repository = EmailTrackingRepository(session_mock)
         
-        result = await repository.find_by_email("welcome")
+        result = await repository.find_by_template("welcome")
         
         assert isinstance(result, list)
 

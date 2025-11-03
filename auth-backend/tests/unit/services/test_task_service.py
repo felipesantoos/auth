@@ -108,7 +108,7 @@ class TestTaskManagement:
         
         service = TaskService(task_repo_mock)
         
-        await service.cancel_task("task-123")
+        await service.mark_task_cancelled("task-123")
         
         task_repo_mock.update.assert_called()
 

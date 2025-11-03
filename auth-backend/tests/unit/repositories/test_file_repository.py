@@ -15,25 +15,24 @@ class TestFileRepository:
         """Test saving file metadata"""
         session_mock = AsyncMock()
         session_mock.add = Mock()
-        session_mock.commit = AsyncMock()
+        session_mock.flush = AsyncMock()
         session_mock.refresh = AsyncMock()
         
         from infra.database.repositories.file_repository import FileRepository
         repository = FileRepository(session_mock)
         
-        file_data = Mock(
-            id=None,
-            user_id="user-123",
-            original_filename="test.pdf",
-            stored_filename="abc123.pdf",
-            file_size=1024,
-            mime_type="application/pdf"
-        )
+        file_data = {
+            "user_id": "user-123",
+            "original_filename": "test.pdf",
+            "stored_filename": "abc123.pdf",
+            "file_size": 1024,
+            "mime_type": "application/pdf"
+        }
         
-        pytest.skip("save method"); await repository.add(file_data)
+        result = await repository.create(file_data)
         
         session_mock.add.assert_called_once()
-        # Commit is not automatic in repositories
+        session_mock.flush.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_get_by_user_id(self):
@@ -46,7 +45,8 @@ class TestFileRepository:
         from infra.database.repositories.file_repository import FileRepository
         repository = FileRepository(session_mock)
         
-        result = await repository.find_by_user_id("user-123")
+        # Fixed: list_by_user requires both user_id and client_id, returns tuple
+        result, total = await repository.list_by_user(user_id="user-123", client_id="test-client")
         
         assert isinstance(result, list)
         session_mock.execute.assert_called()
@@ -59,14 +59,12 @@ class TestFileRepository:
         
         session_mock.execute = AsyncMock()
         session_mock.execute.return_value.scalar_one_or_none = Mock(return_value=db_file_mock)
-        session_mock.delete = Mock()
-        session_mock.commit = AsyncMock()
+        session_mock.delete = AsyncMock()
+        session_mock.flush = AsyncMock()
         
         from infra.database.repositories.file_repository import FileRepository
         repository = FileRepository(session_mock)
         
-        await repository.delete("file-123")
+        result = await repository.delete("file-123")
         
         session_mock.delete.assert_called_with(db_file_mock)
-        session_mock.commit.assert_called()
-

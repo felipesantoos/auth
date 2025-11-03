@@ -50,7 +50,7 @@ class TestBackupCodeRepositoryGet:
         
         repository = BackupCodeRepository(session_mock)
         
-        result = await repository.find_unused_codes(user_id="user-123", client_id="test-client")
+        result = await repository.find_unused_by_user(user_id="user-123", client_id="test-client")
         
         assert isinstance(result, list)
         session_mock.execute.assert_called()
@@ -65,7 +65,8 @@ class TestBackupCodeRepositoryGet:
         
         repository = BackupCodeRepository(session_mock)
         
-        result = await repository.get_unused_codes("user-123")
+        # Fixed: find_unused_by_user requires both user_id and client_id
+        result = await repository.find_unused_by_user(user_id="user-123", client_id="test-client")
         
         assert isinstance(result, list)
 
@@ -78,19 +79,24 @@ class TestBackupCodeRepositoryMarkUsed:
     async def test_mark_code_as_used(self):
         """Test marking backup code as used"""
         session_mock = AsyncMock()
-        db_code_mock = Mock(
-            id="code-123",
-            used=False,
-            mark_used=Mock()
-        )
-        
-        session_mock.execute = AsyncMock()
-        session_mock.execute.return_value.scalar_one_or_none = Mock(return_value=db_code_mock)
-        session_mock.commit = AsyncMock()
+        session_mock.add = Mock()
+        session_mock.flush = AsyncMock()
+        session_mock.refresh = AsyncMock()
         
         repository = BackupCodeRepository(session_mock)
         
-        await repository.mark_used("code-123")
+        # Fixed: save() expects BackupCode domain object, not string
+        # This test verifies that we can save a used code
+        code = BackupCode(
+            client_id="test-client",
+            id="code-123",
+            user_id="user-123",
+            code_hash="hashed_code",
+            used=True  # Marking as used
+        )
         
-        session_mock.commit.assert_called()
+        result = await repository.save(code)
+        
+        # Repository uses flush, not commit (UoW pattern)
+        session_mock.flush.assert_called_once()
 

@@ -11,17 +11,23 @@ class TestPendingUploadRepository:
     
     @pytest.mark.asyncio
     async def test_save_pending_upload(self):
-        """Test saving pending upload"""
+        """Test creating pending upload"""
         session_mock = AsyncMock()
         session_mock.add = Mock()
-        session_mock.commit = AsyncMock()
+        session_mock.flush = AsyncMock()
+        session_mock.refresh = AsyncMock()
         
         from infra.database.repositories.pending_upload_repository import PendingUploadRepository
         repository = PendingUploadRepository(session_mock)
         
-        upload_data = Mock(id=None, user_id="user-123", filename="file.mp4")
-        await repository.add(upload_data)
+        # Fixed: create() expects dict, PendingUploadRepository has no save()
+        upload_data = {
+            "user_id": "user-123",
+            "filename": "file.mp4",
+            "file_size": 1048576
+        }
         
-        # Repository API changed
-        # Commit is not automatic in repositories
-
+        result = await repository.create(upload_data)
+        
+        session_mock.add.assert_called_once()
+        session_mock.flush.assert_called_once()

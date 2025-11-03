@@ -161,7 +161,7 @@ class TestSessionRevocation:
     """Test session revocation (logout)"""
     
     @pytest.mark.asyncio
-    async def test_revoke_session_by_id(self, session_service, mock_repository):
+    async def test_revoke_session(self, session_service, mock_repository):
         """Test revoking specific session"""
         session_id = "session-123"
         user_id = "user-456"
@@ -169,13 +169,13 @@ class TestSessionRevocation:
         
         mock_repository.delete.return_value = True
         
-        result = await session_service.revoke_session(session_id, user_id, client_id)
+        result = await session_service.revoke_session_by_id(session_id, user_id, client_id)
         
         assert result  # Returns truthy
         assert mock_repository.delete.called
     
     @pytest.mark.asyncio
-    async def test_revoke_all_sessions(self, session_service, mock_repository):
+    async def test_revoke_all_user_sessions(self, session_service, mock_repository):
         """Test revoking all sessions for a user"""
         user_id = "user-456"
         client_id = "client-789"
@@ -310,7 +310,7 @@ class TestSessionActivityUpdate:
     """Test session activity tracking"""
     
     @pytest.mark.asyncio
-    async def test_update_session_activity(self, session_service, mock_repository):
+    async def test_update_activity(self, session_service, mock_repository):
         """Test updating session last activity"""
         session = UserSession(
             id="session-123",

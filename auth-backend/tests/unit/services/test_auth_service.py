@@ -47,8 +47,8 @@ class TestPasswordSecurity:
         # Valid password
         auth_service._validate_password_strength("SecurePass123!")
         
-        # Too short
-        with pytest.raises(InvalidPasswordException, match="at least 8 characters"):
+        # Too short - Fixed: Actual requirement is 12 characters
+        with pytest.raises(InvalidPasswordException, match="at least 12 characters"):
             auth_service._validate_password_strength("Short1")
         
         # No uppercase
@@ -77,6 +77,12 @@ class TestJWTSecurity:
         settings_mock.jwt_issuer = "test-issuer"
         settings_mock.jwt_audience = "test-audience"
         settings_mock.access_token_expire_minutes = 30
+        # Fixed: Mock method to return actual values, not Mock objects
+        settings_mock.get_access_token_expire_minutes = Mock(return_value=30)
+        settings_mock.get_jwt_secret = Mock(return_value="test-secret-key-min-32-characters-long")
+        settings_mock.get_jwt_algorithm = Mock(return_value="HS256")
+        settings_mock.get_jwt_issuer = Mock(return_value="test-issuer")
+        settings_mock.get_jwt_audience = Mock(return_value="test-audience")
         
         auth_service = AuthService(Mock(), cache_mock, settings_mock)
         
