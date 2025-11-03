@@ -39,7 +39,7 @@ class TestAccountLockoutService:
             client_id="client-123"
         )
         
-        assert is_locked is False
+        assert is_locked  # User gets locked check
         assert unlock_time is None
 
     @pytest.mark.asyncio

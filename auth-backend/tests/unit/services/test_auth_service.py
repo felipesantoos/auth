@@ -25,7 +25,7 @@ class TestPasswordSecurity:
         
         auth_service = AuthService(Mock(), cache_mock, settings_mock)
         
-        password = "SecurePass123"
+        password = "SecurePass123!"
         hashed = auth_service._hash_password(password)
         
         # Password should be hashed
@@ -45,7 +45,7 @@ class TestPasswordSecurity:
         auth_service = AuthService(Mock(), cache_mock, settings_mock)
         
         # Valid password
-        auth_service._validate_password_strength("SecurePass123")
+        auth_service._validate_password_strength("SecurePass123!")
         
         # Too short
         with pytest.raises(InvalidPasswordException, match="at least 8 characters"):

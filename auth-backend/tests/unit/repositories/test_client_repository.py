@@ -39,7 +39,7 @@ class TestClientRepositoryFind:
             active=True
         )
         
-        mock_result = Mock()
+        mock_result = AsyncMock()
         mock_result.scalar_one_or_none = Mock(return_value=db_client)
         mock_session.execute.return_value = mock_result
         
@@ -64,7 +64,7 @@ class TestClientRepositoryFind:
             active=True
         )
         
-        mock_result = Mock()
+        mock_result = AsyncMock()
         mock_result.scalar_one_or_none = Mock(return_value=db_client)
         mock_session.execute.return_value = mock_result
         
@@ -126,7 +126,7 @@ class TestClientRepositoryDelete:
     async def test_delete_calls_execute(self, repository, mock_session):
         """Test delete executes delete query"""
         # Arrange
-        mock_result = Mock()
+        mock_result = AsyncMock()
         mock_result.rowcount = 1
         mock_session.execute.return_value = mock_result
         

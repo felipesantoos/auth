@@ -40,7 +40,7 @@ class TestAppUserRepositoryFind:
             username="testuser",
             email="test@example.com",
             hashed_password="hashed",
-            full_name="Test User",            active=True
+            full_name="Test User",            is_active=True
         )
         
         mock_result = Mock()
@@ -80,7 +80,7 @@ class TestAppUserRepositoryFind:
             username="testuser",
             email="test@example.com",
             hashed_password="hashed",
-            full_name="Test User",            active=True
+            full_name="Test User",            is_active=True
         )
         
         mock_result = Mock()
@@ -105,7 +105,7 @@ class TestAppUserRepositoryFind:
                 username=f"user{i}",
                 email=f"user{i}@example.com",
                 hashed_password="hashed",
-                full_name=f"User {i}",                active=True
+                full_name=f"User {i}",                is_active=True
             )
             for i in range(3)
         ]
@@ -114,7 +114,7 @@ class TestAppUserRepositoryFind:
         mock_result.scalars = Mock(return_value=Mock(all=Mock(return_value=db_users)))
         mock_session.execute.return_value = mock_result
         
-        filter_obj = UserFilter(client_id="client-456", active=True)
+        filter_obj = UserFilter(client_id="client-456", is_active=True)
         
         # Act
         users = await repository.find_all(filter_obj)
@@ -172,7 +172,7 @@ class TestAppUserRepositorySave:
             username="testuser",
             email="test@example.com",
             hashed_password="hashed",
-            full_name="Old Name",            active=True
+            full_name="Old Name",            is_active=True
         )
         
         mock_result = Mock()
