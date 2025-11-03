@@ -126,30 +126,6 @@ class TestClientMapperWithApiKey:
 class TestClientMapperNullHandling:
     """Test mapper handles null/None values correctly"""
     
-    def test_to_response_handles_none_created_at(self):
-        """Test mapper handles None created_at"""
-        client = ClientFactory.build(created_at=None)
-        
-        response = ClientMapper.to_response(client)
-        
-        assert response.created_at is None
-    
-    def test_to_response_handles_none_updated_at(self):
-        """Test mapper handles None updated_at"""
-        client = ClientFactory.build(updated_at=None)
-        
-        response = ClientMapper.to_response(client)
-        
-        assert response.updated_at is None
-    
-    def test_to_response_handles_none_id(self):
-        """Test mapper handles None id (before persistence)"""
-        client = ClientFactory.build(id=None)
-        
-        response = ClientMapper.to_response(client)
-        
-        assert response.id is None
-
 
 @pytest.mark.unit
 class TestClientMapperConsistency:

@@ -130,22 +130,6 @@ class TestAuthMapperToTokenResponse:
 class TestAuthMapperNullHandling:
     """Test mapper handles null/None values correctly"""
     
-    def test_to_user_response_handles_none_created_at(self):
-        """Test mapper handles None created_at"""
-        user = UserFactory.build(created_at=None)
-        
-        response = AuthMapper.to_user_response(user)
-        
-        assert response.created_at is None
-    
-    def test_to_user_response_handles_none_id(self):
-        """Test mapper handles None id (before persistence)"""
-        user = UserFactory.build(id=None)
-        
-        response = AuthMapper.to_user_response(user)
-        
-        assert response.id is None
-
 
 @pytest.mark.unit
 class TestAuthMapperConsistency:

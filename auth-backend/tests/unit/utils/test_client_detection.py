@@ -3,7 +3,7 @@ Unit tests for Client Detection utility
 Tests client type detection logic without external dependencies
 """
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from app.api.utils.client_detection import (
     detect_client_type,
     is_web_client,
@@ -126,7 +126,7 @@ class TestCookieSettings:
         request = Mock()
         request.headers = {"X-Client-Type": "web"}
         
-        with pytest.mock.patch('app.api.utils.client_detection.settings') as mock_settings:
+        with patch('config.settings.settings') as mock_settings:
             mock_settings.environment = "production"
             
             settings = get_cookie_settings(request)
@@ -139,7 +139,7 @@ class TestCookieSettings:
         request = Mock()
         request.headers = {"X-Client-Type": "mobile"}
         
-        with pytest.mock.patch('app.api.utils.client_detection.settings') as mock_settings:
+        with patch('config.settings.settings') as mock_settings:
             mock_settings.environment = "production"
             
             settings = get_cookie_settings(request)
@@ -152,7 +152,7 @@ class TestCookieSettings:
         request = Mock()
         request.headers = {"X-Client-Type": "web"}
         
-        with pytest.mock.patch('app.api.utils.client_detection.settings') as mock_settings:
+        with patch('config.settings.settings') as mock_settings:
             mock_settings.environment = "production"
             
             settings = get_cookie_settings(request)
@@ -164,7 +164,7 @@ class TestCookieSettings:
         request = Mock()
         request.headers = {"X-Client-Type": "web"}
         
-        with pytest.mock.patch('app.api.utils.client_detection.settings') as mock_settings:
+        with patch('config.settings.settings') as mock_settings:
             mock_settings.environment = "development"
             
             settings = get_cookie_settings(request)

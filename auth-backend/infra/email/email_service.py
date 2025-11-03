@@ -3,7 +3,12 @@ Email Service Implementation
 Production-ready SMTP-based email sending service with comprehensive features
 """
 import logging
-import aiosmtplib
+try:
+    import aiosmtplib
+    SMTP_AVAILABLE = True
+except ImportError:
+    SMTP_AVAILABLE = False
+    aiosmtplib = None
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase

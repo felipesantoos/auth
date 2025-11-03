@@ -1,67 +1,92 @@
 """
 Unit tests for HTTPS Redirect Middleware
-Tests HTTPS enforcement logic without external dependencies
+Tests HTTPS enforcement in production
 """
 import pytest
-from unittest.mock import AsyncMock, Mock
-from starlette.responses import RedirectResponse
+from unittest.mock import Mock, AsyncMock, patch
+from fastapi import Request
+from starlette.responses import RedirectResponse, Response
+
 from app.api.middlewares.https_redirect_middleware import HTTPSRedirectMiddleware
 
 
 @pytest.mark.unit
 class TestHTTPSRedirectMiddleware:
-    """Test HTTPS redirect middleware functionality"""
-    
+    """Test HTTPS redirect middleware"""
+
     @pytest.mark.asyncio
-    async def test_https_request_passes_through(self):
-        """Test HTTPS requests pass through unchanged"""
-        request_mock = Mock()
-        request_mock.url.scheme = "https"
-        request_mock.url = Mock()
-        request_mock.url.scheme = "https"
+    @patch('app.api.middlewares.https_redirect_middleware.settings')
+    async def test_allows_https_in_production(self, mock_settings):
+        """Should allow HTTPS requests in production"""
+        mock_settings.environment = "production"
         
-        response_mock = Mock()
-        response_mock.status_code = 200
+        mock_app = Mock()
+        middleware = HTTPSRedirectMiddleware(app=mock_app)
         
-        call_next_mock = AsyncMock(return_value=response_mock)
+        request = Mock(spec=Request)
+        request.url.scheme = "https"
+        request.url.path = "/api/users"
         
-        middleware = HTTPSRedirectMiddleware(Mock())
+        call_next = AsyncMock(return_value=Response())
         
-        response = await middleware.dispatch(request_mock, call_next_mock)
+        response = await middleware.dispatch(request, call_next)
         
-        assert response.status_code == 200
-        call_next_mock.assert_called_once()
-    
+        # Should call next (not redirect)
+        call_next.assert_called_once_with(request)
+
     @pytest.mark.asyncio
-    async def test_http_request_redirects_to_https(self):
-        """Test HTTP requests redirect to HTTPS"""
-        request_mock = Mock()
-        request_mock.url.scheme = "http"
-        request_mock.url = "http://example.com/api/users"
+    @patch('app.api.middlewares.https_redirect_middleware.settings')
+    async def test_allows_http_in_development(self, mock_settings):
+        """Should allow HTTP in development"""
+        mock_settings.environment = "development"
         
-        middleware = HTTPSRedirectMiddleware(Mock())
+        mock_app = Mock()
+        middleware = HTTPSRedirectMiddleware(app=mock_app)
         
-        response = await middleware.dispatch(request_mock, AsyncMock())
+        request = Mock(spec=Request)
+        request.url.scheme = "http"
         
-        # Should redirect to HTTPS
-        assert isinstance(response, RedirectResponse) or response.status_code == 301
-    
+        call_next = AsyncMock(return_value=Response())
+        
+        response = await middleware.dispatch(request, call_next)
+        
+        # Should call next (not redirect)
+        call_next.assert_called_once()
+
     @pytest.mark.asyncio
-    async def test_localhost_bypasses_https_redirect(self):
-        """Test localhost requests bypass HTTPS redirect in development"""
-        request_mock = Mock()
-        request_mock.url.scheme = "http"
-        request_mock.url.hostname = "localhost"
+    @patch('app.api.middlewares.https_redirect_middleware.settings')
+    async def test_adds_hsts_header_in_production(self, mock_settings):
+        """Should add HSTS header in production"""
+        mock_settings.environment = "production"
         
-        response_mock = Mock()
-        response_mock.status_code = 200
+        mock_app = Mock()
+        middleware = HTTPSRedirectMiddleware(app=mock_app)
         
-        call_next_mock = AsyncMock(return_value=response_mock)
+        request = Mock(spec=Request)
+        request.url.scheme = "https"
         
-        middleware = HTTPSRedirectMiddleware(Mock())
+        response = Response()
+        call_next = AsyncMock(return_value=response)
         
-        # Should allow HTTP for localhost in dev
-        response = await middleware.dispatch(request_mock, call_next_mock)
+        result = await middleware.dispatch(request, call_next)
         
-        assert response.status_code == 200 or call_next_mock.called
+        # Should add HSTS header
+        assert "Strict-Transport-Security" in result.headers
+
+
+@pytest.mark.unit
+class TestHTTPSRedirectBehavior:
+    """Test HTTPS redirect behavior"""
+
+    @pytest.mark.asyncio
+    @patch('app.api.middlewares.https_redirect_middleware.settings')
+    async def test_middleware_exists(self, mock_settings):
+        """Should be able to create middleware instance"""
+        mock_settings.environment = "production"
+        
+        mock_app = Mock()
+        middleware = HTTPSRedirectMiddleware(app=mock_app)
+        
+        assert middleware is not None
+        assert hasattr(middleware, 'dispatch')
 

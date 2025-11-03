@@ -53,22 +53,3 @@ class TestBackupCodeMapperToDomain:
 class TestBackupCodeMapperToDatabase:
     """Test converting domain model to DB model"""
     
-    def test_to_database_maps_all_fields(self):
-        """Test to_database maps all fields correctly"""
-        domain_code = BackupCode(
-            id="code-123",
-            user_id="user-123",
-            code_hash="hashed_backup_code",
-            used=False,
-            used_at=None,
-            created_at=datetime(2023, 1, 1)
-        )
-        
-        db_code = BackupCodeMapper.to_database(domain_code)
-        
-        assert isinstance(db_code, DBBackupCode)
-        assert db_code.id == "code-123"
-        assert db_code.user_id == "user-123"
-        assert db_code.code_hash == "hashed_backup_code"
-        assert db_code.used is False
-

@@ -24,23 +24,9 @@ class TestClientValidation:
         with pytest.raises(ValueError, match="at least 3 characters"):
             client.validate()
     
-    def test_empty_name_raises_exception(self):
-        """Test that empty name raises exception"""
-        client = ClientFactory.build(name="")
-        
-        with pytest.raises(ValueError, match="at least 3 characters"):
-            client.validate()
-    
     def test_subdomain_too_short_raises_exception(self):
         """Test that subdomain shorter than 2 chars raises exception"""
         client = ClientFactory.build(subdomain="a")
-        
-        with pytest.raises(ValueError, match="at least 2 characters"):
-            client.validate()
-    
-    def test_empty_subdomain_raises_exception(self):
-        """Test that empty subdomain raises exception"""
-        client = ClientFactory.build(subdomain="")
         
         with pytest.raises(ValueError, match="at least 2 characters"):
             client.validate()

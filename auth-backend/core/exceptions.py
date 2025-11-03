@@ -197,18 +197,18 @@ class InvalidCredentialsException(AuthenticationException):
 
 class TokenExpiredException(AuthenticationException):
     """JWT token has expired"""
-    def __init__(self):
+    def __init__(self, message: str = "Authentication token has expired"):
         super().__init__(
-            message="Authentication token has expired",
+            message=message,
             code="TOKEN_EXPIRED"
         )
 
 
 class InvalidTokenException(AuthenticationException):
     """JWT token is invalid"""
-    def __init__(self):
+    def __init__(self, message: str = "Invalid authentication token"):
         super().__init__(
-            message="Invalid authentication token",
+            message=message,
             code="INVALID_TOKEN"
         )
 

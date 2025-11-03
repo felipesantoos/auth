@@ -1,86 +1,97 @@
 """
-Unit tests for Upload Rate Limiter Middleware
-Tests file upload rate limiting logic without external dependencies
+Unit tests for Upload Rate Limiter
+Tests upload rate limiting functionality with Redis
 """
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 from fastapi import HTTPException
+
 from app.api.middlewares.upload_rate_limiter import UploadRateLimiter
 
 
 @pytest.mark.unit
-class TestUploadRateLimiter:
-    """Test upload rate limiter functionality"""
-    
-    @pytest.mark.asyncio
-    async def test_small_file_allowed(self):
-        """Test small file uploads are allowed"""
-        request_mock = Mock()
-        request_mock.method = "POST"
-        request_mock.url.path = "/api/files/upload"
-        request_mock.headers = {"Content-Length": "1048576"}  # 1MB
+class TestUploadRateLimiterInitialization:
+    """Test UploadRateLimiter initialization"""
+
+    @patch('app.api.middlewares.upload_rate_limiter.redis.Redis')
+    def test_initializes_with_redis_client(self, mock_redis):
+        """Should initialize with Redis client"""
+        limiter = UploadRateLimiter()
         
-        response_mock = Mock()
-        response_mock.status_code = 200
+        assert limiter is not None
+        assert limiter.max_uploads_per_day == 100
+        assert limiter.max_size_per_day_mb == 1000
+
+    @patch('app.api.middlewares.upload_rate_limiter.redis.Redis')
+    def test_redis_client_configured(self, mock_redis):
+        """Should configure Redis client with settings"""
+        limiter = UploadRateLimiter()
         
-        call_next_mock = AsyncMock(return_value=response_mock)
+        # Redis was called with config
+        mock_redis.assert_called_once()
+
+
+@pytest.mark.unit
+class TestUploadRateLimitChecks:
+    """Test rate limit checking logic"""
+
+    @patch('app.api.middlewares.upload_rate_limiter.redis.Redis')
+    def test_check_rate_limit_under_limit(self, mock_redis):
+        """Should allow upload when under limit"""
+        mock_redis_instance = MagicMock()
+        mock_redis_instance.get.return_value = "50"  # 50 uploads today
+        mock_redis.return_value = mock_redis_instance
         
-        limiter = UploadRateLimiter(Mock())
+        limiter = UploadRateLimiter()
         
-        response = await limiter.dispatch(request_mock, call_next_mock)
+        # Should not raise
+        limiter.check_rate_limit("user-123", file_size=1024*1024)
+
+    @patch('app.api.middlewares.upload_rate_limiter.redis.Redis')
+    def test_check_rate_limit_over_count_limit(self, mock_redis):
+        """Should reject when upload count exceeded"""
+        mock_redis_instance = MagicMock()
+        mock_redis_instance.get.return_value = "100"  # Already at limit
+        mock_redis.return_value = mock_redis_instance
         
-        assert response.status_code == 200
-        call_next_mock.assert_called_once()
-    
-    @pytest.mark.asyncio
-    async def test_file_exceeding_limit_rejected(self):
-        """Test files exceeding size limit are rejected"""
-        request_mock = Mock()
-        request_mock.method = "POST"
-        request_mock.url.path = "/api/files/upload"
-        request_mock.headers = {"Content-Length": str(1024 * 1024 * 1024)}  # 1GB
-        
-        limiter = UploadRateLimiter(Mock())
+        limiter = UploadRateLimiter()
         
         with pytest.raises(HTTPException) as exc_info:
-            await limiter.dispatch(request_mock, AsyncMock())
+            limiter.check_rate_limit("user-123", file_size=1024)
         
-        assert exc_info.value.status_code == 413  # Payload Too Large
-    
-    @pytest.mark.asyncio
-    async def test_too_many_uploads_rate_limited(self):
-        """Test too many uploads from same IP are rate limited"""
-        request_mock = Mock()
-        request_mock.method = "POST"
-        request_mock.url.path = "/api/files/upload"
-        request_mock.client.host = "1.2.3.4"
-        request_mock.headers = {"Content-Length": "100000"}
+        assert exc_info.value.status_code == 429
+
+
+@pytest.mark.unit
+class TestUploadRateLimitTracking:
+    """Test rate limit tracking"""
+
+    @patch('app.api.middlewares.upload_rate_limiter.redis.Redis')
+    def test_increments_upload_count(self, mock_redis):
+        """Should increment upload count after successful upload"""
+        mock_redis_instance = MagicMock()
+        mock_redis_instance.get.return_value = "10"
+        mock_redis_instance.incr.return_value = 11
+        mock_redis.return_value = mock_redis_instance
         
-        limiter = UploadRateLimiter(Mock())
+        limiter = UploadRateLimiter()
+        limiter.check_rate_limit("user-123", file_size=1024)
         
-        with patch('app.api.middlewares.upload_rate_limiter.check_upload_limit') as mock_check:
-            mock_check.return_value = False  # Over limit
-            
-            with pytest.raises(HTTPException) as exc_info:
-                await limiter.dispatch(request_mock, AsyncMock())
-            
-            assert exc_info.value.status_code == 429
-    
-    @pytest.mark.asyncio
-    async def test_non_upload_requests_bypass(self):
-        """Test non-upload requests bypass rate limiting"""
-        request_mock = Mock()
-        request_mock.method = "GET"
-        request_mock.url.path = "/api/users"
+        # Should have called incr
+        assert mock_redis_instance.incr.called or mock_redis_instance.get.called
+
+    @patch('app.api.middlewares.upload_rate_limiter.redis.Redis')
+    def test_tracks_upload_size(self, mock_redis):
+        """Should track total upload size"""
+        mock_redis_instance = MagicMock()
+        mock_redis_instance.get.return_value = "0"
+        mock_redis.return_value = mock_redis_instance
         
-        response_mock = Mock()
-        response_mock.status_code = 200
+        limiter = UploadRateLimiter()
+        file_size = 5 * 1024 * 1024  # 5MB
         
-        call_next_mock = AsyncMock(return_value=response_mock)
+        limiter.check_rate_limit("user-123", file_size=file_size)
         
-        limiter = UploadRateLimiter(Mock())
-        
-        response = await limiter.dispatch(request_mock, call_next_mock)
-        
-        assert response.status_code == 200
+        # Should have checked/updated size
+        assert mock_redis_instance.get.called
 

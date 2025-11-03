@@ -3,7 +3,7 @@ Audit Retention Service
 Manages audit log retention policies and archival for compliance
 """
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
 from core.domain.audit.audit_event_category import AuditEventCategory

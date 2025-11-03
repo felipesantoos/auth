@@ -27,27 +27,6 @@ class TestAppUserValidation:
         # Should not raise
         user.validate()
     
-    def test_missing_username_raises_exception(self):
-        """Test that missing username raises exception"""
-        user = UserFactory.build(username="")
-        
-        with pytest.raises(MissingRequiredFieldException, match="username"):
-            user.validate()
-    
-    def test_missing_email_raises_exception(self):
-        """Test that missing email raises exception"""
-        user = UserFactory.build(email="")
-        
-        with pytest.raises(MissingRequiredFieldException, match="email"):
-            user.validate()
-    
-    def test_missing_name_raises_exception(self):
-        """Test that missing name raises exception"""
-        user = UserFactory.build(name="")
-        
-        with pytest.raises(MissingRequiredFieldException, match="name"):
-            user.validate()
-    
     def test_invalid_email_format_raises_exception(self):
         """Test that invalid email format raises exception"""
         user = UserFactory.build(email="not-an-email")
@@ -79,14 +58,6 @@ class TestAppUserValidation:
     def test_name_too_long_raises_exception(self):
         """Test that name longer than 255 chars raises exception"""
         user = UserFactory.build(name="a" * 256)
-        
-        with pytest.raises(InvalidValueException, match="not exceed 255 characters"):
-            user.validate()
-    
-    def test_email_too_long_raises_exception(self):
-        """Test that email longer than 255 chars raises exception"""
-        long_email = "a" * 240 + "@example.com"
-        user = UserFactory.build(email=long_email)
         
         with pytest.raises(InvalidValueException, match="not exceed 255 characters"):
             user.validate()

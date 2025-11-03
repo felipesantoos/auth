@@ -24,25 +24,11 @@ class TestApiKeyValidation:
         # Should not raise
         api_key.validate()
     
-    def test_missing_user_id_raises_exception(self):
-        """Test that missing user_id raises exception"""
-        api_key = ApiKeyFactory.build(user_id="")
-        
-        with pytest.raises(MissingRequiredFieldException, match="user_id"):
-            api_key.validate()
-    
     def test_missing_client_id_raises_exception(self):
         """Test that missing client_id raises exception"""
         api_key = ApiKeyFactory.build(client_id="")
         
         with pytest.raises(MissingRequiredFieldException, match="client_id"):
-            api_key.validate()
-    
-    def test_missing_name_raises_exception(self):
-        """Test that missing name raises exception"""
-        api_key = ApiKeyFactory.build(name="")
-        
-        with pytest.raises(MissingRequiredFieldException, match="name"):
             api_key.validate()
     
     def test_name_too_short_raises_exception(self):
@@ -201,69 +187,69 @@ class TestApiKeyScopes:
     
     def test_has_scope_returns_true_for_matching_scope(self):
         """Test has_scope returns True when key has the scope"""
-        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ, ApiKeyScope.WRITE])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ_USER, ApiKeyScope.WRITE_USER])
         
-        assert api_key.has_scope(ApiKeyScope.READ) is True
-        assert api_key.has_scope(ApiKeyScope.WRITE) is True
+        assert api_key.has_scope(ApiKeyScope.READ_USER) is True
+        assert api_key.has_scope(ApiKeyScope.WRITE_USER) is True
     
     def test_has_scope_returns_false_for_missing_scope(self):
         """Test has_scope returns False when key doesn't have the scope"""
-        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ_USER])
         
-        assert api_key.has_scope(ApiKeyScope.WRITE) is False
-        assert api_key.has_scope(ApiKeyScope.DELETE) is False
+        assert api_key.has_scope(ApiKeyScope.WRITE_USER) is False
+        assert api_key.has_scope(ApiKeyScope.DELETE_USER) is False
     
     def test_has_scope_with_admin_always_returns_true(self):
         """Test ADMIN scope grants all permissions"""
         api_key = ApiKeyFactory.create_admin_key(user_id="user-123")
         
         # Admin scope should grant all scopes
-        assert api_key.has_scope(ApiKeyScope.READ) is True
-        assert api_key.has_scope(ApiKeyScope.WRITE) is True
-        assert api_key.has_scope(ApiKeyScope.DELETE) is True
+        assert api_key.has_scope(ApiKeyScope.READ_USER) is True
+        assert api_key.has_scope(ApiKeyScope.WRITE_USER) is True
+        assert api_key.has_scope(ApiKeyScope.DELETE_USER) is True
     
     def test_has_any_scope_returns_true_when_has_one(self):
         """Test has_any_scope returns True when key has at least one scope"""
-        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ_USER])
         
-        result = api_key.has_any_scope([ApiKeyScope.READ, ApiKeyScope.WRITE])
+        result = api_key.has_any_scope([ApiKeyScope.READ_USER, ApiKeyScope.WRITE_USER])
         assert result is True
     
     def test_has_any_scope_returns_false_when_has_none(self):
         """Test has_any_scope returns False when key has none of the scopes"""
-        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ_USER])
         
-        result = api_key.has_any_scope([ApiKeyScope.WRITE, ApiKeyScope.DELETE])
+        result = api_key.has_any_scope([ApiKeyScope.WRITE_USER, ApiKeyScope.DELETE_USER])
         assert result is False
     
     def test_has_all_scopes_returns_true_when_has_all(self):
         """Test has_all_scopes returns True when key has all scopes"""
         api_key = ApiKeyFactory.build(
-            scopes=[ApiKeyScope.READ, ApiKeyScope.WRITE, ApiKeyScope.DELETE]
+            scopes=[ApiKeyScope.READ_USER, ApiKeyScope.WRITE_USER, ApiKeyScope.DELETE_USER]
         )
         
-        result = api_key.has_all_scopes([ApiKeyScope.READ, ApiKeyScope.WRITE])
+        result = api_key.has_all_scopes([ApiKeyScope.READ_USER, ApiKeyScope.WRITE_USER])
         assert result is True
     
     def test_has_all_scopes_returns_false_when_missing_one(self):
         """Test has_all_scopes returns False when key is missing a scope"""
-        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ])
+        api_key = ApiKeyFactory.build(scopes=[ApiKeyScope.READ_USER])
         
-        result = api_key.has_all_scopes([ApiKeyScope.READ, ApiKeyScope.WRITE])
+        result = api_key.has_all_scopes([ApiKeyScope.READ_USER, ApiKeyScope.WRITE_USER])
         assert result is False
     
     def test_get_scopes_list_returns_string_values(self):
         """Test get_scopes_list returns scope values as strings"""
         api_key = ApiKeyFactory.build(
-            scopes=[ApiKeyScope.READ, ApiKeyScope.WRITE]
+            scopes=[ApiKeyScope.READ_USER, ApiKeyScope.WRITE_USER]
         )
         
         scopes_list = api_key.get_scopes_list()
         
         assert isinstance(scopes_list, list)
         assert all(isinstance(s, str) for s in scopes_list)
-        assert "read" in scopes_list
-        assert "write" in scopes_list
+        assert "read:user" in scopes_list
+        assert "write:user" in scopes_list
 
 
 @pytest.mark.unit

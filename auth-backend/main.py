@@ -392,13 +392,20 @@ app.add_middleware(MetricsMiddleware)
 
 # Configure Response Compression (Brotli + gzip fallback)
 # Brotli offers 15-20% better compression than gzip
-from brotli_asgi import BrotliMiddleware
-app.add_middleware(
-    BrotliMiddleware,
-    minimum_size=1000,  # Only compress responses > 1KB
-    quality=4,  # 0-11, quality 4 is good balance for dynamic content
-    # gzip_fallback=True is default - automatically falls back to gzip if client doesn't support brotli
-)
+try:
+    from brotli_asgi import BrotliMiddleware
+    BROTLI_AVAILABLE = True
+except ImportError:
+    BROTLI_AVAILABLE = False
+    BrotliMiddleware = None
+
+if BROTLI_AVAILABLE:
+    app.add_middleware(
+        BrotliMiddleware,
+        minimum_size=1000,  # Only compress responses > 1KB
+        quality=4,  # 0-11, quality 4 is good balance for dynamic content
+        # gzip_fallback=True is default - automatically falls back to gzip if client doesn't support brotli
+    )
 
 # Configure API Versioning (Header-based)
 from app.api.middlewares.api_versioning import APIVersionMiddleware

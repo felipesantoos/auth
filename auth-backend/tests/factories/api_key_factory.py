@@ -53,7 +53,7 @@ class ApiKeyFactory:
         if not name:
             name = f"{fake.word()} API Key"[:50]
         if scopes is None:
-            scopes = [ApiKeyScope.READ]
+            scopes = [ApiKeyScope.READ_USER]
         if expires_at is None:
             expires_at = datetime.utcnow() + timedelta(days=30)
         
@@ -163,6 +163,6 @@ class ApiKeyFactoryTraits:
         return ApiKeyFactory.build(
             user_id=user_id,
             name="Test Key",
-            scopes=[ApiKeyScope.READ]
+            scopes=[ApiKeyScope.READ_USER]
         )
 

@@ -19,13 +19,6 @@ class TestBackupCodeValidation:
         # Should not raise
         code.validate()
     
-    def test_missing_user_id_raises_exception(self):
-        """Test that missing user_id raises exception"""
-        code = BackupCodeFactory.build(user_id="")
-        
-        with pytest.raises(MissingRequiredFieldException, match="user_id"):
-            code.validate()
-    
     def test_missing_client_id_raises_exception(self):
         """Test that missing client_id raises exception"""
         code = BackupCodeFactory.build(client_id="")

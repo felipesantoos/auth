@@ -21,7 +21,7 @@ class PermissionFactory:
         user_id: Optional[str] = None,
         client_id: str = "test-client-id",
         resource_type: str = "project",
-        resource_id: Optional[str] = None,
+        resource_id: Optional[str] = "__AUTO__",  # Sentinel value
         action: PermissionAction = PermissionAction.READ,
         granted_by: Optional[str] = None,
         **kwargs
@@ -34,7 +34,7 @@ class PermissionFactory:
             user_id: User ID (auto-generated if not provided)
             client_id: Client ID
             resource_type: Type of resource (e.g., "project", "ticket")
-            resource_id: Specific resource ID (None for all resources)
+            resource_id: Specific resource ID (None for all resources, auto-generated if not specified)
             action: Permission action
             granted_by: ID of user who granted permission
             **kwargs: Additional fields to override
@@ -46,7 +46,8 @@ class PermissionFactory:
             id = fake.uuid4()
         if not user_id:
             user_id = fake.uuid4()
-        if not resource_id:
+        # Auto-generate resource_id only if not explicitly set
+        if resource_id == "__AUTO__":
             resource_id = fake.uuid4()
         if not granted_by:
             granted_by = fake.uuid4()

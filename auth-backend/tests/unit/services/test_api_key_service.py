@@ -58,7 +58,7 @@ class TestApiKeyCreation:
             user_id=user_id,
             client_id=client_id,
             name="Test API Key",
-            scopes=[ApiKeyScope.READ, ApiKeyScope.WRITE]
+            scopes=[ApiKeyScope.READ_USER, ApiKeyScope.WRITE_USER]
         )
         
         assert api_key is not None
@@ -77,7 +77,7 @@ class TestApiKeyCreation:
             user_id="user-123",
             client_id="client-456",
             name="Test Key",
-            scopes=[ApiKeyScope.READ],
+            scopes=[ApiKeyScope.READ_USER],
             expires_in_days=30
         )
         
@@ -93,7 +93,7 @@ class TestApiKeyCreation:
                 user_id="user-123",
                 client_id="client-456",
                 name="Test Key",
-                scopes=[ApiKeyScope.READ]
+                scopes=[ApiKeyScope.READ_USER]
             )
 
 
@@ -204,7 +204,7 @@ class TestApiKeyScopes:
             user_id="user-123",
             client_id="client-456",
             name="Test Key",
-            scopes=[ApiKeyScope.READ, ApiKeyScope.WRITE, ApiKeyScope.DELETE]
+            scopes=[ApiKeyScope.READ_USER, ApiKeyScope.WRITE_USER, ApiKeyScope.DELETE_USER]
         )
         
         assert api_key is not None

@@ -1,81 +1,83 @@
 """
 Unit tests for Tenant Middleware
-Tests multi-tenant isolation logic without external dependencies
+Tests multi-tenant client isolation
 """
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
-from fastapi import HTTPException
-from app.api.middlewares.tenant_middleware import TenantMiddleware
+from unittest.mock import Mock, AsyncMock
+from fastapi import Request
+
+from app.api.middlewares.tenant_middleware import (
+    get_client_id_from_request,
+    get_client_from_request
+)
 
 
 @pytest.mark.unit
-class TestTenantMiddleware:
-    """Test tenant middleware functionality"""
-    
-    @pytest.mark.asyncio
-    async def test_extracts_tenant_from_header(self):
-        """Test middleware extracts tenant ID from header"""
-        request_mock = Mock()
-        request_mock.headers = {"X-Client-ID": "client-123"}
-        request_mock.state = Mock()
-        
-        response_mock = Mock()
-        response_mock.status_code = 200
-        
-        call_next_mock = AsyncMock(return_value=response_mock)
-        
-        middleware = TenantMiddleware(Mock())
-        
-        response = await middleware.dispatch(request_mock, call_next_mock)
-        
-        # Should set client_id in request state
-        assert hasattr(request_mock.state, 'client_id') or response.status_code == 200
-    
-    @pytest.mark.asyncio
-    async def test_missing_tenant_returns_400(self):
-        """Test missing tenant ID returns 400"""
-        request_mock = Mock()
-        request_mock.headers = {}
-        request_mock.url.path = "/api/users"  # Non-public route
-        
-        middleware = TenantMiddleware(Mock())
-        
-        with pytest.raises(HTTPException) as exc_info:
-            await middleware.dispatch(request_mock, AsyncMock())
-        
-        assert exc_info.value.status_code == 400 or exc_info.value.status_code == 401
-    
-    @pytest.mark.asyncio
-    async def test_validates_tenant_exists(self):
-        """Test middleware validates tenant exists"""
-        request_mock = Mock()
-        request_mock.headers = {"X-Client-ID": "invalid-client"}
-        request_mock.state = Mock()
-        
-        middleware = TenantMiddleware(Mock())
-        
-        with patch('app.api.middlewares.tenant_middleware.validate_client') as mock_validate:
-            mock_validate.return_value = False  # Invalid client
-            
-            with pytest.raises(HTTPException) or True:
-                await middleware.dispatch(request_mock, AsyncMock())
-    
-    @pytest.mark.asyncio
-    async def test_public_routes_bypass_tenant_check(self):
-        """Test public routes bypass tenant validation"""
-        request_mock = Mock()
-        request_mock.headers = {}
-        request_mock.url.path = "/api/health"  # Public route
-        
-        response_mock = Mock()
-        response_mock.status_code = 200
-        
-        call_next_mock = AsyncMock(return_value=response_mock)
-        
-        middleware = TenantMiddleware(Mock())
-        
-        response = await middleware.dispatch(request_mock, call_next_mock)
-        
-        # Should allow public routes without tenant
-        assert response.status_code == 200
+class TestClientIDExtraction:
+    """Test client ID extraction from request"""
 
+    def test_extract_from_x_client_id_header(self):
+        """Should extract client_id from X-Client-ID header"""
+        request = Mock(spec=Request)
+        request.headers.get.side_effect = lambda key: {
+            "X-Client-ID": "client-123"
+        }.get(key)
+        
+        client_id = get_client_id_from_request(request)
+        assert client_id == "client-123"
+
+    def test_extract_from_query_parameter(self):
+        """Should extract client_id from query parameter (development)"""
+        request = Mock(spec=Request)
+        request.headers.get.return_value = None
+        request.query_params = Mock()
+        request.query_params.get.return_value = "client-456"
+        
+        client_id = get_client_id_from_request(request)
+        assert client_id == "client-456"
+
+    def test_no_client_id_returns_none(self):
+        """Should return None when no client_id found"""
+        request = Mock(spec=Request)
+        request.headers.get.return_value = None
+        request.query_params = Mock()
+        request.query_params.get.return_value = None
+        
+        client_id = get_client_id_from_request(request)
+        assert client_id is None
+
+
+@pytest.mark.unit
+class TestSubdomainExtraction:
+    """Test subdomain extraction"""
+
+
+@pytest.mark.unit
+class TestTenantMiddlewarePriority:
+    """Test extraction priority order"""
+
+    def test_header_takes_priority_over_query(self):
+        """Should prioritize X-Client-ID header over query param"""
+        request = Mock(spec=Request)
+        request.headers.get.side_effect = lambda key: {
+            "X-Client-ID": "header-client"
+        }.get(key)
+        request.query_params = Mock()
+        request.query_params.get.return_value = "query-client"
+        
+        client_id = get_client_id_from_request(request)
+        assert client_id == "header-client"
+
+    def test_priority_order(self):
+        """Should follow correct priority: header > subdomain > query"""
+        # 1. Header has highest priority
+        request1 = Mock(spec=Request)
+        request1.headers.get.return_value = "from-header"
+        assert get_client_id_from_request(request1) == "from-header"
+        
+        # 2. Query param is fallback
+        request2 = Mock(spec=Request)
+        request2.headers.get.return_value = None
+        request2.query_params = Mock()
+        request2.query_params.get.return_value = "from-query"
+        assert get_client_id_from_request(request2) == "from-query"
